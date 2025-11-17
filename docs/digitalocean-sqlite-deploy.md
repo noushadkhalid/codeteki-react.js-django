@@ -69,6 +69,17 @@ ALLOWED_HOSTS=yourdomain.com
 OPENAI_API_KEY=prod-key
 ```
 
+Generate a strong Django secret key from the server shell:
+
+```bash
+python - <<'PY'
+import secrets
+print(secrets.token_urlsafe(52))
+PY
+```
+
+Copy the output into `SECRET_KEY=...`.
+
 ---
 
 ### 4. Python Virtualenv & Requirements
@@ -77,7 +88,7 @@ OPENAI_API_KEY=prod-key
 python3 -m venv venv
 source venv/bin/activate
 pip install --upgrade pip
-pip install -r backend/requirements.txt
+pip install -r requirements.txt
 ```
 
 ---
@@ -154,7 +165,7 @@ Requires=gunicorn.socket
 After=network.target
 
 [Service]
-User=codeteki                  # replace if needed
+User=codeteki                
 Group=www-data
 WorkingDirectory=/home/codeteki/apps/codeteki/backend
 ExecStart=/home/codeteki/apps/codeteki/venv/bin/gunicorn \
@@ -201,12 +212,12 @@ If the project lives under `/home/<user>` ensure execute + read perms:
 
 ```bash
 sudo chmod +x /home/codeteki
-sudo chmod +x /home/codeteki/apps
-sudo chmod +x /home/codeteki/apps/codeteki
-sudo chmod +x /home/codeteki/apps/codeteki/backend/staticfiles
-sudo chown -R codeteki:www-data /home/codeteki/apps/codeteki
-sudo chmod -R 755 /home/codeteki/apps/codeteki
-sudo chmod -R 775 /home/codeteki/apps/codeteki/backend/staticfiles
+sudo chmod +x /home/codeteki
+sudo chmod +x /home/codeteki/codeteki-react.js-django
+sudo chmod +x /home/codeteki/codeteki-react.js-django/backend/staticfiles
+sudo chown -R codeteki:www-data /home/codeteki/codeteki-react.js-django
+sudo chmod -R 755 /home/codeteki/codeteki-react.js-django
+sudo chmod -R 775 /home/codeteki/codeteki-react.js-django/backend/staticfiles
 ```
 
 If you deploy under `/root`:
@@ -241,9 +252,10 @@ cd /etc/nginx/sites-enabled
 sudo rm -f default my-old-site
 ```
 
-Create `/etc/nginx/sites-available/codeteki`:
+Create `/etc/nginx/sites-available/codeteki` (must be done with `sudo` since `/etc/nginx` is root-owned):
 
-```
+```bash
+sudo tee /etc/nginx/sites-available/codeteki >/dev/null <<'EOF'
 server {
     listen 80;
     server_name yourdomain.com www.yourdomain.com;
@@ -251,11 +263,11 @@ server {
     location = /favicon.ico { access_log off; log_not_found off; }
 
     location /static/ {
-        alias /home/codeteki/apps/codeteki/backend/staticfiles/;
+        alias /home/codeteki/codeteki-react.js-django/backend/staticfiles/;
     }
 
     location /media/ {
-        alias /home/codeteki/apps/codeteki/backend/media/;
+        alias /home/codeteki/codeteki-react.js-django/backend/media/;
     }
 
     location / {
@@ -264,7 +276,10 @@ server {
         client_max_body_size 250m;
     }
 }
+EOF
 ```
+
+Or edit with `sudo nano /etc/nginx/sites-available/codeteki` and paste the same block.
 
 Enable + restart:
 
