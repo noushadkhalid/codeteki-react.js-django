@@ -60,13 +60,19 @@ cp backend/.env.example backend/.env  # if you track one
 nano backend/.env                     # otherwise create from scratch
 ```
 
-Minimum settings:
+Minimum settings (replace with your actual values):
 
-```
-SECRET_KEY=change-me
-DEBUG=False
-ALLOWED_HOSTS=yourdomain.com
-OPENAI_API_KEY=prod-key
+```bash
+# Django Core Settings
+DJANGO_SECRET_KEY=your-generated-secret-key-here
+DJANGO_DEBUG=False
+DJANGO_ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com,YOUR_SERVER_IP
+
+# CSRF Protection (IMPORTANT!)
+DJANGO_CSRF_TRUSTED_ORIGINS=http://yourdomain.com,https://yourdomain.com,http://www.yourdomain.com,https://www.yourdomain.com,http://YOUR_SERVER_IP
+
+# API Keys
+OPENAI_API_KEY=your-openai-api-key
 ```
 
 Generate a strong Django secret key from the server shell:
@@ -78,7 +84,17 @@ print(secrets.token_urlsafe(52))
 PY
 ```
 
-Copy the output into `SECRET_KEY=...`.
+Copy the output into `DJANGO_SECRET_KEY=...`.
+
+**Example .env file:**
+
+```bash
+DJANGO_SECRET_KEY=xCotUWjXTsTPgk6lg2yTTdV97YMT117fSsE0ve7E_aESlGbFLc2fV46GpfaycX7YjSDs6w
+DJANGO_DEBUG=False
+DJANGO_ALLOWED_HOSTS=codeteki.au,www.codeteki.au,170.64.215.170
+DJANGO_CSRF_TRUSTED_ORIGINS=http://codeteki.au,https://codeteki.au,http://www.codeteki.au,https://www.codeteki.au,http://170.64.215.170,https://170.64.215.170
+OPENAI_API_KEY=sk-proj-your-key-here
+```
 
 ---
 

@@ -1,16 +1,13 @@
 import { useMemo, useState } from "react";
-import { useAdminCheck } from "../hooks/useAdminCheck";
 import { Button } from "../components/ui/button";
-import { Badge } from "../components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "../components/ui/sheet";
-import { Menu, X, ArrowRight, Calendar, Settings } from "lucide-react";
+import { Menu, ArrowRight, Calendar } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import BookingModal from "../components/BookingModal";
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);
-  const { isAdmin } = useAdminCheck();
   const [location] = useLocation();
   const logoSrc = useMemo(
     () => `${process.env.PUBLIC_URL || ""}/navbar-logo.png`,
@@ -24,7 +21,6 @@ export default function Header() {
     { name: 'Demos', href: '/demos' },
     { name: 'FAQ', href: '/faq' },
     { name: 'Contact', href: '/contact' },
-    ...(isAdmin ? [{ name: 'Admin', href: '/admin' }] : []),
   ];
 
   return (
@@ -60,20 +56,7 @@ export default function Header() {
           </nav>
 
           <div className="flex items-center space-x-4">
-            {isAdmin && (
-              <Link href="/admin">
-                <Button
-                  variant="outline"
-                  className="hidden md:inline-flex items-center space-x-1 bg-red-50 border-red-200 hover:bg-red-100"
-                  title="Access Admin Dashboard - Manage content, SEO, users, and site settings"
-                >
-                  <Settings className="h-4 w-4 text-red-600" />
-                  <span className="text-red-700">Admin Dashboard</span>
-                  <Badge variant="destructive" className="text-xs">Settings</Badge>
-                </Button>
-              </Link>
-            )}
-            <Button 
+            <Button
               onClick={() => setBookingOpen(true)}
               className="group bg-gradient-to-r from-[#f9cb07] to-[#ffcd3c] hover:from-[#e6b800] hover:to-[#f9cb07] text-black font-semibold hidden md:inline-flex transition-all duration-300 transform hover:scale-105 hover:shadow-lg btn-animated"
             >
@@ -100,19 +83,7 @@ export default function Header() {
                       </button>
                     </Link>
                   ))}
-                  {isAdmin && (
-                    <Link href="/admin">
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start bg-red-50 border-red-200 hover:bg-red-100 text-red-700"
-                        onClick={() => setIsOpen(false)}
-                      >
-                        <Settings className="h-4 w-4 mr-2" />
-                        Admin Dashboard
-                      </Button>
-                    </Link>
-                  )}
-                  <Button 
+                  <Button
                     className="bg-gradient-to-r from-[#f9cb07] to-[#ffcd3c] hover:from-[#e6b800] hover:to-[#f9cb07] text-black font-semibold mt-4"
                     onClick={() => {
                       setBookingOpen(true);

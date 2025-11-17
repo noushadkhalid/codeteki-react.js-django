@@ -14,8 +14,6 @@ import ServiceDetail from "./pages/ServiceDetail";
 import AIToolsPage from "./pages/AIToolsPage";
 import Contact from "./pages/Contact";
 import Blog from "./pages/Blog";
-import AdminDashboard from "./pages/AdminDashboard";
-import AdminLogin from "./pages/AdminLogin";
 import FAQPage from "./pages/FAQ";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
@@ -55,8 +53,6 @@ function Router() {
           <Route path="/faq" component={FAQPage} />
           <Route path="/privacy-policy" component={PrivacyPolicy} />
           <Route path="/terms-of-service" component={TermsOfService} />
-          <Route path="/admin/login" component={AdminLogin} />
-          <Route path="/admin" component={AdminDashboard} />
           <Route component={NotFound} />
         </Switch>
       </main>
