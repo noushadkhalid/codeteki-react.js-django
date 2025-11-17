@@ -1,0 +1,44 @@
+# Python/virtualenv
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+env/
+venv/
+
+# Django SQLite
+backend/db.sqlite3
+backend/db.sqlite3-journal
+
+# Django static/media outputs
+backend/staticfiles/
+backend/media/
+
+# Local environment files
+.env
+backend/.env
+frontend/.env
+
+# Node / frontend
+node_modules/
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+frontend/.parcel-cache/
+frontend/.next/
+frontend/.turbo/
+
+# Logs & coverage
+*.log
+coverage/
+.coverage*
+*.cover
+
+# IDE/editor caches
+.DS_Store
+.vscode/
+.idea/
+
+# Misc
+Thumbs.db
+*.swp

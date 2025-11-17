@@ -1,0 +1,59 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /private/
+
+# Allow essential public API endpoints for content rendering
+Allow: /api/services
+Allow: /api/ai-tools
+Allow: /api/pricing-plans
+Allow: /api/site-settings
+Allow: /api/demo-sites
+
+# Block sensitive admin and auth endpoints
+Disallow: /api/admin/
+Disallow: /api/auth/
+Disallow: /api/contact-inquiries/
+Disallow: /api/booked-slots
+
+# Sitemap location
+Sitemap: https://codeteki.au/sitemap.xml
+
+# Crawl delay for non-essential bots only (Googlebot ignores crawl-delay)
+User-agent: AhrefsBot
+Crawl-delay: 2
+
+User-agent: SemrushBot
+Crawl-delay: 2
+
+User-agent: MJ12bot
+Crawl-delay: 5
+
+# Note: Googlebot ignores crawl-delay directive completely
+
+# Block irrelevant bots
+User-agent: SemrushBot-SA
+Disallow: /
+
+User-agent: SemrushBot-BA
+Disallow: /
+
+User-agent: SemrushBot-SI
+Disallow: /
+
+User-agent: SemrushBot-SWA
+Disallow: /
+
+User-agent: SemrushBot-CT
+Disallow: /
+
+User-agent: SemrushBot-BM
+Disallow: /
+
+# Important pages for SEO
+# Homepage: https://codeteki.au/
+# Services: https://codeteki.au/services
+# Pricing: https://codeteki.au/pricing
+# Contact: https://codeteki.au/contact
+# AI Tools: https://codeteki.au/ai-tools
+# Demos: https://codeteki.au/demos

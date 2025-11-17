@@ -1,0 +1,629 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Performance optimizations */
+* {
+  box-sizing: border-box;
+}
+
+/* Preload critical fonts */
+@font-face {
+  font-family: 'Inter';
+  font-display: swap;
+}
+
+/* Reduce layout shift */
+img {
+  height: auto;
+  max-width: 100%;
+}
+
+/* Critical performance improvements */
+.lazy-image {
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.lazy-image.loaded {
+  opacity: 1;
+}
+
+/* Reduce paint complexity */
+.will-change-transform {
+  will-change: transform;
+}
+
+/* Optimize animations */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Pingdom-specific optimizations */
+.performance-optimized {
+  contain: layout style paint;
+  content-visibility: auto;
+}
+
+/* GPU acceleration for better performance */
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000;
+}
+
+/* Critical path optimization */
+.above-fold {
+  content-visibility: visible;
+}
+
+.below-fold {
+  content-visibility: auto;
+  contain-intrinsic-size: 200px;
+}
+
+/* Optimize scrolling performance */
+.scroll-optimized {
+  overflow-anchor: auto;
+  scroll-behavior: smooth;
+}
+
+/* Reduce layout thrashing */
+.prevent-layout-shift {
+  min-height: 1px;
+  contain: layout;
+}
+
+/* Optimize text rendering */
+body {
+  text-rendering: optimizeSpeed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Accessibility: Skip link for keyboard navigation */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: #cc9900;
+  color: white;
+  padding: 8px;
+  text-decoration: none;
+  z-index: 9999;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.skip-link:focus {
+  top: 6px;
+}
+
+/* Improve screen reader accessibility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Gentle accessibility improvements without breaking existing styles */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid #f9cb07;
+  outline-offset: 2px;
+}
+
+/* GPU acceleration for smooth scrolling */
+.smooth-scroll {
+  -webkit-overflow-scrolling: touch;
+  transform: translateZ(0);
+}
+
+/* Critical path optimization */
+.above-fold {
+  critical: true;
+}
+
+/* Reduce repaints */
+.static-element {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Tooltip positioning fix */
+[data-radix-popper-content-wrapper] {
+  z-index: 9999 !important;
+}
+
+/* Ensure tooltip content is always visible */
+.tooltip-content {
+  position: relative;
+  z-index: 9999;
+  pointer-events: auto;
+  max-width: 280px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Mobile tooltip adjustments */
+@media (max-width: 640px) {
+  .tooltip-content {
+    max-width: 240px;
+    font-size: 0.875rem;
+  }
+}
+
+/* Ensure tooltip doesn't get clipped */
+[data-radix-tooltip-content] {
+  animation-duration: 200ms;
+  animation-timing-function: ease-out;
+}
+
+/* Popover positioning and visibility */
+[data-radix-popover-content] {
+  z-index: 9999 !important;
+  animation-duration: 200ms;
+  animation-timing-function: ease-out;
+}
+
+/* Responsive popover adjustments */
+@media (max-width: 640px) {
+  [data-radix-popover-content] {
+    max-width: 280px;
+    margin: 8px;
+  }
+}
+
+/* Chat Widget Animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* Ensure chat widget is always clickable */
+.chat-widget-container {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 9999;
+  pointer-events: auto;
+}
+
+.chat-widget-container * {
+  pointer-events: auto;
+}
+
+:root {
+  --background: hsl(0, 0%, 99.2%);
+  --foreground: hsl(0, 0%, 0%);
+  --muted: hsl(0, 0%, 96%);
+  --muted-foreground: hsl(0, 0%, 40%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(0, 0%, 0%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(0, 0%, 0%);
+  --border: hsl(0, 0%, 90%);
+  --input: hsl(0, 0%, 90%);
+  --primary: hsl(51, 95%, 52%);
+  --primary-foreground: hsl(0, 0%, 0%);
+  --secondary: hsl(0, 0%, 96%);
+  --secondary-foreground: hsl(0, 0%, 0%);
+  --accent: hsl(0, 0%, 96%);
+  --accent-foreground: hsl(0, 0%, 0%);
+  --destructive: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground: hsl(60, 9.1%, 97.8%);
+  --ring: hsl(0, 0%, 0%);
+  --radius: 0.5rem;
+  --codeteki-yellow: hsl(51, 95%, 52%);
+  --codeteki-bg: hsl(0, 0%, 99.2%);
+  --codeteki-gray: hsl(0, 0%, 40%);
+}
+
+.dark {
+  --background: hsl(240, 10%, 3.9%);
+  --foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 3.7%, 15.9%);
+  --muted-foreground: hsl(240, 5%, 64.9%);
+  --popover: hsl(240, 10%, 3.9%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 3.9%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 3.7%, 15.9%);
+  --input: hsl(240, 3.7%, 15.9%);
+  --primary: hsl(51, 95%, 52%);
+  --primary-foreground: hsl(0, 0%, 0%);
+  --secondary: hsl(240, 3.7%, 15.9%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --accent: hsl(240, 3.7%, 15.9%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(240, 4.9%, 83.9%);
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+@layer utilities {
+  .codeteki-yellow {
+    background-color: var(--codeteki-yellow);
+  }
+  
+  .codeteki-yellow-hover:hover {
+    background-color: hsl(51, 95%, 45%);
+  }
+  
+  .text-codeteki-gray {
+    color: var(--codeteki-gray);
+  }
+  
+  .bg-codeteki-bg {
+    background-color: var(--codeteki-bg);
+  }
+
+  .codeteki-logo {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    background-color: rgba(255, 255, 255, 0.6);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.12);
+    transition: transform 0.4s ease, box-shadow 0.4s ease;
+  }
+
+  .codeteki-logo img {
+    height: 2.5rem;
+    width: auto;
+    transition: transform 0.4s ease;
+  }
+
+  .codeteki-logo span {
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #0f172a;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+  }
+
+  .codeteki-logo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    box-shadow: 0 0 0 0 rgba(249, 203, 7, 0.45);
+    animation: ripple 2.5s infinite;
+    pointer-events: none;
+  }
+
+  .codeteki-logo:hover {
+    transform: scale(1.05) translateY(-1px);
+    box-shadow: 0 18px 45px rgba(249, 203, 7, 0.45);
+  }
+
+  .codeteki-logo:hover img {
+    transform: scale(1.08);
+  }
+
+  .codeteki-logo:hover span {
+    color: #111827;
+  }
+
+  @keyframes ripple {
+    0% {
+      box-shadow: 0 0 0 0 rgba(249, 203, 7, 0.45);
+    }
+    70% {
+      box-shadow: 0 0 0 10px rgba(249, 203, 7, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(249, 203, 7, 0);
+    }
+  }
+
+  .codeteki-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.45rem 1.5rem;
+    background-color: #f9cb07;
+    color: #000;
+    font-weight: 600;
+    font-size: 0.875rem;
+    border-radius: 9999px;
+    box-shadow: 0 14px 35px rgba(249, 203, 7, 0.35);
+    animation: pulse 2s ease-in-out infinite;
+  }
+}
+
+/* Custom animations and effects */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(249, 203, 7, 0.5); }
+  50% { box-shadow: 0 0 30px rgba(249, 203, 7, 0.8), 0 0 40px rgba(249, 203, 7, 0.6); }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+@keyframes floatDelayed {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-15px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes gradientShift {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes bounceSlow {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulseSlow {
+  0%, 100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes rotateIn {
+  from {
+    opacity: 0;
+    transform: rotate(-10deg) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.8s ease-out;
+}
+
+.animate-fade-in-left {
+  animation: fadeInLeft 0.8s ease-out;
+}
+
+.animate-fade-in-delayed {
+  animation: fadeInUp 0.8s ease-out 0.2s both;
+}
+
+.animate-fade-in-delayed-2 {
+  animation: fadeInUp 0.8s ease-out 0.4s both;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: floatSlow 8s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: floatDelayed 7s ease-in-out infinite 1s;
+}
+
+.animate-shimmer {
+  background-size: 200% auto;
+  animation: shimmer 3s linear infinite;
+}
+
+.animate-gradient-shift {
+  animation: gradientShift 4s ease-in-out infinite;
+}
+
+.animate-bounce-slow {
+  animation: bounceSlow 3s ease-in-out infinite;
+}
+
+.animate-pulse-slow {
+  animation: pulseSlow 3s ease-in-out infinite;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.8s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.8s ease-out;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.6s ease-out;
+}
+
+.animate-rotate-in {
+  animation: rotateIn 0.8s ease-out;
+}
+
+/* Button animations */
+.btn-animated {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.btn-animated::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.5s;
+}
+
+.btn-animated:hover::before {
+  left: 100%;
+}
+
+/* Enhanced shadow */
+.shadow-3xl {
+  box-shadow: 0 35px 60px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Card animations - simplified */
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive animations */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
+  .animate-float,
+  .animate-shimmer,
+  .card-hover:hover {
+    animation: none;
+    transform: none;
+  }
+}

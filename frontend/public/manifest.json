@@ -1,0 +1,26 @@
+{
+  "name": "Codeteki - AI Business Solutions",
+  "short_name": "Codeteki",
+  "description": "Transform your business with AI-powered chatbots, voice assistants, and custom automation. Melbourne-based AI development team.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#f9cb07",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "categories": ["business", "productivity", "utilities"],
+  "lang": "en-AU",
+  "scope": "/",
+  "prefer_related_applications": false
+}
