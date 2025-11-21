@@ -1,13 +1,14 @@
 import { useEffect } from "react";
-import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Sparkles, ShieldCheck, Globe } from "lucide-react";
 import SEOHead from "../components/SEOHead";
 import ContactSection from "../components/Contact";
 import { useSiteSettings } from "../hooks/useSiteSettings";
+import { getSupportMeta } from "../lib/supportMeta";
 
 export default function ContactPage() {
   const { settings } = useSiteSettings();
+  const supportMeta = getSupportMeta(settings);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -21,9 +22,9 @@ export default function ContactPage() {
 
   const highlightStats = [
     {
-      label: "Average response time",
-      value: "< 24 hrs",
-      helper: "Based on care plan",
+      label: supportMeta.responseLabel,
+      value: supportMeta.responseValue,
+      helper: supportMeta.responseHelper,
       icon: Sparkles,
     },
     {
@@ -44,17 +45,17 @@ export default function ContactPage() {
     <div className="min-h-screen bg-white">
       <SEOHead
         title="Contact Codeteki | AI Automation Studio"
-        description="Contact Codeteki to discuss AI automation, custom copilots, and white-label projects. Melbourne team responds within 24 hours."
+        description={`Contact Codeteki to discuss AI automation, custom copilots, and white-label projects. ${supportMeta.badge}.`}
         keywords="Contact Codeteki, AI automation contact, Melbourne AI studio"
       />
 
       <section className="bg-[#111827] py-24 relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[1200px] bg-[#1f2937] rounded-full blur-[220px] opacity-60" />
-          <div className="absolute bottom-0.right-10 w-[500px] h-[500px] bg-[#f9cb07]/15 rounded-full blur-[150px]" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[1200px] bg-[#1f2937] rounded-full blur-[220px] opacity-60" />
+        <div className="absolute bottom-0 right-10 w-[500px] h-[500px] bg-[#f9cb07]/15 rounded-full blur-[150px]" />
         </div>
         <div className="relative container mx-auto px-4 text-center max-w-3xl">
-          <span className="codeteki-pill mb-6">We respond within 24 hours</span>
+          <span className="codeteki-pill mb-6">{supportMeta.badge}</span>
           <h1 className="text-4xl lg:text-5xl font-bold text-white mb-4">{heroHeading}</h1>
           <p className="text-lg text-white/80">{heroDescription}</p>
           <div className="mt-10 grid gap-4 md:grid-cols-3">
@@ -79,8 +80,13 @@ export default function ContactPage() {
             >
               <a href="mailto:info@codeteki.au">Email the studio</a>
             </Button>
-            <Button variant="outline" size="lg" className="border-white/40 text-white hover:bg-white/10" asChild>
-              <a href="tel:+61469807872">Call Melbourne pod</a>
+            <Button
+              variant="outline"
+              size="lg"
+              className="border-white/40 text-white hover:bg-[#f9cb07] hover:text-black hover:border-[#f9cb07] transition-all duration-300"
+              asChild
+            >
+              <a href="tel:+61469754386">Call Melbourne pod</a>
             </Button>
           </div>
         </div>

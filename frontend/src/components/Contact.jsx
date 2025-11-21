@@ -14,6 +14,7 @@ import { useToast } from "../hooks/use-toast";
 import { useLocation } from "wouter";
 import BookingModal from "../components/BookingModal";
 import { useSiteSettings } from "../hooks/useSiteSettings";
+import { getSupportMeta } from "../lib/supportMeta";
 
 const contactFormSchema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
@@ -27,6 +28,7 @@ export default function Contact() {
   const [bookingOpen, setBookingOpen] = useState(false);
   const [, setLocation] = useLocation();
   const { settings } = useSiteSettings();
+  const supportMeta = getSupportMeta(settings);
 
   const form = useForm({
     resolver: zodResolver(contactFormSchema),
@@ -46,7 +48,7 @@ export default function Contact() {
     onSuccess: () => {
       toast({
         title: "Message Sent!",
-        description: "Thank you for your inquiry! We will get back to you within 24 hours.",
+        description: supportMeta.responseMessage,
       });
       form.reset();
     },
@@ -73,35 +75,38 @@ const iconMap = {
   clock: Clock,
 };
 
-const quickActions = [
-    {
-      icon: Calendar,
-      title: "Schedule a Call",
-      description: "Book a free consultation with our experts",
-      action: () => {
-        setBookingOpen(true);
+  const quickActions = useMemo(
+    () => [
+      {
+        icon: Calendar,
+        title: "Schedule a Call",
+        description: "Book a free consultation with our experts",
+        action: () => {
+          setBookingOpen(true);
+        },
+        accent: "from-[#f9cb07] to-[#ffcd3c]",
       },
-      accent: "from-[#f9cb07] to-[#ffcd3c]",
-    },
-    {
-      icon: Mail,
-      title: "Email Us",
-      description: "Get a response within 24 hours",
-      action: () => {
-        window.location.href = 'mailto:info@codeteki.au';
+      {
+        icon: Mail,
+        title: "Email Us",
+        description: supportMeta.responseMessage,
+        action: () => {
+          window.location.href = "mailto:info@codeteki.au";
+        },
+        accent: "from-[#38bdf8] to-[#6366f1]",
       },
-      accent: "from-[#38bdf8] to-[#6366f1]",
-    },
-    {
-      icon: HelpCircle,
-      title: "FAQs & Support",
-      description: "Find quick answers to common questions",
-      action: () => {
-        setLocation('/faq');
+      {
+        icon: HelpCircle,
+        title: "FAQs & Support",
+        description: "Find quick answers to common questions",
+        action: () => {
+          setLocation("/faq");
+        },
+        accent: "from-[#f472b6] to-[#c084fc]",
       },
-      accent: "from-[#f472b6] to-[#c084fc]",
-    }
-  ];
+    ],
+    [setBookingOpen, setLocation, supportMeta.responseMessage]
+  );
 
   const { data: contactData, isLoading: contactLoading } = useQuery({
     queryKey: ["/api/contact/"],
@@ -114,9 +119,9 @@ const quickActions = [
         {
           icon: Phone,
           title: "Call Us",
-          value: "+61 469 807 872",
+          value: "+61 469 754 386",
           description: "Melbourne-based support team",
-          href: "tel:+61469807872",
+          href: "tel:+61469754386",
         },
         {
           icon: MapPin,
@@ -128,7 +133,7 @@ const quickActions = [
           icon: Mail,
           title: "Email",
           value: "info@codeteki.au",
-          description: "We reply within 24 hours",
+          description: supportMeta.responseMessage,
           href: "mailto:info@codeteki.au",
         },
       ];
@@ -155,7 +160,7 @@ const quickActions = [
         cta: method.cta,
       };
     });
-  }, [contactData]);
+  }, [contactData, supportMeta.responseMessage]);
 
   const businessHours = useMemo(() => {
     const hours = settings?.business?.hours;
@@ -194,7 +199,7 @@ const quickActions = [
 
       <div className="relative container mx-auto px-4">
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <span className="codeteki-pill mb-6">We respond within 24 hours</span>
+          <span className="codeteki-pill mb-6">{supportMeta.badge}</span>
           <h2 className="text-4xl lg:text-5xl font-bold text-white mb-4">Let's Connect</h2>
           <p className="text-lg text-white/70">
             Multiple ways to reach our Melbourne-based team. We're here to help transform your business with AI.
@@ -212,7 +217,7 @@ const quickActions = [
                 <div>
                   <CardTitle className="text-xl font-bold text-black">Send us a Message</CardTitle>
                   <CardDescription className="text-gray-600 text-xs">
-                    Get a response within 24 hours
+                    {supportMeta.responseMessage}
                   </CardDescription>
                 </div>
               </div>
@@ -264,7 +269,7 @@ const quickActions = [
                     />
                     <div className="bg-[#f9cb07]/10 border border-[#f9cb07]/30 rounded-xl px-3 py-2 text-xs text-[#7a5d00] font-medium flex flex-col justify-center">
                       <p>Typical response time:</p>
-                      <p className="text-sm font-semibold text-black">Under 12 hours</p>
+                      <p className="text-sm font-semibold text-black">{supportMeta.responseValue}</p>
                     </div>
                   </div>
                   <FormField
@@ -313,11 +318,11 @@ const quickActions = [
                     </div>
                     <div className="flex items-center gap-3 rounded-xl bg-gray-50 px-3 py-2">
                       <div className="h-8 w-8 rounded-full bg-[#f9cb07]/40 flex items-center justify-center text-[#7a5d00] font-semibold">
-                        24h
+                        {supportMeta.responseValue}
                       </div>
                       <div>
                         <p className="font-semibold text-gray-900">Response SLA</p>
-                        <p>We reply faster on weekdays—often in just a few hours.</p>
+                        <p>{supportMeta.responseHelper}</p>
                       </div>
                     </div>
                   </div>
@@ -335,7 +340,7 @@ const quickActions = [
                 </CardDescription>
               </CardHeader>
               <div className="flex flex-wrap gap-2 mt-2">
-                {["Free Consultation", "24hr Response"].map((badge) => (
+                {["Free Consultation", supportMeta.responseValue].map((badge) => (
                   <span key={badge} className="px-3 py-1 rounded-full bg-[#f9cb07]/15 text-xs font-semibold text-[#7a5d00]">
                     {badge}
                   </span>

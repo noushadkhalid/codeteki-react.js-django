@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useHomePage } from "../hooks/useHomePage";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import {
@@ -52,23 +52,51 @@ const fallbackSection = {
   title: "Why Choose Codeteki",
   description: "Experience enterprise-level AI solutions tailored for businesses of all sizes.",
   reasons: [
-    { title: "Enterprise AI at SMB Prices", description: "Access cutting-edge AI technology without the enterprise-level investment.", icon: "DollarSign", color: "blue" },
-    { title: "Seamless Integration", description: "Our solutions integrate smoothly with your existing systems.", icon: "Plug", color: "green" },
-    { title: "Human-AI Collaboration", description: "Balanced mix of AI efficiency and human insight.", icon: "Handshake", color: "yellow" },
-    { title: "Melbourne-based Support", description: "Local expertise and support when you need it.", icon: "MapPin", color: "purple" },
+    {
+      title: "Enterprise AI at SMB Prices",
+      description: "Access cutting-edge automation without the enterprise-level investment.",
+      icon: "DollarSign",
+      color: "blue",
+    },
+    {
+      title: "Seamless Integration",
+      description: "Solutions that plug into your systems without disruption.",
+      icon: "Plug",
+      color: "green",
+    },
+    {
+      title: "Human-AI Collaboration",
+      description: "Balance intelligent automation with expert oversight.",
+      icon: "Handshake",
+      color: "yellow",
+    },
+    {
+      title: "Melbourne-based Support",
+      description: "Local specialists ready to guide delivery and adoption.",
+      icon: "MapPin",
+      color: "purple",
+    },
   ],
 };
 
 export default function WhyChoose() {
-  const { data, isLoading } = useQuery({
-    queryKey: ["/api/why-choose/"],
-  });
+  const { data, isLoading } = useHomePage();
 
   const section = useMemo(() => {
-    return data?.data?.whyChoose || data?.whyChoose || fallbackSection;
+    return (
+      data?.data?.whyChoose ||
+      data?.whyChoose ||
+      fallbackSection
+    );
   }, [data]);
 
   const reasons = section.reasons?.length ? section.reasons : fallbackSection.reasons;
+
+  // Don't render if no data from backend
+  if (!section || !reasons?.length) {
+    return null;
+  }
+
 
   return (
     <section className="relative py-24">

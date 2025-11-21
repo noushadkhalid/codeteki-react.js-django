@@ -251,7 +251,7 @@ export default function Services() {
                           <IconComponent className={`h-5 w-5 ${accent.text}`} />
                         </div>
                         {service.badge && (
-                          <span className="rounded-full bg-[#f5f5f4] px-3 py-1 text-xs font-semibold text-[#18181b]">
+                          <span className="rounded-full bg-[#f9cb07] px-3 py-1 text-xs font-semibold text-black shadow-sm">
                             {service.badge}
                           </span>
                         )}

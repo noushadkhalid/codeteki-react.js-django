@@ -191,7 +191,7 @@ export default function TermsOfService() {
             <div className="bg-gray-50 p-6 rounded-lg mt-4">
               <p><strong>Codeteki Digital Services (Aptaa Pty Ltd)</strong></p>
               <p>Email: <a href="mailto:info@codeteki.au" className="text-[#f9cb07] hover:underline">info@codeteki.au</a></p>
-              <p>Phone: <a href="tel:+61469807872" className="text-[#f9cb07] hover:underline">+61 469 807 872</a></p>
+              <p>Phone: <a href="tel:+61469754386" className="text-[#f9cb07] hover:underline">+61 469 754 386</a></p>
               <p>Phone: <a href="tel:+61424538777" className="text-[#f9cb07] hover:underline">+61 424 538 777</a></p>
               <p>Address: Melbourne, Victoria, Australia</p>
               <p>ABN: 20 608 158 407</p>

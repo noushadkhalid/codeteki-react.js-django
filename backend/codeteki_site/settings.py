@@ -186,21 +186,21 @@ OPENAI_SEO_MODEL = os.getenv("OPENAI_SEO_MODEL", "gpt-4o-mini")
 # Django Jazzmin Configuration
 JAZZMIN_SETTINGS = {
     # Title on the login screen & brand name
-    "site_title": "Codeteki Admin",
-    "site_header": "Codeteki",
+    "site_title": "Codeteki CMS",
+    "site_header": "Codeteki Content Management",
     "site_brand": "Codeteki CMS",
-    "site_logo": None,  # Can add logo path here if needed
+    "site_logo": None,
     "login_logo": None,
     "site_icon": None,
 
     # Welcome text on the login screen
-    "welcome_sign": "Welcome to Codeteki Admin Panel",
+    "welcome_sign": "Welcome to Codeteki CMS - Manage Your Website Content",
 
     # Copyright on the footer
-    "copyright": "Codeteki Digital Services",
+    "copyright": "Codeteki Digital Services © 2025",
 
     # Search model from navbar
-    "search_model": ["core.Service", "core.FAQItem"],
+    "search_model": ["core.Service", "core.BlogPost", "core.AITool", "core.DemoShowcase", "core.ContactInquiry", "core.ChatLead"],
 
     # User menu
     "user_avatar": None,
@@ -209,15 +209,15 @@ JAZZMIN_SETTINGS = {
     # Top Menu #
     ############
     "topmenu_links": [
-        {"name": "Home", "url": "admin:index", "permissions": ["auth.view_user"]},
-        {"name": "View Site", "url": "/", "new_window": True},
-        {"model": "auth.User"},
+        {"name": "🌐 View Live Site", "url": "/", "new_window": True},
+        {"name": "📊 Dashboard", "url": "admin:index", "permissions": ["auth.view_user"]},
     ],
 
     #############
     # User Menu #
     #############
     "usermenu_links": [
+        {"name": "View Site", "url": "/", "new_window": True, "icon": "fas fa-external-link-alt"},
         {"model": "auth.user"}
     ],
 
@@ -227,7 +227,177 @@ JAZZMIN_SETTINGS = {
     "show_sidebar": True,
     "navigation_expanded": True,
     "hide_apps": [],
-    "hide_models": [],
+
+    # Hide ALL models - we use organized custom_links instead
+    "hide_models": [
+        # Inline models (appear within parent models)
+        "core.businessimpactmetric",
+        "core.businessimpactlogo",
+        "core.roicalculatorstat",
+        "core.roicalculatortool",
+        "core.whychosereason",
+        "core.footerlink",
+        "core.serviceoutcome",
+        "core.herometric",
+        "core.heropartnerlogo",
+        "core.navigationitem",
+        "core.knowledgefaq",
+        "core.chatmessage",
+        "core.pricingfeature",
+        "core.demoimage",
+        "core.faqitem",
+        "core.faqpagestat",
+        "core.aitool",
+        # Main models (hide to show only in custom_links)
+        "core.herosection",
+        "core.faqpagesection",
+        "core.businessimpactsection",
+        "core.roicalculatorsection",
+        "core.whychoosesection",
+        "core.testimonial",
+        "core.service",
+        "core.serviceprocessstep",
+        "core.aitoolssection",
+        "core.demoshowcase",
+        "core.faqcategory",
+        "core.contactmethod",
+        "core.contactinquiry",
+        "core.pageseo",
+        "core.seodataupload",
+        "core.seokeyword",
+        "core.seokeywordcluster",
+        "core.aiseorecommendation",
+        "core.chatconversation",
+        "core.chatlead",
+        "core.chatbotsettings",
+        "core.knowledgearticle",
+        "core.knowledgecategory",
+        "core.blogpost",
+        "core.sitesettings",
+        "core.footersection",
+        "core.navigationmenu",
+        "core.statmetric",
+        "core.ctasection",
+        "core.pricingplan",
+    ],
+
+    # Custom app ordering
+    "order_with_respect_to": ["core", "auth"],
+
+    # Organized custom menu structure
+    "custom_links": {
+        "core": [
+            {
+                "name": "🏠 Home Page",
+                "url": "/admin/core/herosection/",
+                "icon": "fas fa-home",
+                "children": [
+                    {"name": "Hero Section", "url": "/admin/core/herosection/", "icon": "fas fa-star"},
+                    {"name": "Business Impact", "url": "/admin/core/businessimpactsection/", "icon": "fas fa-chart-line"},
+                    {"name": "ROI Calculator", "url": "/admin/core/roicalculatorsection/", "icon": "fas fa-calculator"},
+                    {"name": "Why Choose Us", "url": "/admin/core/whychoosesection/", "icon": "fas fa-thumbs-up"},
+                    {"name": "Testimonials", "url": "/admin/core/testimonial/", "icon": "fas fa-quote-right"},
+                ]
+            },
+            {
+                "name": "⚙️ Services Page",
+                "url": "/admin/core/service/",
+                "icon": "fas fa-cogs",
+                "children": [
+                    {"name": "All Services", "url": "/admin/core/service/", "icon": "fas fa-list"},
+                    {"name": "Process Steps", "url": "/admin/core/serviceprocessstep/", "icon": "fas fa-tasks"},
+                ]
+            },
+            {
+                "name": "🤖 AI Tools Page",
+                "url": "/admin/core/aitoolssection/",
+                "icon": "fas fa-robot",
+            },
+            {
+                "name": "🎬 Demos Page",
+                "url": "/admin/core/demoshowcase/",
+                "icon": "fas fa-video",
+            },
+            {
+                "name": "❓ FAQ Page",
+                "url": "/admin/core/faqcategory/",
+                "icon": "fas fa-question-circle",
+                "children": [
+                    {"name": "FAQ Hero Section", "url": "/admin/core/faqpagesection/", "icon": "fas fa-star"},
+                    {"name": "FAQ Categories", "url": "/admin/core/faqcategory/", "icon": "fas fa-folder"},
+                ]
+            },
+            {
+                "name": "📞 Contact Page",
+                "url": "/admin/core/contactmethod/",
+                "icon": "fas fa-envelope",
+                "children": [
+                    {"name": "Contact Methods", "url": "/admin/core/contactmethod/", "icon": "fas fa-phone"},
+                    {"name": "Contact Inquiries", "url": "/admin/core/contactinquiry/", "icon": "fas fa-inbox"},
+                ]
+            },
+            {
+                "name": "🔍 SEO Management",
+                "url": "/admin/core/pageseo/",
+                "icon": "fas fa-search-plus",
+                "children": [
+                    {"name": "Page SEO Tags", "url": "/admin/core/pageseo/", "icon": "fas fa-tags"},
+                    {"name": "📤 Upload SEO Data", "url": "/admin/core/seodataupload/add/", "icon": "fas fa-file-upload"},
+                    {"name": "SEO Uploads", "url": "/admin/core/seodataupload/", "icon": "fas fa-database"},
+                    {"name": "Keywords", "url": "/admin/core/seokeyword/", "icon": "fas fa-key"},
+                    {"name": "Keyword Clusters", "url": "/admin/core/seokeywordcluster/", "icon": "fas fa-project-diagram"},
+                    {"name": "AI Recommendations", "url": "/admin/core/aiseorecommendation/", "icon": "fas fa-lightbulb"},
+                ]
+            },
+            {
+                "name": "💬 Leads & Chat",
+                "url": "/admin/core/chatlead/",
+                "icon": "fas fa-user-plus",
+                "children": [
+                    {"name": "Chat Leads", "url": "/admin/core/chatlead/", "icon": "fas fa-star"},
+                    {"name": "Chat Conversations", "url": "/admin/core/chatconversation/", "icon": "fas fa-comments"},
+                    {"name": "Chatbot Settings", "url": "/admin/core/chatbotsettings/", "icon": "fas fa-robot"},
+                    {"name": "Knowledge Base", "url": "/admin/core/knowledgearticle/", "icon": "fas fa-book"},
+                    {"name": "Knowledge Categories", "url": "/admin/core/knowledgecategory/", "icon": "fas fa-folder"},
+                ]
+            },
+            {
+                "name": "📝 Blog & Content",
+                "url": "/admin/core/blogpost/",
+                "icon": "fas fa-newspaper",
+            },
+            {
+                "name": "🏢 Site Settings",
+                "url": "/admin/core/sitesettings/",
+                "icon": "fas fa-sliders-h",
+            },
+            {
+                "name": "🦶 Footer",
+                "url": "/admin/core/footersection/",
+                "icon": "fas fa-info-circle",
+            },
+            {
+                "name": "🧭 Navigation Menus",
+                "url": "/admin/core/navigationmenu/",
+                "icon": "fas fa-bars",
+            },
+            {
+                "name": "📊 Statistics",
+                "url": "/admin/core/statmetric/",
+                "icon": "fas fa-chart-bar",
+            },
+            {
+                "name": "📣 CTA Sections",
+                "url": "/admin/core/ctasection/",
+                "icon": "fas fa-bullhorn",
+            },
+            {
+                "name": "💰 Pricing Plans",
+                "url": "/admin/core/pricingplan/",
+                "icon": "fas fa-tags",
+            },
+        ]
+    },
 
     # Custom icons for models
     "icons": {

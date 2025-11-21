@@ -203,18 +203,18 @@ export default function ChatWidget() {
 
   if (!isOpen) {
     return (
-      <div className="fixed bottom-6 right-6 z-[9999]">
+      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[9999]">
         <div className="relative group">
           <button
             onClick={() => {
               setIsOpen(true);
               setShowIntroPopup(false);
             }}
-            className="bg-gradient-to-r from-[#f9cb07] to-[#ffcd3c] hover:from-[#e6b800] hover:to-[#f9cb07] text-black rounded-full w-16 h-16 shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110 border-2 border-white/20 backdrop-blur-sm flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-[#f9cb07]/50"
+            className="bg-gradient-to-r from-[#f9cb07] to-[#ffcd3c] hover:from-[#e6b800] hover:to-[#f9cb07] text-black rounded-full w-14 h-14 sm:w-16 sm:h-16 shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110 border-2 border-white/20 backdrop-blur-sm flex items-center justify-center focus:outline-none focus:ring-4 focus:ring-[#f9cb07]/50"
             aria-label="Open chat"
             title="Open chat"
           >
-            <MessageCircle className="h-7 w-7 animate-bounce" />
+            <MessageCircle className="h-6 w-6 sm:h-7 sm:w-7 animate-bounce" />
           </button>
           <div className="absolute bottom-full right-0 mb-2 opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none transform translate-y-2 group-hover:translate-y-0">
             <div className="bg-gray-900 text-white text-sm px-3 py-2 rounded-lg whitespace-nowrap shadow-lg animate-pulse">
@@ -223,8 +223,8 @@ export default function ChatWidget() {
             </div>
           </div>
           {showIntroPopup && (
-            <div className="absolute bottom-full right-0 mb-4 animate-in slide-in-from-bottom-4 fade-in duration-700 zoom-in-95">
-              <div className="bg-gradient-to-br from-white via-white to-[#f9cb07]/5 text-gray-800 p-5 rounded-2xl shadow-2xl border-2 border-[#f9cb07]/20 max-w-sm relative backdrop-blur-sm">
+            <div className="absolute bottom-full right-0 mb-4 animate-in slide-in-from-bottom-4 fade-in duration-700 zoom-in-95 max-w-[90vw] sm:max-w-sm">
+              <div className="bg-gradient-to-br from-white via-white to-[#f9cb07]/5 text-gray-800 p-4 sm:p-5 rounded-2xl shadow-2xl border-2 border-[#f9cb07]/20 w-full relative backdrop-blur-sm">
                 <button
                   onClick={() => setShowIntroPopup(false)}
                   className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition-all duration-200 hover:rotate-90"
@@ -232,33 +232,33 @@ export default function ChatWidget() {
                 >
                   <X className="h-4 w-4" />
                 </button>
-                <div className="flex items-center space-x-3 mb-4">
+                <div className="flex items-center space-x-2 sm:space-x-3 mb-3 sm:mb-4">
                   <div className="relative">
-                    <Bot className="h-6 w-6 text-[#f9cb07] animate-pulse" />
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-ping"></div>
+                    <Bot className="h-5 w-5 sm:h-6 sm:w-6 text-[#f9cb07] animate-pulse" />
+                    <div className="absolute -top-1 -right-1 w-2 h-2 sm:w-3 sm:h-3 bg-green-400 rounded-full animate-ping"></div>
                   </div>
                   <div>
-                    <h4 className="font-bold text-base text-gray-900 animate-in slide-in-from-left duration-500">AI Assistant Ready!</h4>
-                    <p className="text-xs text-[#f9cb07] font-medium">Codeteki AI • Online Now</p>
+                    <h4 className="font-bold text-sm sm:text-base text-gray-900 animate-in slide-in-from-left duration-500">AI Assistant Ready!</h4>
+                    <p className="text-[10px] sm:text-xs text-[#f9cb07] font-medium">Codeteki AI • Online Now</p>
                   </div>
                 </div>
-                <p className="text-sm text-gray-700 mb-4 font-medium animate-in slide-in-from-left duration-700 delay-100">💡 I can help you with:</p>
-                <div className="space-y-3 mb-5">
-                  <div className="flex items-center space-x-3 p-2 bg-gradient-to-r from-blue-50 to-transparent rounded-lg animate-in slide-in-from-left duration-500 delay-200">
-                    <MessageCircle className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm font-medium text-gray-700">AI Chatbot Pricing & Features</span>
+                <p className="text-xs sm:text-sm text-gray-700 mb-3 sm:mb-4 font-medium animate-in slide-in-from-left duration-700 delay-100">💡 I can help you with:</p>
+                <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-5">
+                  <div className="flex items-center space-x-2 sm:space-x-3 p-2 bg-gradient-to-r from-blue-50 to-transparent rounded-lg animate-in slide-in-from-left duration-500 delay-200">
+                    <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 flex-shrink-0" />
+                    <span className="text-xs sm:text-sm font-medium text-gray-700">AI Chatbot Pricing & Features</span>
                   </div>
-                  <div className="flex items-center space-x-3 p-2 bg-gradient-to-r from-green-50 to-transparent rounded-lg animate-in slide-in-from-left duration-500 delay-300">
-                    <Phone className="h-4 w-4 text-green-600" />
-                    <span className="text-sm font-medium text-gray-700">Voice Assistant Solutions</span>
+                  <div className="flex items-center space-x-2 sm:space-x-3 p-2 bg-gradient-to-r from-green-50 to-transparent rounded-lg animate-in slide-in-from-left duration-500 delay-300">
+                    <Phone className="h-3 w-3 sm:h-4 sm:w-4 text-green-600 flex-shrink-0" />
+                    <span className="text-xs sm:text-sm font-medium text-gray-700">Voice Assistant Solutions</span>
                   </div>
-                  <div className="flex items-center space-x-3 p-2 bg-gradient-to-r from-purple-50 to-transparent rounded-lg animate-in slide-in-from-left duration-500 delay-400">
-                    <Globe className="h-4 w-4 text-purple-600" />
-                    <span className="text-sm font-medium text-gray-700">Website Development Quotes</span>
+                  <div className="flex items-center space-x-2 sm:space-x-3 p-2 bg-gradient-to-r from-purple-50 to-transparent rounded-lg animate-in slide-in-from-left duration-500 delay-400">
+                    <Globe className="h-3 w-3 sm:h-4 sm:w-4 text-purple-600 flex-shrink-0" />
+                    <span className="text-xs sm:text-sm font-medium text-gray-700">Website Development Quotes</span>
                   </div>
-                  <div className="flex items-center space-x-3 p-2 bg-gradient-to-r from-orange-50 to-transparent rounded-lg animate-in slide-in-from-left duration-500 delay-500">
-                    <Zap className="h-4 w-4 text-orange-600" />
-                    <span className="text-sm font-medium text-gray-700">Business Automation Advice</span>
+                  <div className="flex items-center space-x-2 sm:space-x-3 p-2 bg-gradient-to-r from-orange-50 to-transparent rounded-lg animate-in slide-in-from-left duration-500 delay-500">
+                    <Zap className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600 flex-shrink-0" />
+                    <span className="text-xs sm:text-sm font-medium text-gray-700">Business Automation Advice</span>
                   </div>
                 </div>
                 <button
@@ -266,7 +266,7 @@ export default function ChatWidget() {
                     setIsOpen(true);
                     setShowIntroPopup(false);
                   }}
-                  className="w-full bg-gradient-to-r from-[#f9cb07] to-[#ffcd3c] text-black text-sm py-3 px-4 rounded-xl hover:from-[#e6b800] hover:to-[#f9cb07] transition-all duration-300 font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
+                  className="w-full bg-gradient-to-r from-[#f9cb07] to-[#ffcd3c] text-black text-xs sm:text-sm py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl hover:from-[#e6b800] hover:to-[#f9cb07] transition-all duration-300 font-bold shadow-lg hover:shadow-xl transform hover:scale-105"
                 >
                   ✨ Start Chatting Now
                 </button>
@@ -282,8 +282,8 @@ export default function ChatWidget() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-[9999]">
-      <Card className={`w-96 shadow-2xl border-2 border-[#f9cb07]/30 transition-all duration-300 ${isMinimized ? "h-16" : "h-[600px]"} bg-white/95 backdrop-blur-md`}>
+    <div className="fixed bottom-0 right-0 sm:bottom-6 sm:right-6 z-[9999] w-full sm:w-auto">
+      <Card className={`w-full sm:w-96 shadow-2xl border-2 border-[#f9cb07]/30 transition-all duration-300 ${isMinimized ? "h-16" : "h-screen sm:h-[600px]"} bg-white/95 backdrop-blur-md sm:rounded-lg rounded-none`}>
         <CardHeader className="bg-gradient-to-r from-[#f9cb07] to-[#ffcd3c] text-black p-4 rounded-t-lg shadow-lg">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -316,8 +316,8 @@ export default function ChatWidget() {
         </CardHeader>
 
         {!isMinimized && (
-          <CardContent className="p-0 flex flex-col h-[calc(600px-88px)] bg-gradient-to-b from-white to-gray-50">
-            <div className="flex-1 overflow-y-auto p-4">
+          <CardContent className="p-0 flex flex-col h-[calc(100vh-88px)] sm:h-[calc(600px-88px)] bg-gradient-to-b from-white to-gray-50">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-4">
               <div className="space-y-4">
                 {messages.map((message, index) => (
                   <div
@@ -325,10 +325,10 @@ export default function ChatWidget() {
                     className={`flex ${message.role === "user" ? "justify-end" : "justify-start"} animate-fade-in`}
                   >
                     <div
-                      className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm ${
+                      className={`max-w-[90%] sm:max-w-[85%] rounded-2xl px-3 py-2.5 sm:px-4 sm:py-3 shadow-sm ${
                         message.role === "user"
-                          ? "bg-gradient-to-r from-[#f9cb07] to-[#ffcd3c] text-black ml-4"
-                          : "bg-white text-gray-800 mr-4 border border-gray-200"
+                          ? "bg-gradient-to-r from-[#f9cb07] to-[#ffcd3c] text-black ml-2 sm:ml-4"
+                          : "bg-white text-gray-800 mr-2 sm:mr-4 border border-gray-200"
                       }`}
                     >
                       <div className="flex items-start space-x-2">
@@ -376,22 +376,22 @@ export default function ChatWidget() {
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="border-t bg-gradient-to-r from-gray-50 to-white p-4">
-              <div className="flex space-x-3">
+            <div className="border-t bg-gradient-to-r from-gray-50 to-white p-3 sm:p-4">
+              <div className="flex space-x-2 sm:space-x-3">
                 <div className="flex-1 relative">
                   <Input
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
                     onKeyDown={handleKeyPress}
                     placeholder="Ask about our AI solutions..."
-                    className="border-2 border-gray-200 focus:border-[#f9cb07] focus:ring-2 focus:ring-[#f9cb07]/20 transition-all duration-300 rounded-full px-4 py-3 pr-12 bg-white shadow-sm hover:shadow-md font-medium placeholder:text-gray-400"
+                    className="border-2 border-gray-200 focus:border-[#f9cb07] focus:ring-2 focus:ring-[#f9cb07]/20 transition-all duration-300 rounded-full px-3 py-2.5 sm:px-4 sm:py-3 pr-10 sm:pr-12 bg-white shadow-sm hover:shadow-md text-sm sm:text-base font-medium placeholder:text-gray-400"
                     disabled={chatMutation.isLoading}
                   />
                 </div>
                 <button
                   onClick={handleSendMessage}
                   disabled={!inputMessage.trim() || chatMutation.isPending}
-                  className="bg-gradient-to-r from-[#f9cb07] to-[#ffcd3c] hover:from-[#e6b800] hover:to-[#f9cb07] text-black rounded-full px-5 py-3 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-gradient-to-r from-[#f9cb07] to-[#ffcd3c] hover:from-[#e6b800] hover:to-[#f9cb07] text-black rounded-full px-4 py-2.5 sm:px-5 sm:py-3 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                 >
                   {chatMutation.isPending ? (
                     <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
@@ -400,9 +400,9 @@ export default function ChatWidget() {
                   )}
                 </button>
               </div>
-              <div className="flex items-center justify-center mt-3 space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <p className="text-xs text-gray-500 font-medium">Powered by Codeteki AI • Always here to help</p>
+              <div className="flex items-center justify-center mt-2 sm:mt-3 space-x-1.5 sm:space-x-2">
+                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <p className="text-[10px] sm:text-xs text-gray-500 font-medium">Powered by Codeteki AI • Always here to help</p>
               </div>
             </div>
           </CardContent>

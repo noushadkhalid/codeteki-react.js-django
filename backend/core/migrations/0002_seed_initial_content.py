@@ -13,6 +13,7 @@ def seed_content(apps, schema_editor):
     FAQCategory = apps.get_model("core", "FAQCategory")
     FAQItem = apps.get_model("core", "FAQItem")
     ContactMethod = apps.get_model("core", "ContactMethod")
+    SiteSettings = apps.get_model("core", "SiteSettings")
 
     hero = HeroSection.objects.create(
         badge="🚀 AI-Powered Business Solutions",
@@ -318,7 +319,7 @@ def seed_content(apps, schema_editor):
         {
             "title": "Call Us",
             "description": "Prefer to talk? Book a call and speak directly with our solution engineers.",
-            "value": "+61 3 7019 1234",
+            "value": "+61 469 754 386",
             "cta_label": "Schedule a Call",
             "icon": "Phone",
         },
@@ -327,6 +328,18 @@ def seed_content(apps, schema_editor):
     for order, method in enumerate(contacts):
         ContactMethod.objects.create(order=order, **method)
 
+    if not SiteSettings.objects.exists():
+        SiteSettings.objects.create(
+            site_name="Codeteki Digital Services",
+            site_tagline="AI-Powered Business Solutions",
+            site_description="AI-powered business solutions that reimagine operations with automation, copilots, and integrated tooling.",
+            primary_email="hello@codeteki.com.au",
+            secondary_email="support@codeteki.com.au",
+            primary_phone="+61 469 754 386",
+            secondary_phone="+61 424 538 777",
+            address="Melbourne, Victoria, Australia",
+        )
+
 
 def remove_content(apps, schema_editor):
     apps.get_model("core", "HeroSection").objects.all().delete()
@@ -334,6 +347,11 @@ def remove_content(apps, schema_editor):
     apps.get_model("core", "Service").objects.all().delete()
     apps.get_model("core", "FAQCategory").objects.all().delete()
     apps.get_model("core", "ContactMethod").objects.all().delete()
+    apps.get_model("core", "SiteSettings").objects.filter(
+        site_name="Codeteki Digital Services",
+        primary_email="hello@codeteki.com.au",
+        primary_phone="+61 469 754 386",
+    ).delete()
 
 
 class Migration(migrations.Migration):

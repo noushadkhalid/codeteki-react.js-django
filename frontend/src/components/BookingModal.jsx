@@ -7,6 +7,8 @@ import { Textarea } from "./ui/textarea";
 import { Label } from "./ui/label";
 import { Calendar, Clock, User, Phone, Mail, MessageCircle, X } from "lucide-react";
 import { useToast } from "../hooks/use-toast";
+import { useSiteSettings } from "../hooks/useSiteSettings";
+import { getSupportMeta } from "../lib/supportMeta";
 
 export default function BookingModal({ open, onOpenChange }) {
   const [selectedDate, setSelectedDate] = useState("");
@@ -23,6 +25,8 @@ export default function BookingModal({ open, onOpenChange }) {
     service: 'Free Consultation'
   });
   const { toast } = useToast();
+  const { settings } = useSiteSettings();
+  const supportMeta = getSupportMeta(settings);
   const queryClient = useQueryClient();
 
   // Generate dynamic available slots (next 14 business days)
@@ -105,7 +109,7 @@ export default function BookingModal({ open, onOpenChange }) {
       queryClient.invalidateQueries({ queryKey: ['/api/contact-inquiries'] });
       toast({
         title: "Booking Submitted Successfully!",
-        description: "We'll contact you within 24 hours to confirm your consultation.",
+        description: supportMeta.responseConfirmation,
       });
     },
     onError: () => {
@@ -170,7 +174,7 @@ export default function BookingModal({ open, onOpenChange }) {
                   Book Free Consultation
                 </DialogTitle>
                 <DialogDescription className="text-gray-600 text-sm mt-1">
-                  30-min call with our AI experts
+                  30-min call with our AI experts • {supportMeta.responseMessage}
                 </DialogDescription>
               </div>
               <Button

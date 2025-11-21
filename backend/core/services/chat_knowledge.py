@@ -113,7 +113,7 @@ class ChatKnowledgeBuilder:
             sections.append(
                 "Contact Info:\n"
                 f"Email: {contact.get('email', 'info@codeteki.au')}\n"
-                f"Phone: {contact.get('phone', '+61 469 807 872')}\n"
+                f"Phone: {contact.get('phone', '+61 469 754 386')}\n"
                 f"Address: {contact.get('address', 'Melbourne, Australia')}"
             )
 

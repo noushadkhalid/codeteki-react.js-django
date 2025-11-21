@@ -39,7 +39,7 @@ export default function SEOHead({ title, description, keywords, page }) {
         settings?.siteDescription ||
         "AI-powered business solutions including chatbots, voice assistants, and custom automation. Melbourne-based AI development team.",
       "url": "https://codeteki.au",
-      "telephone": settings?.contact?.primaryPhone || "+61 469 807 872",
+      "telephone": settings?.contact?.primaryPhone || "+61 469 754 386",
       "email": settings?.contact?.primaryEmail || "info@codeteki.au",
       "address": {
         "@type": "PostalAddress",

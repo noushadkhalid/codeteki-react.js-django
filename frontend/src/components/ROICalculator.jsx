@@ -150,7 +150,7 @@ export default function ROICalculator() {
       <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_35%,rgba(249,203,7,0.05)_50%,transparent_65%)] pointer-events-none" />
       <div className="container mx-auto px-4 relative">
         <div className="text-center mb-20 animate-fade-in-up">
-          <Badge className="bg-[#f9cb07]/10 text-[#f9cb07] px-6 py-3 text-lg mb-8 animate-pulse">
+          <Badge className="bg-[#f9cb07] text-black px-6 py-3 text-lg mb-8 animate-pulse">
             <Calculator className="w-5 h-5 mr-2" />
             {roiContent.badge || fallbackContent.badge}
           </Badge>

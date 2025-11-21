@@ -229,7 +229,7 @@ CONTACT_METHODS = [
     {
         "title": "Call Us",
         "description": "Prefer to talk? Book a call and speak directly with our solution engineers.",
-        "value": "+61 3 7019 1234",
+        "value": "+61 469 754 386",
         "cta": "Schedule a Call",
         "icon": "Phone",
     },

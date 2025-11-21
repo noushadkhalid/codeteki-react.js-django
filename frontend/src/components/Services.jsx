@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { Badge } from "../components/ui/badge";
 import { Bot, Globe, Cog, Repeat, Cable, Code } from "lucide-react";
 
 const remoteCTA = {
@@ -148,7 +147,11 @@ export default function Services() {
                       <div className={`h-12 w-12 rounded-xl ring-8 ring-white ${accents.iconBg} flex items-center justify-center`}>
                         <IconComponent className={`h-5 w-5 ${accents.iconColor}`} />
                       </div>
-                      <Badge className="bg-[#f5f5f4] text-xs text-[#18181b]">{service.pricing || "Custom"}</Badge>
+                      {service.pricing && (
+                        <span className="rounded-full bg-[#f9cb07] px-3 py-1 text-xs font-semibold text-black shadow-sm">
+                          {service.pricing}
+                        </span>
+                      )}
                     </div>
                     <CardTitle className="mt-6 text-2xl font-bold text-[#09090b]">{service.title}</CardTitle>
                     <CardDescription className="mt-2 text-sm text-[#6b7280] leading-relaxed">

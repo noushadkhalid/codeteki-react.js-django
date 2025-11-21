@@ -89,11 +89,11 @@ def _serialize_hero_section() -> dict | None:
         "description": hero.description,
         "primaryCta": {
             "label": hero.primary_cta_label,
-            "href": getattr(hero, "primary_cta_href", hero.primary_cta_url),
+            "href": hero.primary_cta_href,
         },
         "secondaryCta": {
             "label": hero.secondary_cta_label,
-            "href": getattr(hero, "secondary_cta_href", hero.secondary_cta_url),
+            "href": hero.secondary_cta_href,
         },
         "image": getattr(hero, "image_url", None),
         "media": hero.media_url,
@@ -379,11 +379,55 @@ def _serialize_stats(section: str = "home") -> list:
     ]
 
 
+def _serialize_faq_page_section() -> dict:
+    """Serialize FAQ page hero/header section"""
+    from .models import FAQPageSection
+
+    section = FAQPageSection.objects.filter(is_active=True).first()
+    if not section:
+        return {
+            "title": "FAQ Hub",
+            "description": "Answers for every stage of your AI journey",
+            "badge": "",
+            "searchPlaceholder": "Search FAQs...",
+            "ctaText": "Book strategy call",
+            "ctaUrl": "/contact",
+            "secondaryCtaText": "Still stuck? Message the team",
+            "stats": [
+                {"value": "< 24 hrs", "label": "Average response time", "detail": "Based on care plan"},
+                {"value": "80+", "label": "Documented answers", "detail": ""},
+                {"value": "14", "label": "Industries supported", "detail": ""},
+            ]
+        }
+
+    return {
+        "title": section.title,
+        "description": section.description,
+        "badge": section.badge,
+        "searchPlaceholder": section.search_placeholder,
+        "ctaText": section.cta_text,
+        "ctaUrl": section.cta_url,
+        "secondaryCtaText": section.secondary_cta_text,
+        "stats": [
+            {
+                "value": stat.value,
+                "label": stat.label,
+                "detail": stat.detail
+            }
+            for stat in section.stats.all().order_by('order')
+        ]
+    }
+
+
 def _serialize_faq_categories() -> list:
+    from .models import FAQCategory
+
     categories = FAQCategory.objects.prefetch_related("items").order_by("order")
     return [
         {
             "title": category.title,
+            "description": category.description,
+            "icon": category.icon,
             "items": [
                 {"question": item.question, "answer": item.answer}
                 for item in category.items.all()
@@ -478,7 +522,10 @@ class ServicesAPIView(JSONAPIView):
 
 class FAQAPIView(JSONAPIView):
     def get(self, request):
-        return self.render({"categories": _serialize_faq_categories()})
+        return self.render({
+            "pageSection": _serialize_faq_page_section(),
+            "categories": _serialize_faq_categories()
+        })
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -672,6 +719,14 @@ class SiteSettingsAPIView(JSONAPIView):
                 "primaryPhone": settings_obj.primary_phone,
                 "secondaryPhone": settings_obj.secondary_phone,
                 "address": settings_obj.address,
+            },
+            "support": {
+                "badge": settings_obj.support_badge,
+                "responseValue": settings_obj.support_response_value,
+                "responseLabel": settings_obj.support_response_label,
+                "responseHelper": settings_obj.support_response_helper,
+                "responseMessage": settings_obj.support_response_message,
+                "responseConfirmation": settings_obj.support_response_confirmation,
             },
             "social": {
                 "facebook": settings_obj.facebook,

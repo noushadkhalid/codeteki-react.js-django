@@ -166,8 +166,44 @@ class ServiceProcessStep(TimestampedModel):
         return self.title
 
 
+# FAQ Page Section (Hero/Header)
+class FAQPageSection(TimestampedModel):
+    badge = models.CharField(max_length=100, blank=True)
+    title = models.CharField(max_length=200, default='FAQ Hub')
+    description = models.TextField(default='Answers for every stage of your AI journey')
+    search_placeholder = models.CharField(max_length=100, default='Search FAQs...')
+    cta_text = models.CharField(max_length=100, default='Book strategy call')
+    cta_url = models.CharField(max_length=255, default='/contact')
+    secondary_cta_text = models.CharField(max_length=100, blank=True, default='Still stuck? Message the team')
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "FAQ Page Section"
+        verbose_name_plural = "FAQ Page Sections"
+
+    def __str__(self):
+        return self.title
+
+
+class FAQPageStat(models.Model):
+    section = models.ForeignKey(FAQPageSection, related_name='stats', on_delete=models.CASCADE)
+    value = models.CharField(max_length=60, help_text='e.g., < 24 hrs, 80+, 14')
+    label = models.CharField(max_length=120, help_text='e.g., Average response time')
+    detail = models.CharField(max_length=200, blank=True, help_text='Additional detail text')
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']
+        verbose_name = 'FAQ Page Stat'
+
+    def __str__(self):
+        return f"{self.value} - {self.label}"
+
+
 class FAQCategory(TimestampedModel):
     title = models.CharField(max_length=160)
+    description = models.TextField(blank=True, help_text='Category description')
+    icon = models.CharField(max_length=40, blank=True, help_text='Icon name for the category')
     order = models.PositiveIntegerField(default=0)
 
     class Meta:
@@ -429,6 +465,14 @@ class SiteSettings(TimestampedModel):
     primary_phone = models.CharField(max_length=20, blank=True)
     secondary_phone = models.CharField(max_length=20, blank=True)
     address = models.TextField(blank=True)
+    support_badge = models.CharField(max_length=160, default="We respond within 24 hours")
+    support_response_value = models.CharField(max_length=60, default="< 24 hrs")
+    support_response_label = models.CharField(max_length=120, default="Average response time")
+    support_response_helper = models.CharField(max_length=160, default="Based on care plan")
+    support_response_message = models.CharField(max_length=180, default="Get a response within 24 hours")
+    support_response_confirmation = models.CharField(
+        max_length=200, default="We'll contact you within 24 hours to confirm your consultation."
+    )
 
     # Social Media
     facebook = models.URLField(blank=True)
