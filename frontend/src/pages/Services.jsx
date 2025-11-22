@@ -132,6 +132,71 @@ const fallbackCTA = {
   secondaryButton: { text: "View Our Portfolio", url: "/ai-tools" },
 };
 
+const servicesHeroFallback = {
+  badge: "Our Core Services",
+  title: "From AI workforce to custom tools and MCP integration",
+  description:
+    "Comprehensive solutions tailored for your business with Melbourne-based delivery, transparent pricing, and fully managed operations after launch.",
+  subheading: "Melbourne-based delivery, transparent pricing, and fully managed operations.",
+  metrics: fallbackStats,
+};
+
+function ServicesHero({ statsFallback = [] }) {
+  const { data } = useQuery({
+    queryKey: ["/api/hero/?page=services"],
+  });
+
+  const hero = data?.data?.hero || data?.hero || servicesHeroFallback;
+  const heroStats =
+    hero.metrics?.length > 0
+      ? hero.metrics
+      : statsFallback?.length
+      ? statsFallback
+      : fallbackStats;
+
+  return (
+    <section className="relative overflow-hidden bg-gradient-to-br from-[#fff9e6] via-white to-[#eef2ff] py-24">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-20 left-1/4 h-64 w-64 rounded-full bg-[#f9cb07]/30 blur-[140px]" />
+        <div className="absolute bottom-0 right-10 h-72 w-72 rounded-full bg-[#c4b5fd]/30 blur-[140px]" />
+      </div>
+      <div className="relative container mx-auto px-4">
+        <div className="text-center max-w-4xl mx-auto">
+          <span className="codeteki-pill mb-6">{hero.badge}</span>
+          <h1 className="text-4xl lg:text-5xl font-bold text-black mb-4 leading-tight">
+            {hero.title}
+            {hero.highlighted && (
+              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#f9cb07] to-[#ff6b35]">
+                {hero.highlighted}
+              </span>
+            )}
+          </h1>
+          {hero.subheading && (
+            <p className="text-xs uppercase tracking-[0.35em] text-gray-500 mb-4">
+              {hero.subheading}
+            </p>
+          )}
+          <p className="text-lg text-[#52525b]">{hero.description}</p>
+        </div>
+
+        <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-3">
+          {heroStats.map((stat) => (
+            <div
+              key={`${stat.label}-${stat.value}`}
+              className="rounded-2xl border border-white/80 bg-white shadow-[0_15px_35px_rgba(15,23,42,0.08)] p-6 text-center"
+            >
+              <p className="text-3xl font-bold text-[#0f172a]">{stat.value}</p>
+              <p className="mt-2 text-sm font-semibold uppercase tracking-[0.2em] text-gray-500">
+                {stat.label}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function Services() {
   const { data: servicesData, isLoading } = useQuery({
     queryKey: ["/api/services/"],
@@ -198,36 +263,7 @@ export default function Services() {
         keywords="AI services, business automation, chatbot services, voice AI, Melbourne AI development"
       />
 
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#fff9e6] via-white to-[#eef2ff] py-24">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-20 left-1/4 h-64 w-64 rounded-full bg-[#f9cb07]/30 blur-[140px]" />
-          <div className="absolute bottom-0 right-10 h-72 w-72 rounded-full bg-[#c4b5fd]/30 blur-[140px]" />
-        </div>
-        <div className="relative container mx-auto px-4">
-          <div className="text-center max-w-4xl mx-auto">
-            <span className="codeteki-pill mb-6">Our Core Services</span>
-            <h1 className="text-4xl lg:text-5xl font-bold text-black mb-4">
-              From AI workforce to custom tools and MCP integration
-            </h1>
-            <p className="text-lg text-[#52525b]">
-              Comprehensive solutions tailored for your business with Melbourne-based delivery, transparent pricing, and
-              fully managed operations after launch.
-            </p>
-          </div>
-
-          <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-3">
-            {serviceStats.map((stat) => (
-              <div
-                key={stat.label}
-                className="rounded-2xl border border-white/80 bg-white shadow-[0_15px_35px_rgba(15,23,42,0.08)] p-6 text-center"
-              >
-                <p className="text-3xl font-bold text-[#0f172a]">{stat.value}</p>
-                <p className="mt-2 text-sm font-semibold uppercase tracking-[0.2em] text-gray-500">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <ServicesHero statsFallback={serviceStats} />
 
       <section className="py-20 bg-white">
         <div className="container mx-auto px-4">

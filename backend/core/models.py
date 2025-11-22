@@ -14,6 +14,22 @@ class TimestampedModel(models.Model):
 
 
 class HeroSection(TimestampedModel):
+    PAGE_CHOICES = [
+        ("home", "Home Page"),
+        ("services", "Services Page"),
+        ("ai-tools", "AI Tools Page"),
+        ("demos", "Demos Page"),
+        ("faq", "FAQ Page"),
+        ("contact", "Contact Page"),
+    ]
+
+    page = models.CharField(
+        max_length=30,
+        choices=PAGE_CHOICES,
+        default="home",
+        help_text="Landing page this hero should be displayed on.",
+    )
+
     badge = models.CharField(max_length=120)
     badge_emoji = models.CharField(max_length=12, default="🚀")
     title = models.CharField(max_length=255)
@@ -33,10 +49,10 @@ class HeroSection(TimestampedModel):
 
     class Meta:
         verbose_name = "Hero Section"
-        ordering = ["-updated_at"]
+        ordering = ["page", "-updated_at"]
 
     def __str__(self):
-        return self.title
+        return f"{self.title} ({self.page})"
 
     @property
     def media_url(self):
@@ -128,6 +144,7 @@ class Service(TimestampedModel):
     badge = models.CharField(max_length=120, blank=True)
     description = models.TextField()
     icon = models.CharField(max_length=40, default="Sparkles")
+    is_featured = models.BooleanField(default=False)
     order = models.PositiveIntegerField(default=0)
 
     class Meta:

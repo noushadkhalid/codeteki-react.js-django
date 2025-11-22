@@ -82,7 +82,7 @@ class HeroSectionAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('🎯 Main Content', {
-            'fields': ('badge', 'badge_emoji', 'title', 'highlighted_text', 'subheading', 'description')
+            'fields': ('page', 'badge', 'badge_emoji', 'title', 'highlighted_text', 'subheading', 'description')
         }),
         ('🎨 Styling', {
             'fields': ('highlight_gradient_from', 'highlight_gradient_to', 'background_pattern')
@@ -217,9 +217,9 @@ class ServiceOutcomeInline(admin.TabularInline):
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
-    list_display = ('title', 'badge', 'icon', 'order', 'slug')
-    list_editable = ('order',)
-    list_filter = ('badge',)
+    list_display = ('title', 'badge', 'icon', 'order', 'is_featured', 'slug')
+    list_editable = ('order', 'is_featured')
+    list_filter = ('badge', 'is_featured')
     search_fields = ('title', 'description')
     prepopulated_fields = {'slug': ('title',)}
     inlines = [ServiceOutcomeInline]
@@ -231,6 +231,10 @@ class ServiceAdmin(admin.ModelAdmin):
         }),
         ('🎨 Display', {
             'fields': ('icon', 'order')
+        }),
+        ('🔥 Featured', {
+            'fields': ('is_featured',),
+            'description': 'Highlight services that should appear in the home page featured list.'
         }),
     )
 
@@ -447,8 +451,8 @@ class ContactMethodAdmin(admin.ModelAdmin):
                 ('title', 'icon'),
                 'value',
                 'description',
-                ('cta', 'href'),
-                'order'
+                'cta_label',
+                'order',
             )
         }),
     )

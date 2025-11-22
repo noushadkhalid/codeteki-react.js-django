@@ -18,7 +18,7 @@ export default function Home() {
       />
       <Hero />
       <BusinessImpact />
-      <Services />
+      <Services featuredOnly />
       <AITools />
       <ROICalculator />
       <WhyChoose />

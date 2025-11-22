@@ -1,41 +1,67 @@
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
-import AIToolsShowcase from "../components/AITools";
+import AIToolsShowcase, { aiToolsFallbackSection } from "../components/AITools";
 import Contact from "../components/Contact";
 import SEOHead from "../components/SEOHead";
 import { ExternalLink, Layers, ShieldCheck, Sparkles } from "lucide-react";
 
+const getToolCounts = (tools = []) =>
+  tools.reduce(
+    (acc, tool) => {
+      acc.total += 1;
+      if (tool.comingSoon || tool.is_coming_soon) {
+        acc.comingSoon += 1;
+        return acc;
+      }
+      const status = (tool.status || "free").toString().toLowerCase();
+      if (status === "free") acc.free += 1;
+      if (status === "credits") acc.credits += 1;
+      if (status === "premium") acc.premium += 1;
+      return acc;
+    },
+    { total: 0, free: 0, credits: 0, premium: 0, comingSoon: 0 }
+  );
+
 export default function AIToolsPage() {
+  const { data } = useQuery({
+    queryKey: ["/api/ai-tools/"],
+  });
+  const aiToolsSection = data?.data?.aiTools || data?.aiTools || aiToolsFallbackSection;
+  const toolCounts = useMemo(() => getToolCounts(aiToolsSection.tools || []), [aiToolsSection.tools]);
+
   return (
     <div className="min-h-screen bg-white">
-      <SEOHead 
+      <SEOHead
         title="AI Tools | Codeteki - Complete AI Tools Collection"
         description="Discover AI-powered tools Codeteki already shipped for DesiFirms. Explore business, health, immigration, and finance copilots that are live in production."
         keywords="AI tools, health calculator, business generator, Australia, desifirms"
       />
-      
+
       <section className="relative bg-gradient-to-br from-gray-50 to-white py-20 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(249,203,7,0.2),transparent_60%)]" aria-hidden="true" />
         <div className="container mx-auto px-4">
           <div className="relative max-w-5xl mx-auto text-center">
             <span className="codeteki-pill mb-6">
-              Built by Codeteki • Hosted on DesiFirms
+              {aiToolsSection.badge}
             </span>
             <h1 className="text-5xl font-bold text-black mb-6 leading-tight">
-              Explore the production-ready AI tools we already operate
+              {aiToolsSection.title}
             </h1>
-            <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-              All Codeteki utilities are deployed on DesiFirms.com.au for the Australian market. This page connects you directly to the live tools—no mock-ups, no future promises.
-            </p>
+            <p
+              className="text-xl text-gray-600 mb-8 leading-relaxed max-w-4xl mx-auto"
+              dangerouslySetInnerHTML={{ __html: aiToolsSection.description || "" }}
+            />
             <div className="flex flex-wrap gap-2 sm:gap-4 justify-center max-w-4xl mx-auto">
               <Badge className="bg-green-100 text-green-800 px-3 py-2 text-sm sm:text-base">
-                10+ Free Tools • Ready Now
+                Free Tools ({toolCounts.free}) • Ready Now
               </Badge>
               <Badge className="bg-blue-100 text-blue-800 px-3 py-2 text-sm sm:text-base">
-                Credit Tools • Live
+                Credit Tools ({toolCounts.credits}) • Live
               </Badge>
               <Badge className="bg-purple-100 text-purple-800 px-3 py-2 text-sm sm:text-base">
-                Premium Copilots
+                Premium Copilots ({toolCounts.premium})
               </Badge>
               <Badge className="bg-gray-100 text-gray-800 px-3 py-2 text-sm sm:text-base">
                 New Drops Every Month

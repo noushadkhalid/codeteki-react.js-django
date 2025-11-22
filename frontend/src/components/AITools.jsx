@@ -190,6 +190,7 @@ const fallbackSection = {
 };
 
 export const aiToolsDataset = fallbackTools;
+export const aiToolsFallbackSection = fallbackSection;
 
 const categoryStyles = {
   health: { bg: "bg-[#fefce8]", icon: "text-[#92400e]" },

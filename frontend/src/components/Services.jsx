@@ -89,9 +89,10 @@ const defaultServices = [
   },
 ];
 
-export default function Services() {
+export default function Services({ featuredOnly = false }) {
+  const queryUrl = featuredOnly ? "/api/services/?featured=1" : "/api/services/";
   const { data, isLoading } = useQuery({
-    queryKey: ["/api/services/"],
+    queryKey: [queryUrl],
   });
 
   const services = data?.data?.services || data?.services || [];

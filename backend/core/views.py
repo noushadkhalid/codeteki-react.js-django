@@ -69,13 +69,21 @@ def _serialize_page_seo(page: str) -> dict:
     }
 
 
-def _serialize_hero_section() -> dict | None:
+def _serialize_hero_section(page: str = "home") -> dict | None:
+    normalized_page = (page or "home").strip().lower()
     hero = (
-        HeroSection.objects.filter(is_active=True)
+        HeroSection.objects.filter(page=normalized_page, is_active=True)
         .prefetch_related("metrics", "partner_logos")
         .order_by("-updated_at")
         .first()
     )
+    if not hero and normalized_page != "home":
+        hero = (
+            HeroSection.objects.filter(page="home", is_active=True)
+            .prefetch_related("metrics", "partner_logos")
+            .order_by("-updated_at")
+            .first()
+        )
     if not hero:
         return None
     return {
@@ -143,12 +151,14 @@ def _serialize_business_impact_section() -> dict:
     }
 
 
-def _serialize_services_section() -> dict:
-    services = (
+def _serialize_services_section(featured_only: bool = False) -> dict:
+    services_qs = (
         Service.objects.prefetch_related("outcomes")
         .order_by("order")
-        .all()
     )
+    if featured_only:
+        services_qs = services_qs.filter(is_featured=True)
+    services = services_qs.all()
     service_payload = [
         {
             "id": service.slug,
@@ -517,7 +527,9 @@ class JSONAPIView(View):
 
 class ServicesAPIView(JSONAPIView):
     def get(self, request):
-        return self.render(_serialize_services_section())
+        featured_flag = (request.GET.get("featured") or "").strip().lower()
+        featured_only = featured_flag in {"1", "true", "yes", "on"}
+        return self.render(_serialize_services_section(featured_only=featured_only))
 
 
 class FAQAPIView(JSONAPIView):
@@ -558,7 +570,8 @@ class ContactAPIView(JSONAPIView):
 
 class HeroContentAPIView(JSONAPIView):
     def get(self, request):
-        hero_payload = _serialize_hero_section() or {}
+        page = request.GET.get("page", "home")
+        hero_payload = _serialize_hero_section(page) or {}
         return self.render({"hero": hero_payload, "brand": BRAND_TOKENS})
 
 
