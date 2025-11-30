@@ -42,3 +42,8 @@ coverage/
 # Misc
 Thumbs.db
 *.swp
+
+
+credentials/
+*.json
+!package.json

@@ -2,12 +2,13 @@ import { useRoute } from "wouter";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
-import { 
-  CheckCircle, ArrowLeft, Phone, Mail, MapPin, Clock, 
+import {
+  CheckCircle, ArrowLeft, Phone, Mail, MapPin, Clock,
   Users, Award, DollarSign, Headphones, Bot, Mic, Cog,
   Globe, Building, Zap
 } from "lucide-react";
 import { Link } from "wouter";
+import SEOHead from "../components/SEOHead";
 
 const serviceData = {
   "ai-workforce": {
@@ -193,6 +194,11 @@ export default function ServiceDetail() {
 
   return (
     <div className="min-h-screen bg-white">
+      <SEOHead
+        title={`${service.title} | Codeteki Melbourne`}
+        description={service.description}
+        page={`service-${serviceId}`}
+      />
       {/* Navigation */}
       <div className="bg-white border-b">
         <div className="container mx-auto px-4 py-4">

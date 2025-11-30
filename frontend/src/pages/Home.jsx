@@ -19,7 +19,7 @@ export default function Home() {
       <Hero />
       <BusinessImpact />
       <Services featuredOnly />
-      <AITools />
+      <AITools hideComingSoon />
       <ROICalculator />
       <WhyChoose />
       <Contact />

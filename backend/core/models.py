@@ -515,6 +515,82 @@ class SiteSettings(TimestampedModel):
         return self.site_name
 
 
+class SocialLink(models.Model):
+    """Dynamic social links - add any social platform."""
+    PLATFORM_CHOICES = [
+        ('facebook', 'Facebook'),
+        ('twitter', 'Twitter / X'),
+        ('linkedin', 'LinkedIn'),
+        ('instagram', 'Instagram'),
+        ('youtube', 'YouTube'),
+        ('github', 'GitHub'),
+        ('tiktok', 'TikTok'),
+        ('pinterest', 'Pinterest'),
+        ('whatsapp', 'WhatsApp'),
+        ('telegram', 'Telegram'),
+        ('discord', 'Discord'),
+        ('snapchat', 'Snapchat'),
+        ('threads', 'Threads'),
+        ('other', 'Other'),
+    ]
+
+    footer_section = models.ForeignKey(
+        FooterSection,
+        on_delete=models.CASCADE,
+        related_name='social_links'
+    )
+    platform = models.CharField(max_length=20, choices=PLATFORM_CHOICES)
+    url = models.URLField()
+    custom_label = models.CharField(max_length=50, blank=True, help_text="Custom label for 'Other' platform")
+    icon = models.CharField(max_length=50, blank=True, help_text="Custom icon name (Lucide icon)")
+    order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['order']
+        verbose_name = "Social Link"
+        verbose_name_plural = "Social Links"
+
+    def __str__(self):
+        return f"{self.get_platform_display()}: {self.url}"
+
+
+class BusinessHours(models.Model):
+    """Business hours with proper form fields instead of JSON."""
+    DAY_CHOICES = [
+        ('monday', 'Monday'),
+        ('tuesday', 'Tuesday'),
+        ('wednesday', 'Wednesday'),
+        ('thursday', 'Thursday'),
+        ('friday', 'Friday'),
+        ('saturday', 'Saturday'),
+        ('sunday', 'Sunday'),
+        ('monday_friday', 'Monday - Friday'),
+        ('weekends', 'Weekends'),
+    ]
+
+    site_settings = models.ForeignKey(
+        SiteSettings,
+        on_delete=models.CASCADE,
+        related_name='hours'
+    )
+    day = models.CharField(max_length=20, choices=DAY_CHOICES)
+    hours = models.CharField(
+        max_length=100,
+        help_text="e.g., '9:00 AM - 6:00 PM AEDT' or 'Closed' or 'By appointment'"
+    )
+    is_closed = models.BooleanField(default=False)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['order']
+        verbose_name = "Business Hours"
+        verbose_name_plural = "Business Hours"
+
+    def __str__(self):
+        return f"{self.get_day_display()}: {self.hours}"
+
+
 # SEO Meta for different pages
 class PageSEO(TimestampedModel):
     PAGE_CHOICES = [
@@ -754,27 +830,109 @@ class NavigationItem(models.Model):
         return self.title
 
 
-# Blog/News (Optional but good to have)
+# Blog/News - Enhanced for SEO and Content Marketing
+class BlogCategory(TimestampedModel):
+    """Blog categories for organizing content."""
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True)
+    description = models.TextField(blank=True)
+    icon = models.CharField(max_length=40, default="article", help_text="Material icon name")
+    color = models.CharField(max_length=20, default="blue", help_text="Theme color")
+    is_active = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order", "name"]
+        verbose_name = "Blog Category"
+        verbose_name_plural = "Blog Categories"
+
+    def __str__(self):
+        return self.name
+
+    def get_absolute_url(self):
+        return f"/blog/category/{self.slug}/"
+
+
 class BlogPost(TimestampedModel):
+    """Blog posts with enhanced SEO fields for content marketing."""
+    STATUS_DRAFT = "draft"
+    STATUS_REVIEW = "review"
+    STATUS_PUBLISHED = "published"
+    STATUS_CHOICES = [
+        (STATUS_DRAFT, "Draft"),
+        (STATUS_REVIEW, "In Review"),
+        (STATUS_PUBLISHED, "Published"),
+    ]
+
+    # Basic fields
     title = models.CharField(max_length=255)
     slug = models.SlugField(unique=True)
-    excerpt = models.TextField(max_length=320)
+    excerpt = models.TextField(max_length=320, help_text="Brief summary for previews (max 320 chars)")
     content = RichTextField()
     featured_image = models.ImageField(upload_to='blog/', blank=True, null=True)
     author = models.CharField(max_length=120, default="Codeteki Team")
-    category = models.CharField(max_length=80, blank=True)
-    tags = models.CharField(max_length=255, blank=True, help_text="Comma separated")
+
+    # Category - now a foreign key
+    blog_category = models.ForeignKey(
+        BlogCategory, on_delete=models.SET_NULL, null=True, blank=True, related_name="posts"
+    )
+    category = models.CharField(max_length=80, blank=True, help_text="Legacy field - use blog_category instead")
+    tags = models.CharField(max_length=255, blank=True, help_text="Comma separated tags")
+
+    # SEO Fields
+    meta_title = models.CharField(max_length=70, blank=True, help_text="SEO title (max 70 chars). Leave blank to use post title.")
+    meta_description = models.TextField(max_length=160, blank=True, help_text="SEO description (max 160 chars). Leave blank to use excerpt.")
+    focus_keyword = models.CharField(max_length=100, blank=True, help_text="Primary keyword to optimize for")
+    secondary_keywords = models.CharField(max_length=255, blank=True, help_text="Comma separated secondary keywords")
+    canonical_url = models.URLField(blank=True, help_text="Canonical URL if different from default")
+
+    # Open Graph
+    og_title = models.CharField(max_length=100, blank=True, help_text="Open Graph title for social sharing")
+    og_description = models.TextField(max_length=300, blank=True, help_text="Open Graph description for social sharing")
+    og_image = models.ImageField(upload_to='blog/og/', blank=True, null=True, help_text="Image for social sharing (1200x630 recommended)")
+
+    # Publishing
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_DRAFT)
     is_featured = models.BooleanField(default=False)
-    is_published = models.BooleanField(default=False)
+    is_published = models.BooleanField(default=False)  # Legacy field
     published_at = models.DateTimeField(blank=True, null=True)
+
+    # Reading & engagement
+    reading_time_minutes = models.PositiveIntegerField(default=5, help_text="Estimated reading time in minutes")
     views_count = models.PositiveIntegerField(default=0)
 
+    # Content source (for Ubersuggest integration)
+    source_cluster = models.ForeignKey(
+        'SEOKeywordCluster', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="blog_posts", help_text="SEO keyword cluster this post targets"
+    )
+    ai_generated = models.BooleanField(default=False, help_text="Was this content AI-generated?")
+
     class Meta:
-        ordering = ["-published_at"]
+        ordering = ["-published_at", "-created_at"]
         verbose_name = "Blog Post"
 
     def __str__(self):
         return self.title
+
+    def get_absolute_url(self):
+        return f"/blog/{self.slug}/"
+
+    def get_meta_title(self):
+        """Return meta title or fallback to post title."""
+        return self.meta_title or self.title
+
+    def get_meta_description(self):
+        """Return meta description or fallback to excerpt."""
+        return self.meta_description or self.excerpt[:160]
+
+    def tag_list(self):
+        """Return list of tags."""
+        return [tag.strip() for tag in (self.tags or "").split(",") if tag.strip()]
+
+    def keyword_list(self):
+        """Return list of secondary keywords."""
+        return [kw.strip() for kw in (self.secondary_keywords or "").split(",") if kw.strip()]
 
 
 class SEODataUpload(TimestampedModel):
@@ -1137,3 +1295,584 @@ class ChatLead(TimestampedModel):
 
     def __str__(self):
         return self.name or f"Lead {self.pk}"
+
+
+# =============================================================================
+# SEO ENGINE MODELS - Site Audits, PageSpeed, Search Console
+# =============================================================================
+
+class SiteAudit(TimestampedModel):
+    """Container for a site-wide SEO audit."""
+    STATUS_PENDING = "pending"
+    STATUS_RUNNING = "running"
+    STATUS_COMPLETED = "completed"
+    STATUS_FAILED = "failed"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_RUNNING, "Running"),
+        (STATUS_COMPLETED, "Completed"),
+        (STATUS_FAILED, "Failed"),
+    ]
+
+    STRATEGY_MOBILE = "mobile"
+    STRATEGY_DESKTOP = "desktop"
+    STRATEGY_CHOICES = [
+        (STRATEGY_MOBILE, "Mobile"),
+        (STRATEGY_DESKTOP, "Desktop"),
+    ]
+
+    name = models.CharField(max_length=200)
+    domain = models.CharField(max_length=255, default="codeteki.au")
+    strategy = models.CharField(max_length=10, choices=STRATEGY_CHOICES, default=STRATEGY_MOBILE)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+
+    # Target URLs to audit (JSON list)
+    target_urls = models.JSONField(default=list, blank=True, help_text="List of URLs to audit")
+
+    # Aggregate scores (calculated from page audits)
+    avg_performance = models.FloatField(null=True, blank=True)
+    avg_seo = models.FloatField(null=True, blank=True)
+    avg_accessibility = models.FloatField(null=True, blank=True)
+    avg_best_practices = models.FloatField(null=True, blank=True)
+
+    # Issue counts
+    total_pages = models.IntegerField(default=0)
+    total_issues = models.IntegerField(default=0)
+    critical_issues = models.IntegerField(default=0)
+    warning_issues = models.IntegerField(default=0)
+
+    # AI Analysis
+    ai_analysis = models.TextField(blank=True, help_text="ChatGPT analysis of audit results")
+    ai_recommendations = models.JSONField(default=list, blank=True)
+
+    # Timing
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    # Notes
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Site Audit"
+
+    def __str__(self):
+        return f"{self.name} ({self.get_status_display()})"
+
+    def run_audit(self):
+        """Execute the site audit using Lighthouse."""
+        from .services.lighthouse import LighthouseService
+        service = LighthouseService(self)
+        return service.run_audit()
+
+    def generate_ai_analysis(self):
+        """Generate ChatGPT analysis of audit results."""
+        from .services.seo_audit_ai import SEOAuditAIEngine
+        engine = SEOAuditAIEngine(self)
+        return engine.analyze()
+
+
+class AIAnalysisReport(SiteAudit):
+    """Proxy model for viewing AI Analysis reports separately."""
+    class Meta:
+        proxy = True
+        verbose_name = "AI Analysis Report"
+        verbose_name_plural = "AI Analysis Reports"
+
+
+class PageAudit(TimestampedModel):
+    """Individual page audit results (from Lighthouse)."""
+    site_audit = models.ForeignKey(
+        SiteAudit, related_name="page_audits", on_delete=models.CASCADE, null=True, blank=True
+    )
+    url = models.URLField(max_length=500, db_index=True)
+    strategy = models.CharField(max_length=10, default="mobile")
+
+    # Lighthouse Scores (0-100)
+    performance_score = models.IntegerField(null=True, blank=True)
+    accessibility_score = models.IntegerField(null=True, blank=True)
+    best_practices_score = models.IntegerField(null=True, blank=True)
+    seo_score = models.IntegerField(null=True, blank=True)
+
+    # Core Web Vitals
+    lcp = models.FloatField(null=True, blank=True, help_text="Largest Contentful Paint (seconds)")
+    fid = models.FloatField(null=True, blank=True, help_text="First Input Delay (milliseconds)")
+    inp = models.FloatField(null=True, blank=True, help_text="Interaction to Next Paint (milliseconds)")
+    cls = models.FloatField(null=True, blank=True, help_text="Cumulative Layout Shift")
+    fcp = models.FloatField(null=True, blank=True, help_text="First Contentful Paint (seconds)")
+    ttfb = models.FloatField(null=True, blank=True, help_text="Time to First Byte (milliseconds)")
+    si = models.FloatField(null=True, blank=True, help_text="Speed Index (seconds)")
+    tbt = models.FloatField(null=True, blank=True, help_text="Total Blocking Time (milliseconds)")
+
+    # Raw data storage
+    raw_data = models.JSONField(default=dict, blank=True)
+
+    # Status
+    status = models.CharField(max_length=20, default="pending")
+    error_message = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Page Audit"
+
+    def __str__(self):
+        return f"{self.url} - P:{self.performance_score} SEO:{self.seo_score}"
+
+
+class AuditIssue(TimestampedModel):
+    """Individual issues found during audits."""
+    SEVERITY_ERROR = "error"
+    SEVERITY_WARNING = "warning"
+    SEVERITY_INFO = "info"
+    SEVERITY_PASSED = "passed"
+    SEVERITY_CHOICES = [
+        (SEVERITY_ERROR, "Error"),
+        (SEVERITY_WARNING, "Warning"),
+        (SEVERITY_INFO, "Info"),
+        (SEVERITY_PASSED, "Passed"),
+    ]
+
+    CATEGORY_PERFORMANCE = "performance"
+    CATEGORY_SEO = "seo"
+    CATEGORY_ACCESSIBILITY = "accessibility"
+    CATEGORY_BEST_PRACTICES = "best-practices"
+    CATEGORY_CHOICES = [
+        (CATEGORY_PERFORMANCE, "Performance"),
+        (CATEGORY_SEO, "SEO"),
+        (CATEGORY_ACCESSIBILITY, "Accessibility"),
+        (CATEGORY_BEST_PRACTICES, "Best Practices"),
+    ]
+
+    STATUS_OPEN = "open"
+    STATUS_IN_PROGRESS = "in_progress"
+    STATUS_FIXED = "fixed"
+    STATUS_IGNORED = "ignored"
+    STATUS_CHOICES = [
+        (STATUS_OPEN, "Open"),
+        (STATUS_IN_PROGRESS, "In Progress"),
+        (STATUS_FIXED, "Fixed"),
+        (STATUS_IGNORED, "Ignored"),
+    ]
+
+    page_audit = models.ForeignKey(
+        PageAudit, related_name="issues", on_delete=models.CASCADE
+    )
+
+    # Issue identification
+    audit_id = models.CharField(max_length=100, help_text="Lighthouse audit ID")
+    title = models.CharField(max_length=300)
+    description = models.TextField()
+
+    # Classification
+    category = models.CharField(max_length=30, choices=CATEGORY_CHOICES)
+    severity = models.CharField(max_length=20, choices=SEVERITY_CHOICES)
+
+    # Metrics
+    score = models.FloatField(null=True, blank=True, help_text="Audit score (0-1)")
+    display_value = models.CharField(max_length=200, blank=True, help_text="Human-readable value")
+    savings_ms = models.FloatField(default=0, help_text="Potential time savings in ms")
+    savings_bytes = models.IntegerField(default=0, help_text="Potential size savings in bytes")
+
+    # Fix tracking
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_OPEN)
+    ai_fix_recommendation = models.TextField(blank=True, help_text="ChatGPT fix recommendation")
+    fixed_at = models.DateTimeField(null=True, blank=True)
+
+    # Raw details
+    details = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["severity", "-savings_ms"]
+        verbose_name = "Audit Issue"
+
+    def __str__(self):
+        return f"{self.severity.upper()}: {self.title}"
+
+
+class PageSpeedResult(TimestampedModel):
+    """PageSpeed Insights API results with field data (CrUX)."""
+    page_audit = models.ForeignKey(
+        PageAudit, related_name="pagespeed_results", on_delete=models.CASCADE, null=True, blank=True
+    )
+    url = models.URLField(max_length=500, db_index=True)
+    strategy = models.CharField(max_length=10, default="mobile")
+
+    # Lab Data (same as Lighthouse)
+    lab_performance_score = models.IntegerField(null=True, blank=True)
+    lab_lcp = models.FloatField(null=True, blank=True)
+    lab_fcp = models.FloatField(null=True, blank=True)
+    lab_cls = models.FloatField(null=True, blank=True)
+    lab_tbt = models.FloatField(null=True, blank=True)
+    lab_si = models.FloatField(null=True, blank=True)
+
+    # Field Data (Real User Metrics from CrUX)
+    field_lcp = models.FloatField(null=True, blank=True, help_text="75th percentile LCP from real users")
+    field_fid = models.FloatField(null=True, blank=True, help_text="75th percentile FID from real users")
+    field_inp = models.FloatField(null=True, blank=True, help_text="75th percentile INP from real users")
+    field_cls = models.FloatField(null=True, blank=True, help_text="75th percentile CLS from real users")
+    field_fcp = models.FloatField(null=True, blank=True, help_text="75th percentile FCP from real users")
+    field_ttfb = models.FloatField(null=True, blank=True, help_text="75th percentile TTFB from real users")
+
+    # Origin-level metrics
+    origin_lcp = models.FloatField(null=True, blank=True)
+    origin_inp = models.FloatField(null=True, blank=True)
+    origin_cls = models.FloatField(null=True, blank=True)
+
+    # Overall assessment
+    overall_category = models.CharField(max_length=20, blank=True, help_text="FAST, AVERAGE, or SLOW")
+
+    # Raw data
+    raw_data = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "PageSpeed Result"
+
+    def __str__(self):
+        return f"PageSpeed: {self.url} ({self.overall_category})"
+
+
+class SearchConsoleData(TimestampedModel):
+    """Google Search Console performance data."""
+    upload = models.ForeignKey(
+        SEODataUpload, related_name="search_console_data", on_delete=models.CASCADE, null=True, blank=True
+    )
+
+    # Query data
+    date = models.DateField(db_index=True)
+    query = models.CharField(max_length=500, db_index=True)
+    page = models.URLField(max_length=500)
+
+    # Metrics
+    clicks = models.IntegerField(default=0)
+    impressions = models.IntegerField(default=0)
+    ctr = models.FloatField(default=0, help_text="Click-through rate (0-1)")
+    position = models.FloatField(default=0, help_text="Average position in search results")
+
+    # Dimensions
+    country = models.CharField(max_length=10, blank=True)
+    device = models.CharField(max_length=20, blank=True)
+
+    class Meta:
+        ordering = ["-date", "-impressions"]
+        verbose_name = "Search Console Data"
+        verbose_name_plural = "Search Console Data"
+        indexes = [
+            models.Index(fields=["date", "query"]),
+            models.Index(fields=["page", "date"]),
+        ]
+
+    def __str__(self):
+        return f"{self.query} - {self.date} (pos: {self.position:.1f})"
+
+
+class SearchConsoleSync(TimestampedModel):
+    """Track Search Console sync operations."""
+    STATUS_PENDING = "pending"
+    STATUS_RUNNING = "running"
+    STATUS_COMPLETED = "completed"
+    STATUS_FAILED = "failed"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_RUNNING, "Running"),
+        (STATUS_COMPLETED, "Completed"),
+        (STATUS_FAILED, "Failed"),
+    ]
+
+    property_url = models.URLField(max_length=255, help_text="Search Console property URL")
+    start_date = models.DateField()
+    end_date = models.DateField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+
+    # Results
+    rows_imported = models.IntegerField(default=0)
+    queries_imported = models.IntegerField(default=0)
+    pages_imported = models.IntegerField(default=0)
+
+    # Metadata
+    error_message = models.TextField(blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Search Console Sync"
+
+    def __str__(self):
+        return f"Sync {self.start_date} to {self.end_date} ({self.get_status_display()})"
+
+    def run_sync(self):
+        """Execute the Search Console sync."""
+        from .services.search_console import SearchConsoleService
+        service = SearchConsoleService()
+        return service.sync_data(self)
+
+
+class KeywordRanking(TimestampedModel):
+    """Track keyword rankings over time."""
+    keyword = models.ForeignKey(
+        SEOKeyword, related_name="rankings", on_delete=models.CASCADE
+    )
+    date = models.DateField(db_index=True)
+
+    # Position data
+    position = models.FloatField()
+    previous_position = models.FloatField(null=True, blank=True)
+    position_change = models.FloatField(default=0)
+
+    # Traffic data (from Search Console)
+    clicks = models.IntegerField(default=0)
+    impressions = models.IntegerField(default=0)
+    ctr = models.FloatField(default=0)
+
+    # URL ranking
+    ranking_url = models.URLField(max_length=500, blank=True)
+
+    # SERP features
+    has_featured_snippet = models.BooleanField(default=False)
+    has_local_pack = models.BooleanField(default=False)
+    has_video = models.BooleanField(default=False)
+    has_image = models.BooleanField(default=False)
+    serp_features = models.JSONField(default=list, blank=True)
+
+    class Meta:
+        ordering = ["-date", "position"]
+        verbose_name = "Keyword Ranking"
+        indexes = [
+            models.Index(fields=["keyword", "date"]),
+        ]
+
+    def __str__(self):
+        change = f"+{self.position_change}" if self.position_change > 0 else str(self.position_change)
+        return f"{self.keyword.keyword} - Pos {self.position:.1f} ({change})"
+
+
+class CompetitorProfile(TimestampedModel):
+    """Track competitor domains for SEO analysis."""
+    domain = models.CharField(max_length=255, unique=True)
+    name = models.CharField(max_length=100)
+    is_active = models.BooleanField(default=True)
+
+    # Domain metrics (updated periodically)
+    domain_authority = models.IntegerField(default=0)
+    organic_traffic_est = models.IntegerField(default=0)
+    total_keywords = models.IntegerField(default=0)
+    total_backlinks = models.IntegerField(default=0)
+
+    # Analysis
+    last_analysis = models.DateTimeField(null=True, blank=True)
+    analysis_data = models.JSONField(default=dict, blank=True)
+    ai_insights = models.TextField(blank=True)
+
+    # Notes
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "Competitor Profile"
+
+    def __str__(self):
+        return f"{self.name} ({self.domain})"
+
+
+class SEORecommendation(TimestampedModel):
+    """AI-generated SEO recommendations with status tracking."""
+    TYPE_META_TITLE = "meta_title"
+    TYPE_META_DESCRIPTION = "meta_description"
+    TYPE_CONTENT_BRIEF = "content_brief"
+    TYPE_TECHNICAL_FIX = "technical_fix"
+    TYPE_NEW_CONTENT = "new_content"
+    TYPE_INTERNAL_LINK = "internal_link"
+    TYPE_CHOICES = [
+        (TYPE_META_TITLE, "Meta Title"),
+        (TYPE_META_DESCRIPTION, "Meta Description"),
+        (TYPE_CONTENT_BRIEF, "Content Brief"),
+        (TYPE_TECHNICAL_FIX, "Technical Fix"),
+        (TYPE_NEW_CONTENT, "New Content"),
+        (TYPE_INTERNAL_LINK, "Internal Link"),
+    ]
+
+    STATUS_GENERATED = "generated"
+    STATUS_PENDING = "pending"
+    STATUS_APPROVED = "approved"
+    STATUS_APPLIED = "applied"
+    STATUS_REJECTED = "rejected"
+    STATUS_CHOICES = [
+        (STATUS_GENERATED, "Generated"),
+        (STATUS_PENDING, "Pending Review"),
+        (STATUS_APPROVED, "Approved"),
+        (STATUS_APPLIED, "Applied"),
+        (STATUS_REJECTED, "Rejected"),
+    ]
+
+    PRIORITY_CRITICAL = "critical"
+    PRIORITY_HIGH = "high"
+    PRIORITY_MEDIUM = "medium"
+    PRIORITY_LOW = "low"
+    PRIORITY_CHOICES = [
+        (PRIORITY_CRITICAL, "Critical"),
+        (PRIORITY_HIGH, "High"),
+        (PRIORITY_MEDIUM, "Medium"),
+        (PRIORITY_LOW, "Low"),
+    ]
+
+    # Source links
+    upload = models.ForeignKey(
+        SEODataUpload, on_delete=models.CASCADE, null=True, blank=True, related_name="seo_recommendations"
+    )
+    keyword = models.ForeignKey(
+        SEOKeyword, on_delete=models.SET_NULL, null=True, blank=True, related_name="seo_recommendations"
+    )
+    cluster = models.ForeignKey(
+        SEOKeywordCluster, on_delete=models.SET_NULL, null=True, blank=True, related_name="seo_recommendations"
+    )
+    audit_issue = models.ForeignKey(
+        AuditIssue, on_delete=models.SET_NULL, null=True, blank=True, related_name="recommendations"
+    )
+
+    # Target
+    target_url = models.URLField(max_length=500, blank=True)
+    target_field = models.CharField(max_length=100, blank=True, help_text="Field to update (e.g., meta_title)")
+
+    # Recommendation
+    recommendation_type = models.CharField(max_length=30, choices=TYPE_CHOICES)
+    title = models.CharField(max_length=255)
+    current_value = models.TextField(blank=True)
+    recommended_value = models.TextField()
+    reasoning = models.TextField(blank=True)
+
+    # Status
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default=PRIORITY_MEDIUM)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_GENERATED)
+    applied_at = models.DateTimeField(null=True, blank=True)
+
+    # AI metadata
+    ai_model = models.CharField(max_length=50, blank=True)
+    ai_tokens_used = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "SEO Recommendation"
+
+    def __str__(self):
+        return f"{self.get_recommendation_type_display()}: {self.title}"
+
+
+class SEOChangeLog(TimestampedModel):
+    """Audit trail for applied SEO changes."""
+    recommendation = models.ForeignKey(
+        SEORecommendation, on_delete=models.CASCADE, related_name="change_logs"
+    )
+    target_url = models.URLField(max_length=500)
+    target_field = models.CharField(max_length=100)
+    old_value = models.TextField()
+    new_value = models.TextField()
+    applied_by = models.ForeignKey(
+        "auth.User", on_delete=models.SET_NULL, null=True, blank=True
+    )
+    applied_at = models.DateTimeField(auto_now_add=True)
+    reverted = models.BooleanField(default=False)
+    reverted_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-applied_at"]
+        verbose_name = "SEO Change Log"
+
+    def __str__(self):
+        return f"Changed {self.target_field} on {self.target_url}"
+
+
+class ScheduledAudit(TimestampedModel):
+    """Automated recurring site audits."""
+    FREQUENCY_DAILY = "daily"
+    FREQUENCY_WEEKLY = "weekly"
+    FREQUENCY_MONTHLY = "monthly"
+    FREQUENCY_CHOICES = [
+        (FREQUENCY_DAILY, "Daily"),
+        (FREQUENCY_WEEKLY, "Weekly"),
+        (FREQUENCY_MONTHLY, "Monthly"),
+    ]
+
+    name = models.CharField(max_length=200)
+    is_active = models.BooleanField(default=True)
+    target_urls = models.JSONField(default=list, help_text="List of URLs to audit")
+    strategy = models.CharField(max_length=10, default="mobile")
+    frequency = models.CharField(max_length=20, choices=FREQUENCY_CHOICES, default=FREQUENCY_WEEKLY)
+
+    # Scheduling
+    last_run = models.DateTimeField(null=True, blank=True)
+    next_run = models.DateTimeField(null=True, blank=True)
+
+    # Notifications
+    notify_emails = models.JSONField(default=list, blank=True, help_text="Email addresses for notifications")
+    notify_on_score_drop = models.BooleanField(default=True)
+    score_drop_threshold = models.IntegerField(default=5, help_text="Alert if score drops by this many points")
+
+    # Related audit
+    last_audit = models.ForeignKey(
+        SiteAudit, on_delete=models.SET_NULL, null=True, blank=True, related_name="scheduled_for"
+    )
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "Scheduled Audit"
+
+    def __str__(self):
+        return f"{self.name} ({self.get_frequency_display()})"
+
+
+class SEOChatSession(TimestampedModel):
+    """SEO assistant chat sessions."""
+    user = models.ForeignKey(
+        "auth.User", on_delete=models.CASCADE, null=True, blank=True
+    )
+    session_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+
+    # Context linking
+    upload = models.ForeignKey(
+        SEODataUpload, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    audit = models.ForeignKey(
+        SiteAudit, on_delete=models.SET_NULL, null=True, blank=True
+    )
+
+    # Session data
+    context = models.JSONField(default=dict, blank=True)
+    title = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+        verbose_name = "SEO Chat Session"
+
+    def __str__(self):
+        return f"SEO Chat {self.session_id}"
+
+
+class SEOChatMessage(TimestampedModel):
+    """Messages in SEO chat sessions."""
+    ROLE_USER = "user"
+    ROLE_ASSISTANT = "assistant"
+    ROLE_SYSTEM = "system"
+    ROLE_CHOICES = [
+        (ROLE_USER, "User"),
+        (ROLE_ASSISTANT, "Assistant"),
+        (ROLE_SYSTEM, "System"),
+    ]
+
+    session = models.ForeignKey(
+        SEOChatSession, on_delete=models.CASCADE, related_name="messages"
+    )
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    content = models.TextField()
+
+    # Data references
+    data_references = models.JSONField(default=list, blank=True)
+
+    # Token usage
+    tokens_used = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ["created_at"]
+        verbose_name = "SEO Chat Message"
+
+    def __str__(self):
+        return f"{self.role}: {self.content[:50]}..."

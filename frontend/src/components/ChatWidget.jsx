@@ -246,7 +246,7 @@ export default function ChatWidget() {
                 <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-5">
                   <div className="flex items-center space-x-2 sm:space-x-3 p-2 bg-gradient-to-r from-blue-50 to-transparent rounded-lg animate-in slide-in-from-left duration-500 delay-200">
                     <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 flex-shrink-0" />
-                    <span className="text-xs sm:text-sm font-medium text-gray-700">AI Chatbot Pricing & Features</span>
+                    <span className="text-xs sm:text-sm font-medium text-gray-700">AI Chatbot Capabilities</span>
                   </div>
                   <div className="flex items-center space-x-2 sm:space-x-3 p-2 bg-gradient-to-r from-green-50 to-transparent rounded-lg animate-in slide-in-from-left duration-500 delay-300">
                     <Phone className="h-3 w-3 sm:h-4 sm:w-4 text-green-600 flex-shrink-0" />
@@ -254,7 +254,7 @@ export default function ChatWidget() {
                   </div>
                   <div className="flex items-center space-x-2 sm:space-x-3 p-2 bg-gradient-to-r from-purple-50 to-transparent rounded-lg animate-in slide-in-from-left duration-500 delay-400">
                     <Globe className="h-3 w-3 sm:h-4 sm:w-4 text-purple-600 flex-shrink-0" />
-                    <span className="text-xs sm:text-sm font-medium text-gray-700">Website Development Quotes</span>
+                    <span className="text-xs sm:text-sm font-medium text-gray-700">SEO & Website Optimization</span>
                   </div>
                   <div className="flex items-center space-x-2 sm:space-x-3 p-2 bg-gradient-to-r from-orange-50 to-transparent rounded-lg animate-in slide-in-from-left duration-500 delay-500">
                     <Zap className="h-3 w-3 sm:h-4 sm:w-4 text-orange-600 flex-shrink-0" />

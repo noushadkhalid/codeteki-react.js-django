@@ -1,6 +1,13 @@
+import SEOHead from "../components/SEOHead";
+
 export default function TermsOfService() {
   return (
     <div className="min-h-screen bg-white py-20">
+      <SEOHead
+        title="Terms of Service | Codeteki"
+        description="Read Codeteki's Terms of Service covering our AI workforce solutions, web development, and automation services under Australian law."
+        page="terms-of-service"
+      />
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-black mb-4">Terms of Service</h1>

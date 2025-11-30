@@ -44,13 +44,16 @@ ALLOWED_HOSTS = [
 # Application definition
 
 INSTALLED_APPS = [
-    'jazzmin',  # Modern admin theme - must be before django.contrib.admin
+    'unfold',  # Modern Tailwind admin theme - must be before django.contrib.admin
+    'unfold.contrib.filters',  # Enhanced filters
+    'unfold.contrib.forms',  # Enhanced form widgets
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sitemaps',  # Dynamic sitemap generation
     'ckeditor',  # Rich text editor
     'core',
 ]
@@ -183,314 +186,448 @@ CKEDITOR_CONFIGS = {
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_SEO_MODEL = os.getenv("OPENAI_SEO_MODEL", "gpt-4o-mini")
 
-# Django Jazzmin Configuration
-JAZZMIN_SETTINGS = {
-    # Title on the login screen & brand name
-    "site_title": "Codeteki CMS",
-    "site_header": "Codeteki Content Management",
-    "site_brand": "Codeteki CMS",
-    "site_logo": None,
-    "login_logo": None,
-    "site_icon": None,
+# Google APIs for SEO Engine
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
+GOOGLE_SERVICE_ACCOUNT_FILE = os.getenv(
+    "GOOGLE_SERVICE_ACCOUNT_FILE",
+    str(BASE_DIR / "credentials" / "codeteki-seo-engine-c4aa28232d6d.json")
+)
+GOOGLE_SEARCH_CONSOLE_PROPERTY = os.getenv("GOOGLE_SEARCH_CONSOLE_PROPERTY", "https://www.codeteki.au/")
 
-    # Welcome text on the login screen
-    "welcome_sign": "Welcome to Codeteki CMS - Manage Your Website Content",
+# Site URL for SEO audits
+SITE_URL = os.getenv("SITE_URL", "https://www.codeteki.au")
 
-    # Copyright on the footer
-    "copyright": "Codeteki Digital Services © 2025",
+# Django Unfold Configuration
+from django.templatetags.static import static
+from django.urls import reverse_lazy
 
-    # Search model from navbar
-    "search_model": ["core.Service", "core.BlogPost", "core.AITool", "core.DemoShowcase", "core.ContactInquiry", "core.ChatLead"],
-
-    # User menu
-    "user_avatar": None,
-
-    ############
-    # Top Menu #
-    ############
-    "topmenu_links": [
-        {"name": "🌐 View Live Site", "url": "/", "new_window": True},
-        {"name": "📊 Dashboard", "url": "admin:index", "permissions": ["auth.view_user"]},
+UNFOLD = {
+    "SITE_TITLE": "Codeteki CMS",
+    "SITE_HEADER": "Codeteki",
+    "SITE_SUBHEADER": "Content Management System",
+    "SITE_DROPDOWN": [
+        {
+            "icon": "public",
+            "title": "View Live Site",
+            "link": "/",
+        },
     ],
-
-    #############
-    # User Menu #
-    #############
-    "usermenu_links": [
-        {"name": "View Site", "url": "/", "new_window": True, "icon": "fas fa-external-link-alt"},
-        {"model": "auth.user"}
-    ],
-
-    #############
-    # Side Menu #
-    #############
-    "show_sidebar": True,
-    "navigation_expanded": True,
-    "hide_apps": [],
-
-    # Hide ALL models - we use organized custom_links instead
-    "hide_models": [
-        # Inline models (appear within parent models)
-        "core.businessimpactmetric",
-        "core.businessimpactlogo",
-        "core.roicalculatorstat",
-        "core.roicalculatortool",
-        "core.whychosereason",
-        "core.footerlink",
-        "core.serviceoutcome",
-        "core.herometric",
-        "core.heropartnerlogo",
-        "core.navigationitem",
-        "core.knowledgefaq",
-        "core.chatmessage",
-        "core.pricingfeature",
-        "core.demoimage",
-        "core.faqitem",
-        "core.faqpagestat",
-        "core.aitool",
-        # Main models (hide to show only in custom_links)
-        "core.herosection",
-        "core.faqpagesection",
-        "core.businessimpactsection",
-        "core.roicalculatorsection",
-        "core.whychoosesection",
-        "core.testimonial",
-        "core.service",
-        "core.serviceprocessstep",
-        "core.aitoolssection",
-        "core.demoshowcase",
-        "core.faqcategory",
-        "core.contactmethod",
-        "core.contactinquiry",
-        "core.pageseo",
-        "core.seodataupload",
-        "core.seokeyword",
-        "core.seokeywordcluster",
-        "core.aiseorecommendation",
-        "core.chatconversation",
-        "core.chatlead",
-        "core.chatbotsettings",
-        "core.knowledgearticle",
-        "core.knowledgecategory",
-        "core.blogpost",
-        "core.sitesettings",
-        "core.footersection",
-        "core.navigationmenu",
-        "core.statmetric",
-        "core.ctasection",
-        "core.pricingplan",
-    ],
-
-    # Custom app ordering
-    "order_with_respect_to": ["core", "auth"],
-
-    # Organized custom menu structure
-    "custom_links": {
-        "core": [
-            {
-                "name": "🏠 Home Page",
-                "url": "/admin/core/herosection/",
-                "icon": "fas fa-home",
-                "children": [
-                    {"name": "Hero Section", "url": "/admin/core/herosection/", "icon": "fas fa-star"},
-                    {"name": "Business Impact", "url": "/admin/core/businessimpactsection/", "icon": "fas fa-chart-line"},
-                    {"name": "ROI Calculator", "url": "/admin/core/roicalculatorsection/", "icon": "fas fa-calculator"},
-                    {"name": "Why Choose Us", "url": "/admin/core/whychoosesection/", "icon": "fas fa-thumbs-up"},
-                    {"name": "Testimonials", "url": "/admin/core/testimonial/", "icon": "fas fa-quote-right"},
-                ]
-            },
-            {
-                "name": "⚙️ Services Page",
-                "url": "/admin/core/service/",
-                "icon": "fas fa-cogs",
-                "children": [
-                    {"name": "All Services", "url": "/admin/core/service/", "icon": "fas fa-list"},
-                    {"name": "Process Steps", "url": "/admin/core/serviceprocessstep/", "icon": "fas fa-tasks"},
-                ]
-            },
-            {
-                "name": "🤖 AI Tools Page",
-                "url": "/admin/core/aitoolssection/",
-                "icon": "fas fa-robot",
-            },
-            {
-                "name": "🎬 Demos Page",
-                "url": "/admin/core/demoshowcase/",
-                "icon": "fas fa-video",
-            },
-            {
-                "name": "❓ FAQ Page",
-                "url": "/admin/core/faqcategory/",
-                "icon": "fas fa-question-circle",
-                "children": [
-                    {"name": "FAQ Hero Section", "url": "/admin/core/faqpagesection/", "icon": "fas fa-star"},
-                    {"name": "FAQ Categories", "url": "/admin/core/faqcategory/", "icon": "fas fa-folder"},
-                ]
-            },
-            {
-                "name": "📞 Contact Page",
-                "url": "/admin/core/contactmethod/",
-                "icon": "fas fa-envelope",
-                "children": [
-                    {"name": "Contact Methods", "url": "/admin/core/contactmethod/", "icon": "fas fa-phone"},
-                    {"name": "Contact Inquiries", "url": "/admin/core/contactinquiry/", "icon": "fas fa-inbox"},
-                ]
-            },
-            {
-                "name": "🔍 SEO Management",
-                "url": "/admin/core/pageseo/",
-                "icon": "fas fa-search-plus",
-                "children": [
-                    {"name": "Page SEO Tags", "url": "/admin/core/pageseo/", "icon": "fas fa-tags"},
-                    {"name": "📤 Upload SEO Data", "url": "/admin/core/seodataupload/add/", "icon": "fas fa-file-upload"},
-                    {"name": "SEO Uploads", "url": "/admin/core/seodataupload/", "icon": "fas fa-database"},
-                    {"name": "Keywords", "url": "/admin/core/seokeyword/", "icon": "fas fa-key"},
-                    {"name": "Keyword Clusters", "url": "/admin/core/seokeywordcluster/", "icon": "fas fa-project-diagram"},
-                    {"name": "AI Recommendations", "url": "/admin/core/aiseorecommendation/", "icon": "fas fa-lightbulb"},
-                ]
-            },
-            {
-                "name": "💬 Leads & Chat",
-                "url": "/admin/core/chatlead/",
-                "icon": "fas fa-user-plus",
-                "children": [
-                    {"name": "Chat Leads", "url": "/admin/core/chatlead/", "icon": "fas fa-star"},
-                    {"name": "Chat Conversations", "url": "/admin/core/chatconversation/", "icon": "fas fa-comments"},
-                    {"name": "Chatbot Settings", "url": "/admin/core/chatbotsettings/", "icon": "fas fa-robot"},
-                    {"name": "Knowledge Base", "url": "/admin/core/knowledgearticle/", "icon": "fas fa-book"},
-                    {"name": "Knowledge Categories", "url": "/admin/core/knowledgecategory/", "icon": "fas fa-folder"},
-                ]
-            },
-            {
-                "name": "📝 Blog & Content",
-                "url": "/admin/core/blogpost/",
-                "icon": "fas fa-newspaper",
-            },
-            {
-                "name": "🏢 Site Settings",
-                "url": "/admin/core/sitesettings/",
-                "icon": "fas fa-sliders-h",
-            },
-            {
-                "name": "🦶 Footer",
-                "url": "/admin/core/footersection/",
-                "icon": "fas fa-info-circle",
-            },
-            {
-                "name": "🧭 Navigation Menus",
-                "url": "/admin/core/navigationmenu/",
-                "icon": "fas fa-bars",
-            },
-            {
-                "name": "📊 Statistics",
-                "url": "/admin/core/statmetric/",
-                "icon": "fas fa-chart-bar",
-            },
-            {
-                "name": "📣 CTA Sections",
-                "url": "/admin/core/ctasection/",
-                "icon": "fas fa-bullhorn",
-            },
-            {
-                "name": "💰 Pricing Plans",
-                "url": "/admin/core/pricingplan/",
-                "icon": "fas fa-tags",
-            },
-        ]
+    # Logo
+    "SITE_LOGO": {
+        "light": lambda request: static("images/logo.png"),
+        "dark": lambda request: static("images/logo-dark.png"),
     },
-
-    # Custom icons for models
-    "icons": {
-        "auth": "fas fa-users-cog",
-        "auth.user": "fas fa-user",
-        "auth.Group": "fas fa-users",
-        "core.HeroSection": "fas fa-home",
-        "core.Service": "fas fa-cogs",
-        "core.BusinessImpactSection": "fas fa-chart-line",
-        "core.FAQCategory": "fas fa-question-circle",
-        "core.ContactMethod": "fas fa-envelope",
-        "core.ROICalculatorSection": "fas fa-calculator",
-        "core.AIToolsSection": "fas fa-robot",
-        "core.AITool": "fas fa-magic",
-        "core.WhyChooseSection": "fas fa-star",
-        "core.FooterSection": "fas fa-info-circle",
-        "core.SiteSettings": "fas fa-sliders-h",
-        "core.PageSEO": "fas fa-search",
-        "core.SEODataUpload": "fas fa-file-upload",
-        "core.SEOKeyword": "fas fa-key",
-        "core.SEOKeywordCluster": "fas fa-project-diagram",
-        "core.AISEORecommendation": "fas fa-microchip",
-        "core.ChatbotSettings": "fas fa-robot",
-        "core.KnowledgeCategory": "fas fa-folder-tree",
-        "core.KnowledgeArticle": "fas fa-book-open",
-        "core.ChatConversation": "fas fa-comments",
-        "core.ChatLead": "fas fa-user-plus",
-        "core.Testimonial": "fas fa-quote-right",
-        "core.CTASection": "fas fa-bullhorn",
-        "core.DemoShowcase": "fas fa-image",
-        "core.PricingPlan": "fas fa-tags",
-        "core.StatMetric": "fas fa-chart-bar",
-        "core.NavigationMenu": "fas fa-bars",
-        "core.NavigationItem": "fas fa-link",
-        "core.BlogPost": "fas fa-newspaper",
+    "SITE_SYMBOL": "rocket_launch",  # Material icon
+    "SITE_FAVICONS": [
+        {
+            "rel": "icon",
+            "sizes": "32x32",
+            "type": "image/png",
+            "href": lambda request: static("favicon.ico"),
+        },
+    ],
+    "SHOW_HISTORY": True,
+    "SHOW_VIEW_ON_SITE": True,
+    "ENVIRONMENT": "core.utils.environment_callback",
+    "DASHBOARD_CALLBACK": "core.utils.dashboard_callback",
+    "LOGIN": {
+        "image": lambda request: static("images/login-bg.jpg"),
     },
-
-    # Icons that are used when one is not manually specified
-    "default_icon_parents": "fas fa-chevron-circle-right",
-    "default_icon_children": "fas fa-circle",
-
-    #################
-    # Related Modal #
-    #################
-    "related_modal_active": False,
-
-    #############
-    # UI Tweaks #
-    #############
-    "custom_css": None,
-    "custom_js": None,
-    "use_google_fonts_cdn": True,
-    "show_ui_builder": False,
-
-    ###############
-    # Change view #
-    ###############
-    "changeform_format": "horizontal_tabs",
-    "changeform_format_overrides": {"auth.user": "collapsible", "auth.group": "vertical_tabs"},
-
-    # Theme
-    "theme": "flatly",  # Options: cerulean, cosmo, flatly, journal, litera, lumen, lux, materia, minty, pulse, sandstone, simplex, sketchy, slate, solar, spacelab, superhero, united, yeti
-}
-
-# UI Tweaks for colors
-JAZZMIN_UI_TWEAKS = {
-    "navbar_small_text": False,
-    "footer_small_text": False,
-    "body_small_text": False,
-    "brand_small_text": False,
-    "brand_colour": "#f9cb07",  # Your brand yellow
-    "accent": "accent-warning",
-    "navbar": "navbar-warning navbar-dark",  # Use warning for yellow
-    "no_navbar_border": False,
-    "navbar_fixed": True,
-    "layout_boxed": False,
-    "footer_fixed": False,
-    "sidebar_fixed": True,
-    "sidebar": "sidebar-dark-warning",  # Dark sidebar with yellow accents
-    "sidebar_nav_small_text": False,
-    "sidebar_disable_expand": False,
-    "sidebar_nav_child_indent": True,
-    "sidebar_nav_compact_style": False,
-    "sidebar_nav_legacy_style": False,
-    "sidebar_nav_flat_style": False,
-    "theme": "flatly",
-    "dark_mode_theme": None,
-    "button_classes": {
-        "primary": "btn-primary",
-        "secondary": "btn-secondary",
-        "info": "btn-info",
-        "warning": "btn-warning",
-        "danger": "btn-danger",
-        "success": "btn-success"
-    }
+    "STYLES": [
+        lambda request: static("css/admin-custom.css"),
+    ],
+    "SCRIPTS": [
+        lambda request: static("admin/js/seo-loading.js"),
+    ],
+    "COLORS": {
+        "font": {
+            "subtle-light": "107 114 128",
+            "subtle-dark": "156 163 175",
+            "default-light": "75 85 99",
+            "default-dark": "209 213 219",
+            "important-light": "17 24 39",
+            "important-dark": "243 244 246",
+        },
+        "primary": {
+            "50": "255 251 235",
+            "100": "254 243 199",
+            "200": "253 230 138",
+            "300": "252 211 77",
+            "400": "251 191 36",
+            "500": "245 158 11",  # Codeteki yellow/amber
+            "600": "217 119 6",
+            "700": "180 83 9",
+            "800": "146 64 14",
+            "900": "120 53 15",
+            "950": "69 26 3",
+        },
+    },
+    "EXTENSIONS": {
+        "modeltranslation": {
+            "flags": {
+                "en": "🇺🇸",
+                "au": "🇦🇺",
+            },
+        },
+    },
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": False,
+        "navigation": [
+            {
+                "title": "Dashboard",
+                "separator": True,
+                "collapsible": False,
+                "items": [
+                    {
+                        "title": "Dashboard",
+                        "icon": "dashboard",
+                        "link": reverse_lazy("admin:index"),
+                    },
+                ],
+            },
+            # ============================================
+            # HOME PAGE SECTIONS - Matching Frontend Order
+            # ============================================
+            {
+                "title": "Home Page Sections",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": "1. Hero Section",
+                        "icon": "flag",
+                        "link": reverse_lazy("admin:core_herosection_changelist"),
+                        "badge": "core.utils.home_page_badge",
+                    },
+                    {
+                        "title": "2. Business Impact",
+                        "icon": "trending_up",
+                        "link": reverse_lazy("admin:core_businessimpactsection_changelist"),
+                    },
+                    {
+                        "title": "3. Services",
+                        "icon": "build",
+                        "link": reverse_lazy("admin:core_service_changelist"),
+                    },
+                    {
+                        "title": "4. AI Tools Gallery",
+                        "icon": "smart_toy",
+                        "link": reverse_lazy("admin:core_aitool_changelist"),
+                    },
+                    {
+                        "title": "5. ROI Calculator",
+                        "icon": "calculate",
+                        "link": reverse_lazy("admin:core_roicalculatorsection_changelist"),
+                    },
+                    {
+                        "title": "6. Why Choose Us",
+                        "icon": "verified",
+                        "link": reverse_lazy("admin:core_whychoosesection_changelist"),
+                    },
+                    {
+                        "title": "7. Contact Form",
+                        "icon": "contact_mail",
+                        "link": reverse_lazy("admin:core_contactmethod_changelist"),
+                    },
+                ],
+            },
+            # ============================================
+            # SERVICES PAGE
+            # ============================================
+            {
+                "title": "Services Page",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": "Services List",
+                        "icon": "build",
+                        "link": reverse_lazy("admin:core_service_changelist"),
+                    },
+                    {
+                        "title": "Service Process Steps",
+                        "icon": "timeline",
+                        "link": reverse_lazy("admin:core_serviceprocessstep_changelist"),
+                    },
+                    {
+                        "title": "Pricing Plans",
+                        "icon": "payments",
+                        "link": reverse_lazy("admin:core_pricingplan_changelist"),
+                    },
+                ],
+            },
+            # ============================================
+            # CONTACT PAGE
+            # ============================================
+            {
+                "title": "Contact Page",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": "Contact Methods",
+                        "icon": "contact_mail",
+                        "link": reverse_lazy("admin:core_contactmethod_changelist"),
+                    },
+                    {
+                        "title": "Contact Inquiries",
+                        "icon": "inbox",
+                        "link": reverse_lazy("admin:core_contactinquiry_changelist"),
+                    },
+                ],
+            },
+            # ============================================
+            # FAQ PAGE
+            # ============================================
+            {
+                "title": "FAQ Page",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": "FAQ Page Header",
+                        "icon": "title",
+                        "link": reverse_lazy("admin:core_faqpagesection_changelist"),
+                    },
+                    {
+                        "title": "FAQ Categories",
+                        "icon": "help",
+                        "link": reverse_lazy("admin:core_faqcategory_changelist"),
+                    },
+                ],
+            },
+            # ============================================
+            # OTHER PAGES
+            # ============================================
+            {
+                "title": "Other Pages",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": "Demos/Showcases",
+                        "icon": "movie",
+                        "link": reverse_lazy("admin:core_demoshowcase_changelist"),
+                    },
+                    {
+                        "title": "Testimonials",
+                        "icon": "format_quote",
+                        "link": reverse_lazy("admin:core_testimonial_changelist"),
+                    },
+                    {
+                        "title": "AI Tools Gallery",
+                        "icon": "smart_toy",
+                        "link": reverse_lazy("admin:core_aitool_changelist"),
+                    },
+                ],
+            },
+            # ============================================
+            # BLOG & CONTENT
+            # ============================================
+            {
+                "title": "Blog & Content",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": "Blog Posts",
+                        "icon": "article",
+                        "link": reverse_lazy("admin:core_blogpost_changelist"),
+                    },
+                    {
+                        "title": "Blog Categories",
+                        "icon": "category",
+                        "link": reverse_lazy("admin:core_blogcategory_changelist"),
+                    },
+                    {
+                        "title": "Knowledge Base",
+                        "icon": "menu_book",
+                        "link": reverse_lazy("admin:core_knowledgearticle_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": "SEO Management",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": "Page SEO Tags",
+                        "icon": "sell",
+                        "link": reverse_lazy("admin:core_pageseo_changelist"),
+                    },
+                    {
+                        "title": "SEO Uploads",
+                        "icon": "upload_file",
+                        "link": reverse_lazy("admin:core_seodataupload_changelist"),
+                    },
+                    {
+                        "title": "Keywords",
+                        "icon": "key",
+                        "link": reverse_lazy("admin:core_seokeyword_changelist"),
+                    },
+                    {
+                        "title": "Keyword Clusters",
+                        "icon": "hub",
+                        "link": reverse_lazy("admin:core_seokeywordcluster_changelist"),
+                    },
+                    {
+                        "title": "AI Recommendations",
+                        "icon": "lightbulb",
+                        "link": reverse_lazy("admin:core_aiseorecommendation_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": "SEO Engine",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": "Site Audits",
+                        "icon": "fact_check",
+                        "link": reverse_lazy("admin:core_siteaudit_changelist"),
+                        "badge": "core.utils.audit_badge",
+                    },
+                    {
+                        "title": "AI Analysis",
+                        "icon": "smart_toy",
+                        "link": reverse_lazy("admin:core_aianalysisreport_changelist"),
+                    },
+                    {
+                        "title": "Page Audits",
+                        "icon": "description",
+                        "link": reverse_lazy("admin:core_pageaudit_changelist"),
+                    },
+                    {
+                        "title": "Audit Issues",
+                        "icon": "warning",
+                        "link": reverse_lazy("admin:core_auditissue_changelist"),
+                    },
+                    {
+                        "title": "PageSpeed Results",
+                        "icon": "speed",
+                        "link": reverse_lazy("admin:core_pagespeedresult_changelist"),
+                    },
+                    {
+                        "title": "Search Console Data",
+                        "icon": "analytics",
+                        "link": reverse_lazy("admin:core_searchconsoledata_changelist"),
+                    },
+                    {
+                        "title": "Search Console Sync",
+                        "icon": "sync",
+                        "link": reverse_lazy("admin:core_searchconsolesync_changelist"),
+                    },
+                    {
+                        "title": "Keyword Rankings",
+                        "icon": "trending_up",
+                        "link": reverse_lazy("admin:core_keywordranking_changelist"),
+                    },
+                    {
+                        "title": "Competitors",
+                        "icon": "business",
+                        "link": reverse_lazy("admin:core_competitorprofile_changelist"),
+                    },
+                    {
+                        "title": "SEO Recommendations",
+                        "icon": "tips_and_updates",
+                        "link": reverse_lazy("admin:core_seorecommendation_changelist"),
+                    },
+                    {
+                        "title": "Scheduled Audits",
+                        "icon": "schedule",
+                        "link": reverse_lazy("admin:core_scheduledaudit_changelist"),
+                    },
+                    {
+                        "title": "Change Log",
+                        "icon": "history",
+                        "link": reverse_lazy("admin:core_seochangelog_changelist"),
+                    },
+                ],
+            },
+            # ============================================
+            # LEADS & CRM
+            # ============================================
+            {
+                "title": "Leads & CRM",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": "Chat Leads",
+                        "icon": "person_add",
+                        "link": reverse_lazy("admin:core_chatlead_changelist"),
+                        "badge": "core.utils.leads_badge",
+                    },
+                    {
+                        "title": "Conversations",
+                        "icon": "chat",
+                        "link": reverse_lazy("admin:core_chatconversation_changelist"),
+                    },
+                    {
+                        "title": "Contact Inquiries",
+                        "icon": "inbox",
+                        "link": reverse_lazy("admin:core_contactinquiry_changelist"),
+                    },
+                    {
+                        "title": "Chatbot Settings",
+                        "icon": "smart_toy",
+                        "link": reverse_lazy("admin:core_chatbotsettings_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": "Site Configuration",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": "Site Settings",
+                        "icon": "tune",
+                        "link": reverse_lazy("admin:core_sitesettings_changelist"),
+                    },
+                    {
+                        "title": "Navigation Menus",
+                        "icon": "menu",
+                        "link": reverse_lazy("admin:core_navigationmenu_changelist"),
+                    },
+                    {
+                        "title": "Footer",
+                        "icon": "view_agenda",
+                        "link": reverse_lazy("admin:core_footersection_changelist"),
+                    },
+                    {
+                        "title": "CTA Sections",
+                        "icon": "campaign",
+                        "link": reverse_lazy("admin:core_ctasection_changelist"),
+                    },
+                    {
+                        "title": "Statistics",
+                        "icon": "bar_chart",
+                        "link": reverse_lazy("admin:core_statmetric_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": "Users & Auth",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": "Users",
+                        "icon": "people",
+                        "link": reverse_lazy("admin:auth_user_changelist"),
+                    },
+                    {
+                        "title": "Groups",
+                        "icon": "groups",
+                        "link": reverse_lazy("admin:auth_group_changelist"),
+                    },
+                ],
+            },
+        ],
+    },
+    # TABS removed - using sidebar navigation only for consistent experience
 }

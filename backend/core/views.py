@@ -447,12 +447,33 @@ def _serialize_faq_categories() -> list:
     ]
 
 
-def _parse_business_hours(raw: str | None) -> list:
+def _parse_business_hours(settings_obj) -> list:
+    """
+    Get business hours from the new BusinessHours model,
+    falling back to old JSON field and then defaults.
+    """
     default_hours = [
         {"day": "Monday - Friday", "hours": "9:00 AM - 6:00 PM AEDT"},
         {"day": "Saturday", "hours": "10:00 AM - 4:00 PM AEDT"},
         {"day": "Sunday", "hours": "By appointment"},
     ]
+
+    if not settings_obj:
+        return default_hours
+
+    # First, try the new BusinessHours model
+    hours_from_model = settings_obj.hours.all().order_by('order')
+    if hours_from_model.exists():
+        return [
+            {
+                "day": hour.get_day_display(),
+                "hours": "Closed" if hour.is_closed else hour.hours
+            }
+            for hour in hours_from_model
+        ]
+
+    # Fall back to old JSON field
+    raw = settings_obj.business_hours
     if not raw:
         return default_hours
     try:
@@ -493,7 +514,7 @@ def _serialize_contact_details(include_inquiries: bool = False) -> dict:
         "secondaryPhone": settings_obj.secondary_phone if settings_obj else "",
         "address": settings_obj.address if settings_obj else "",
     }
-    business_hours = _parse_business_hours(settings_obj.business_hours if settings_obj else None)
+    business_hours = _parse_business_hours(settings_obj)
     payload = {
         "methods": methods,
         "info": info,
@@ -679,7 +700,7 @@ class WhyChooseContentAPIView(JSONAPIView):
 class FooterContentAPIView(JSONAPIView):
     """Footer section content."""
     def get(self, request):
-        section = FooterSection.objects.prefetch_related("links").order_by("-updated_at").first()
+        section = FooterSection.objects.prefetch_related("links", "social_links").order_by("-updated_at").first()
         if not section:
             return self.render({"footer": {}})
 
@@ -693,17 +714,22 @@ class FooterContentAPIView(JSONAPIView):
                 "url": link.url,
             })
 
+        # Get dynamic social links
+        social_links = [
+            {
+                "platform": social.platform,
+                "url": social.url,
+                "label": social.custom_label or social.get_platform_display(),
+            }
+            for social in section.social_links.filter(is_active=True).order_by('order')
+        ]
+
         payload = {
             "company": section.company_name,
             "description": section.company_description,
             "logo": section.logo.url if section.logo else None,
             "abn": section.abn,
-            "social": {
-                "facebook": section.facebook_url,
-                "twitter": section.twitter_url,
-                "linkedin": section.linkedin_url,
-                "instagram": section.instagram_url,
-            },
+            "socialLinks": social_links,
             "copyright": section.copyright_text,
             "links": links_by_column,
         }
@@ -751,7 +777,7 @@ class SiteSettingsAPIView(JSONAPIView):
             },
             "business": {
                 "abn": settings_obj.abn,
-                "hours": settings_obj.business_hours,
+                "hours": _parse_business_hours(settings_obj),
             },
             "analytics": {
                 "googleAnalyticsId": settings_obj.google_analytics_id,

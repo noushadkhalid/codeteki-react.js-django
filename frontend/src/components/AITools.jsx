@@ -243,11 +243,35 @@ const filterTools = (tools, tab) => {
   }
 };
 
+// Map Lucide icon names to emojis for fallback
+const iconToEmoji = {
+  Zap: "⚡️",
+  MessageCircle: "💬",
+  Bot: "🤖",
+  Phone: "📞",
+  Globe: "🌐",
+  Search: "🔍",
+  Settings: "⚙️",
+  Users: "👥",
+  Mail: "📧",
+  Calendar: "📅",
+  FileText: "📄",
+  BarChart: "📊",
+  Shield: "🛡️",
+  Clock: "🕐",
+  Star: "⭐",
+  Heart: "❤️",
+  Home: "🏠",
+  Briefcase: "💼",
+  Code: "💻",
+  Database: "🗄️",
+};
+
 const normalizeBackendTools = (tools = []) =>
   tools.map((tool) => ({
     title: tool.title,
     description: tool.description,
-    emoji: tool.emoji || tool.icon || "⚡️",
+    emoji: tool.emoji || iconToEmoji[tool.icon] || "⚡️",
     status: tool.status || "free",
     category: tool.category || "general",
     link: tool.externalUrl || tool.cta?.url || tool.secondaryCta?.url || remoteUrl,
@@ -259,7 +283,7 @@ const normalizeBackendTools = (tools = []) =>
     badge: tool.badge,
   }));
 
-export default function AITools({ showEmbed = false }) {
+export default function AITools({ showEmbed = false, hideComingSoon = false }) {
   const [activeFilter, setActiveFilter] = useState("all");
   const { data, isLoading } = useQuery({
     queryKey: ["/api/ai-tools/"],
@@ -267,20 +291,32 @@ export default function AITools({ showEmbed = false }) {
 
   const apiSection = data?.data?.aiTools || data?.aiTools;
   const normalizedTools = useMemo(() => normalizeBackendTools(apiSection?.tools), [apiSection]);
-  const dataset = normalizedTools.length ? normalizedTools : fallbackTools;
+  const allTools = normalizedTools.length ? normalizedTools : fallbackTools;
+
+  // Filter out coming soon tools if hideComingSoon is true
+  const dataset = useMemo(
+    () => hideComingSoon ? allTools.filter(tool => !tool.comingSoon) : allTools,
+    [allTools, hideComingSoon]
+  );
 
   const sectionCopy = apiSection || fallbackSection;
 
   const toolCounts = useMemo(() => getCounts(dataset), [dataset]);
   const filterOptions = useMemo(
-    () => [
-      { key: "all", label: `All Tools (${toolCounts.total})` },
-      { key: "free", label: `Free Tools (${toolCounts.free})` },
-      { key: "credits", label: `Credit Tools (${toolCounts.credits})` },
-      { key: "premium", label: `Premium (${toolCounts.premium})` },
-      { key: "coming-soon", label: `Coming Soon (${toolCounts.comingSoon})` },
-    ],
-    [toolCounts]
+    () => {
+      const options = [
+        { key: "all", label: `All Tools (${toolCounts.total})` },
+        { key: "free", label: `Free Tools (${toolCounts.free})` },
+        { key: "credits", label: `Credit Tools (${toolCounts.credits})` },
+        { key: "premium", label: `Premium (${toolCounts.premium})` },
+      ];
+      // Only show Coming Soon tab if not hiding coming soon tools
+      if (!hideComingSoon && toolCounts.comingSoon > 0) {
+        options.push({ key: "coming-soon", label: `Coming Soon (${toolCounts.comingSoon})` });
+      }
+      return options;
+    },
+    [toolCounts, hideComingSoon]
   );
 
   const filteredTools = useMemo(

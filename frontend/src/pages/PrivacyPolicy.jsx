@@ -1,6 +1,13 @@
+import SEOHead from "../components/SEOHead";
+
 export default function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-white py-20">
+      <SEOHead
+        title="Privacy Policy | Codeteki"
+        description="Codeteki's Privacy Policy outlines how we collect, use, and protect your personal information in compliance with Australian Privacy Principles."
+        page="privacy-policy"
+      />
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-black mb-4">Privacy Policy</h1>

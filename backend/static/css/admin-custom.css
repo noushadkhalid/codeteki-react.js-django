@@ -1,0 +1,46 @@
+/**
+ * Codeteki Admin Custom Styles
+ * Hides confusing default app list on dashboard
+ */
+
+/* Hide the default "Site administration" section on dashboard index */
+body.dashboard #content-main > .module {
+    display: none !important;
+}
+
+/* Also hide "Recent actions" sidebar on dashboard if it exists */
+body.dashboard #content-related {
+    display: none !important;
+}
+
+/* Keep the dashboard content area full width */
+body.dashboard #content {
+    margin-right: 0 !important;
+}
+
+/* Style for custom dashboard cards (if using dashboard_callback) */
+.dashboard-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.dashboard-card {
+    background: white;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-card-title {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-bottom: 0.5rem;
+}
+
+.dashboard-card-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #111827;
+}

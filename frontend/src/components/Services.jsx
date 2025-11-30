@@ -2,12 +2,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { Bot, Globe, Cog, Repeat, Cable, Code } from "lucide-react";
-
-const remoteCTA = {
-  href: "mailto:info@codeteki.au",
-  label: "Book consultations",
-};
+import { Bot, Globe, Cog, Repeat, Cable, Code, Search } from "lucide-react";
 
 const iconMap = {
   bot: Bot,
@@ -16,6 +11,7 @@ const iconMap = {
   repeat: Repeat,
   cable: Cable,
   code: Code,
+  search: Search,
 };
 
 const accentStyles = {
@@ -24,6 +20,8 @@ const accentStyles = {
   integration: { iconBg: "bg-emerald-50", iconColor: "text-emerald-600", pill: "bg-emerald-100 text-emerald-700" },
   tooling: { iconBg: "bg-amber-50", iconColor: "text-amber-600", pill: "bg-amber-100 text-amber-700" },
   web: { iconBg: "bg-slate-50", iconColor: "text-slate-600", pill: "bg-slate-100 text-slate-700" },
+  new: { iconBg: "bg-rose-50", iconColor: "text-rose-600", pill: "bg-rose-100 text-rose-700" },
+  seo: { iconBg: "bg-teal-50", iconColor: "text-teal-600", pill: "bg-teal-100 text-teal-700" },
 };
 
 const defaultServices = [
@@ -121,12 +119,19 @@ export default function Services({ featuredOnly = false }) {
         <div className="text-center max-w-4xl mx-auto mb-16">
           <span className="codeteki-pill mb-6">Our Core Services</span>
           <h2 className="text-4xl lg:text-5xl font-bold text-black mt-6 mb-4">
-            From AI workforce to custom tools and MCP integration
+            AI Solutions That Drive Real Business Results
           </h2>
-          <p className="text-lg text-[#52525b]">
-            Comprehensive solutions tailored for your business with Melbourne-based delivery, transparent pricing, and
-            fully managed operations once we launch.
+          <p className="text-lg text-[#52525b] mb-8">
+            From intelligent automation to custom development, we deliver end-to-end AI solutions with Melbourne-based support, transparent pricing, and fully managed operations.
           </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Button asChild size="lg" className="px-8 py-6 text-lg bg-[#f9cb07] text-black font-semibold hover:bg-[#e6b800]">
+              <a href="/contact">Book Consultation</a>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="px-8 py-6 text-lg border-2 border-black text-black font-semibold hover:bg-black hover:text-white">
+              <a href="mailto:info@codeteki.au?subject=Proposal Request">Request Proposal</a>
+            </Button>
+          </div>
         </div>
 
         {isLoading ? (
@@ -159,36 +164,39 @@ export default function Services({ featuredOnly = false }) {
                       {service.description}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="flex flex-col gap-6 p-6 pt-0">
-                    {service.metrics?.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {service.metrics.map((metric, idx) => (
-                          <Pill key={idx} className={accents.pill}>
-                            {metric}
-                          </Pill>
-                        ))}
-                      </div>
-                    )}
-                    {service.features?.length > 0 && (
-                      <ul className="text-sm text-[#52525b] space-y-2">
-                        {service.features.slice(0, 4).map((feature, idx) => (
-                          <li key={idx} className="flex items-start gap-2">
-                            <span className="text-[#f9cb07] mt-1">•</span>
-                            <span>{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                  <CardContent className="flex flex-col flex-grow p-6 pt-0">
+                    <div className="flex-grow space-y-4">
+                      {service.metrics?.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {service.metrics.map((metric, idx) => (
+                            <Pill key={idx} className={accents.pill}>
+                              {metric}
+                            </Pill>
+                          ))}
+                        </div>
+                      )}
+                      {service.features?.length > 0 && (
+                        <ul className="text-sm text-[#52525b] space-y-2">
+                          {service.features.slice(0, 4).map((feature, idx) => (
+                            <li key={idx} className="flex items-start gap-2">
+                              <span className="text-[#f9cb07] mt-1">•</span>
+                              <span>{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
 
-                    <div className="mt-auto flex flex-col gap-3">
+                    <div className="flex flex-col gap-3 pt-6">
                       <Button asChild className="w-full bg-[#f9cb07] text-black font-semibold hover:bg-[#e6b800]">
-                        <a href={remoteCTA.href}>{remoteCTA.label}</a>
+                        <a href="/contact">Book Consultation</a>
                       </Button>
                       <Button
+                        asChild
                         variant="outline"
-                        className="text-xs uppercase tracking-wide border border-[#e4e4e7] text-[#18181b] hover:bg-[#0f172a] hover:text-white"
+                        className="w-full text-xs uppercase tracking-wide border border-[#e4e4e7] text-[#18181b] hover:bg-[#0f172a] hover:text-white"
                       >
-                        Request proposal
+                        <a href={`mailto:info@codeteki.au?subject=Proposal Request - ${service.title}`}>Request Proposal</a>
                       </Button>
                     </div>
                   </CardContent>
@@ -197,6 +205,13 @@ export default function Services({ featuredOnly = false }) {
             })}
           </div>
         )}
+
+        {/* See All Services Button */}
+        <div className="mt-12 text-center">
+          <Button asChild size="lg" variant="outline" className="px-8 py-6 text-lg border-2 border-black text-black font-semibold hover:bg-black hover:text-white">
+            <a href="/services">See All Services</a>
+          </Button>
+        </div>
       </div>
     </section>
   );
