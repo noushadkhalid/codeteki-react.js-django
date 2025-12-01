@@ -1210,24 +1210,76 @@ class SiteAuditAdmin(ModelAdmin):
 
     @action(description="⚡ Run PageSpeed analysis")
     def run_pagespeed_analysis(self, request, queryset):
+        """Run PageSpeed and save results to PageAudit (shows inline below)."""
+        from django.utils import timezone
         from .services.pagespeed import PageSpeedService
+        from .models import PageAudit
+
         service = PageSpeedService()
-        analyzed_count = 0
 
         for audit in queryset:
-            urls = audit.target_urls or [f"https://{audit.domain}/"]
-            for url in urls[:5]:  # Limit to 5 URLs
-                try:
-                    result = service.analyze_and_save(url, audit.strategy)
-                    if result:
-                        analyzed_count += 1
-                except Exception as e:
-                    self.message_user(request, f"❌ PageSpeed failed for {url}: {str(e)}", messages.ERROR)
+            audit.status = 'running'
+            audit.started_at = timezone.now()
+            audit.save(update_fields=['status', 'started_at'])
 
-        if analyzed_count > 0:
+            urls = audit.target_urls or [f"https://{audit.domain}/"]
+            pages_done = 0
+
+            for url in urls[:10]:  # Limit to 10 URLs
+                try:
+                    # Get PageSpeed data
+                    data = service.analyze_url(url, audit.strategy)
+                    if not data or not data.get('success'):
+                        continue
+
+                    # Save to PageAudit (shows inline in Site Audits)
+                    PageAudit.objects.update_or_create(
+                        site_audit=audit,
+                        url=url,
+                        defaults={
+                            'strategy': audit.strategy,
+                            'performance_score': data.get('lab_performance_score'),
+                            'seo_score': data.get('seo_score'),
+                            'accessibility_score': data.get('accessibility_score'),
+                            'best_practices_score': data.get('best_practices_score'),
+                            'lcp': data.get('lab_lcp'),
+                            'cls': data.get('lab_cls'),
+                            'fcp': data.get('lab_fcp'),
+                            'tbt': data.get('lab_tbt'),
+                            'si': data.get('lab_si'),
+                            'ttfb': data.get('ttfb'),
+                            'status': 'completed',
+                            'raw_data': {
+                                'source': 'pagespeed_api',
+                                'field_lcp': data.get('field_lcp'),
+                                'field_cls': data.get('field_cls'),
+                                'field_inp': data.get('field_inp'),
+                                'overall_category': data.get('overall_category'),
+                            }
+                        }
+                    )
+                    pages_done += 1
+                except Exception as e:
+                    self.message_user(request, f"❌ {url}: {str(e)}", messages.ERROR)
+
+            # Update audit totals
+            page_audits = audit.page_audits.all()
+            if page_audits.exists():
+                scores = page_audits.exclude(performance_score__isnull=True)
+                if scores.exists():
+                    audit.avg_performance = sum(p.performance_score for p in scores) / scores.count()
+                    audit.avg_seo = sum(p.seo_score or 0 for p in scores) / scores.count()
+                    audit.avg_accessibility = sum(p.accessibility_score or 0 for p in scores) / scores.count()
+                    audit.avg_best_practices = sum(p.best_practices_score or 0 for p in scores) / scores.count()
+                audit.total_pages = page_audits.count()
+
+            audit.status = 'completed'
+            audit.completed_at = timezone.now()
+            audit.save()
+
             self.message_user(
                 request,
-                f"✅ PageSpeed: {analyzed_count} URLs analyzed. View results in SEO Engine → PageSpeed Results",
+                f"✅ '{audit.name}': {pages_done} pages analyzed. Results shown below in Page Audits.",
                 messages.SUCCESS
             )
 
@@ -1526,7 +1578,7 @@ class PageSpeedResultAdmin(ModelAdmin):
     list_display = ('url', 'strategy', 'lab_performance_score', 'overall_category', 'field_lcp', 'field_cls', 'created_at')
     list_filter = ('strategy', 'overall_category', 'created_at')
     search_fields = ('url',)
-    actions = ['run_pagespeed_analysis']
+    actions = ['run_pagespeed_analysis', 'generate_ai_recommendations']
 
     class Media:
         js = ('admin/js/seo-loading.js',)
@@ -1605,6 +1657,80 @@ class PageSpeedResultAdmin(ModelAdmin):
                     self.message_user(request, f"❌ {record.url}: {result.get('error')}", messages.ERROR)
             except Exception as e:
                 self.message_user(request, f"❌ Error analyzing {record.url}: {str(e)}", messages.ERROR)
+
+    @action(description="🤖 Generate AI Recommendations")
+    def generate_ai_recommendations(self, request, queryset):
+        """Generate AI recommendations based on PageSpeed results."""
+        from .services.ai_client import AIContentEngine
+        from .models import SEORecommendation
+
+        ai = AIContentEngine()
+        if not ai.enabled:
+            self.message_user(request, "❌ OpenAI API not configured. Set OPENAI_API_KEY.", messages.ERROR)
+            return
+
+        for record in queryset:
+            if not record.lab_performance_score:
+                self.message_user(request, f"⚠️ {record.url}: Run PageSpeed analysis first", messages.WARNING)
+                continue
+
+            try:
+                # Build prompt with PageSpeed data
+                prompt = f"""Analyze this PageSpeed Insights data and provide SEO/Performance recommendations:
+
+URL: {record.url}
+Strategy: {record.strategy}
+
+SCORES:
+- Performance: {record.lab_performance_score}/100
+
+CORE WEB VITALS (Lab):
+- LCP (Largest Contentful Paint): {record.lab_lcp}s (Good: <2.5s, Needs Improvement: 2.5-4s, Poor: >4s)
+- CLS (Cumulative Layout Shift): {record.lab_cls} (Good: <0.1, Needs Improvement: 0.1-0.25, Poor: >0.25)
+- TBT (Total Blocking Time): {record.lab_tbt}ms (Good: <200ms, Poor: >600ms)
+- FCP (First Contentful Paint): {record.lab_fcp}s
+- Speed Index: {record.lab_si}s
+
+REAL USER DATA (CrUX):
+- Field LCP: {record.field_lcp or 'N/A'}s
+- Field CLS: {record.field_cls or 'N/A'}
+- Field INP: {record.field_inp or 'N/A'}ms
+- Overall Category: {record.overall_category or 'N/A'}
+
+Provide:
+1. PRIORITY ISSUES (top 3 things to fix immediately)
+2. QUICK WINS (easy improvements)
+3. SPECIFIC CODE RECOMMENDATIONS (what to optimize)
+4. ESTIMATED IMPACT (how much scores could improve)
+
+Be specific and actionable. Focus on the worst metrics first."""
+
+                result = ai.generate(prompt=prompt, temperature=0.3)
+
+                if result.get('success'):
+                    # Save recommendation
+                    SEORecommendation.objects.create(
+                        target_url=record.url,
+                        recommendation_type='technical_fix',
+                        title=f"PageSpeed Analysis: {record.url}",
+                        current_value=f"Performance: {record.lab_performance_score}/100",
+                        recommended_value=result.get('output', ''),
+                        reasoning=f"Generated from PageSpeed Insights analysis on {record.strategy}",
+                        priority='high' if record.lab_performance_score < 50 else 'medium',
+                        status='pending',
+                        ai_model=result.get('model', 'gpt-4o-mini'),
+                        ai_tokens_used=result.get('usage', {}).get('total_tokens', 0),
+                    )
+                    self.message_user(
+                        request,
+                        f"✅ AI recommendations generated for {record.url}",
+                        messages.SUCCESS
+                    )
+                else:
+                    self.message_user(request, f"❌ AI failed for {record.url}: {result.get('error')}", messages.ERROR)
+
+            except Exception as e:
+                self.message_user(request, f"❌ Error: {str(e)}", messages.ERROR)
 
     class Meta:
         verbose_name_plural = "🔍 SEO Engine: PageSpeed Results"
