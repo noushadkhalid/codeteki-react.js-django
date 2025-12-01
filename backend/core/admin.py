@@ -594,19 +594,27 @@ class SEODataUploadAdmin(ModelAdmin):
         if processed:
             self.message_user(request, f"✅ Successfully processed {processed} upload(s).", messages.SUCCESS)
 
-    @action(description="🤖 Generate AI playbooks")
+    @action(description="🤖 Generate AI playbooks (Top 3 clusters)")
     def generate_ai_playbooks(self, request, queryset):
+        """Generate AI recommendations for top 3 priority clusters only to avoid timeout."""
         generated = 0
         for upload in queryset:
             try:
-                result = upload.run_ai_automation(refresh=True)
-                generated += result.get('recommendations', 0)
+                # Process only top 3 clusters to avoid nginx timeout
+                result = upload.run_ai_automation(cluster_limit=3, refresh=True)
+                count = result.get('recommendations', 0)
+                generated += count
+                self.message_user(
+                    request,
+                    f"✅ {upload.name}: {count} recommendations from top 3 clusters",
+                    messages.SUCCESS
+                )
             except Exception as exc:
                 self.message_user(request, f"❌ AI failed for {upload.name}: {exc}", messages.ERROR)
                 continue
 
-        if generated:
-            self.message_user(request, f"✅ Created {generated} AI recommendation(s).", messages.SUCCESS)
+        if not generated:
+            self.message_user(request, "⚠️ No recommendations generated. Check if clusters exist.", messages.WARNING)
 
     @action(description="📝 Generate blog drafts from clusters")
     def generate_blog_drafts(self, request, queryset):

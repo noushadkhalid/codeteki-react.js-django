@@ -28,62 +28,56 @@ const defaultServices = [
   {
     id: 1,
     title: "AI Workforce Solutions",
-    description: "Unlimited chat + voice agents trained on your knowledge to pick up every call, qualify leads, and book meetings.",
+    description: "Deploy domain-trained AI agents that collaborate with your team, manage workflows, and eliminate repetitive busy work.",
     icon: "bot",
     category: "workforce",
-    pricing: "from $699 setup",
-    metrics: ["60% staffing savings", "24/7 availability"],
-    features: ["Custom tone + persona", "Live transfer handoff", "CRM + calendar syncing", "Analytics dashboard"],
+    badge: "Enterprise Ready",
+    outcomes: ["Human-in-the-loop guardrails", "Secure knowledge base integrations", "Realtime analytics + alerts"],
   },
   {
     id: 2,
     title: "Custom Tool Development",
-    description: "Bespoke internal tools, calculators, and customer-facing AI experiences delivered end-to-end.",
+    description: "Design and ship bespoke internal tools, portals, and dashboards that plug straight into your existing ecosystem.",
     icon: "code",
     category: "tooling",
-    pricing: "from $3k",
-    metrics: ["4-6 week delivery", "Australian hosting"],
-    features: ["React + Next.js builds", "Secure auth workflows", "Payments + billing automation", "Maintenance options"],
+    badge: "Tailored Builds",
+    outcomes: ["Pixel-perfect UI/UX", "First-party API integrations", "Ongoing roadmap partnership"],
   },
   {
     id: 3,
-    title: "Business Automation",
-    description: "We eliminate repetitive tasks across operations, HR, finance, and customer success with AI-led automation.",
+    title: "Business Automation Tools",
+    description: "Automate approvals, reporting, compliance, and daily operations with orchestrated workflows across your stack.",
     icon: "cog",
     category: "automation",
-    pricing: "custom per workflow",
-    metrics: ["80% manual reduction", "ROI in 3 months"],
-    features: ["Document + email automation", "Data entry + reconciliation", "Inventory + order syncing", "Reporting pipelines"],
+    badge: "Process Automation",
+    outcomes: ["Unified task orchestration", "Codeteki governance layer", "Return on investment reporting"],
   },
   {
     id: 4,
-    title: "MCP Integrations",
-    description: "Connect Claude and other assistants to your databases and tools using Model Context Protocol.",
+    title: "MCP Integration Services",
+    description: "Connect the Model Context Protocol to your proprietary knowledge bases and tooling to unlock trustworthy automation.",
     icon: "cable",
     category: "integration",
-    pricing: "from $4k",
-    metrics: ["Secure access", "Real-time syncing"],
-    features: ["Design + implementation", "Policy + access controls", "Audit + monitoring", "LLM guardrails"],
+    badge: "MCP Experts",
+    outcomes: ["Source-of-truth syncing", "Guardrailed data pipelines", "Observability dashboards"],
   },
   {
     id: 5,
     title: "AI Tools for Daily Tasks",
-    description: "Deploy AI tools similar to DesiFirms (diet planners, property analyzers, visa copilots) under your brand.",
+    description: "Personalized copilots for sales, support, HR, and finance that meet your policies and tone of voice from day one.",
     icon: "repeat",
     category: "tooling",
-    pricing: "white-label or custom",
-    metrics: ["Over 20 live tools", "100% managed"],
-    features: ["White-label UI", "Hosting + analytics", "Credit/paywall system", "Support + updates"],
+    badge: "Personal Copilots",
+    outcomes: ["Secure workspace libraries", "Role-based access + auditing", "No more context switching"],
   },
   {
     id: 6,
-    title: "Web Development",
-    description: "High-performance, SEO-ready websites that integrate Codeteki AI agents and forms out of the box.",
+    title: "Professional Web Development",
+    description: "Full-stack product teams that deliver marketing sites, customer portals, and high-performance web apps.",
     icon: "globe",
     category: "web",
-    pricing: "from $499",
-    metrics: ["4.5s faster than average", "100 Lighthouse score"],
-    features: ["Figma-to-code delivery", "Copywriting support", "CMS + blog setup", "Ongoing care plans"],
+    badge: "Full Stack",
+    outcomes: ["React + Django specialists", "Accessibility-grade builds", "Training + documentation"],
   },
 ];
 
@@ -102,10 +96,9 @@ export default function Services({ featuredOnly = false }) {
         title: service.title || service.name,
         description: service.description,
         icon: (service.icon || "bot").toLowerCase(),
-        category: (service.badge || service.category || "automation").toLowerCase().replace(/\s+/g, ""),
-        pricing: service.pricing || service.badge,
-        metrics: service.outcomes || service.metrics || [],
-        features: service.features || [],
+        category: (service.category || "automation").toLowerCase().replace(/\s+/g, ""),
+        badge: service.badge,
+        outcomes: service.outcomes || [],
         slug: service.slug,
       }));
     }
@@ -153,9 +146,9 @@ export default function Services({ featuredOnly = false }) {
                       <div className={`h-12 w-12 rounded-xl ring-8 ring-white ${accents.iconBg} flex items-center justify-center`}>
                         <IconComponent className={`h-5 w-5 ${accents.iconColor}`} />
                       </div>
-                      {service.pricing && (
+                      {service.badge && (
                         <span className="rounded-full bg-[#f9cb07] px-3 py-1 text-xs font-semibold text-black shadow-sm">
-                          {service.pricing}
+                          {service.badge}
                         </span>
                       )}
                     </div>
@@ -165,22 +158,13 @@ export default function Services({ featuredOnly = false }) {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="flex flex-col flex-grow p-6 pt-0">
-                    <div className="flex-grow space-y-4">
-                      {service.metrics?.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {service.metrics.map((metric, idx) => (
-                            <Pill key={idx} className={accents.pill}>
-                              {metric}
-                            </Pill>
-                          ))}
-                        </div>
-                      )}
-                      {service.features?.length > 0 && (
+                    <div className="flex-grow">
+                      {service.outcomes?.length > 0 && (
                         <ul className="text-sm text-[#52525b] space-y-2">
-                          {service.features.slice(0, 4).map((feature, idx) => (
+                          {service.outcomes.slice(0, 4).map((outcome, idx) => (
                             <li key={idx} className="flex items-start gap-2">
-                              <span className="text-[#f9cb07] mt-1">•</span>
-                              <span>{feature}</span>
+                              <span className="text-[#f9cb07] mt-1">✓</span>
+                              <span>{outcome}</span>
                             </li>
                           ))}
                         </ul>
@@ -216,7 +200,3 @@ export default function Services({ featuredOnly = false }) {
     </section>
   );
 }
-
-const Pill = ({ children, className }) => (
-  <span className={`text-xs font-semibold px-3 py-1 rounded-full ${className}`}>{children}</span>
-);

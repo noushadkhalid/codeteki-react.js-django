@@ -32,6 +32,10 @@ SECRET_KEY = os.getenv(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DJANGO_DEBUG", "True") == "True"
 
+# Increase limits for large SEO keyword uploads (1000s of keywords)
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 50000  # Default is 1000
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10485760  # 10MB
+
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.getenv(
