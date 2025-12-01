@@ -128,7 +128,10 @@ class PageSpeedService:
                 result["origin_inp"] = self._extract_crux_metric(origin_metrics, "INTERACTION_TO_NEXT_PAINT")
                 result["origin_cls"] = self._extract_crux_metric(origin_metrics, "CUMULATIVE_LAYOUT_SHIFT_SCORE")
 
-            # Store raw data (trimmed)
+            # Extract issues from Lighthouse data embedded in PageSpeed response
+            result["issues"] = self._extract_issues(lighthouse)
+
+            # Store raw data (trimmed but with audit details)
             result["raw_data"] = self._trim_raw_data(data)
 
             result["success"] = True
@@ -155,7 +158,7 @@ class PageSpeedService:
         Returns:
             PageSpeedResult instance or None on error
         """
-        from ..models import PageSpeedResult
+        from ..models import PageSpeedResult, AuditIssue
 
         analysis = self.analyze_url(url, strategy)
 
@@ -186,6 +189,23 @@ class PageSpeedService:
             overall_category=analysis.get("overall_category", ""),
             raw_data=analysis.get("raw_data", {}),
         )
+
+        # Save issues if page_audit is provided
+        if page_audit and analysis.get("issues"):
+            for issue_data in analysis["issues"]:
+                AuditIssue.objects.create(
+                    page_audit=page_audit,
+                    audit_id=issue_data.get("id", ""),
+                    title=issue_data.get("title", ""),
+                    description=issue_data.get("description", ""),
+                    category=issue_data.get("category", ""),
+                    severity=issue_data.get("severity", "info"),
+                    score=issue_data.get("score"),
+                    display_value=issue_data.get("display_value", ""),
+                    savings_ms=issue_data.get("savings_ms", 0),
+                    savings_bytes=issue_data.get("savings_bytes", 0),
+                    details=issue_data.get("details", {}),
+                )
 
         return result
 
@@ -277,22 +297,127 @@ class PageSpeedService:
             return percentile
         return None
 
+    def _extract_issues(self, lighthouse_data: dict) -> list:
+        """Extract issues/opportunities from Lighthouse data in PageSpeed response."""
+        issues = []
+        audits = lighthouse_data.get("audits", {})
+        categories = lighthouse_data.get("categories", {})
+
+        # Map audit IDs to categories
+        audit_to_category = {}
+        for cat_id, cat_data in categories.items():
+            for audit_ref in cat_data.get("auditRefs", []):
+                audit_to_category[audit_ref.get("id")] = cat_id
+
+        for audit_id, audit_data in audits.items():
+            # Skip passed/informational audits
+            score = audit_data.get("score")
+            if score is None or score == 1:
+                continue
+
+            # Determine severity
+            if score == 0:
+                severity = "error"
+            elif score < 0.5:
+                severity = "warning"
+            else:
+                severity = "info"
+
+            # Get category
+            category = audit_to_category.get(audit_id, "performance")
+
+            # Extract savings
+            savings_ms = 0
+            savings_bytes = 0
+            details = audit_data.get("details", {})
+            if details.get("overallSavingsMs"):
+                savings_ms = details["overallSavingsMs"]
+            if details.get("overallSavingsBytes"):
+                savings_bytes = details["overallSavingsBytes"]
+
+            issues.append({
+                "id": audit_id,
+                "title": audit_data.get("title", ""),
+                "description": audit_data.get("description", ""),
+                "category": category,
+                "severity": severity,
+                "score": score,
+                "display_value": audit_data.get("displayValue", ""),
+                "savings_ms": savings_ms,
+                "savings_bytes": savings_bytes,
+                "details": self._trim_details(details),
+            })
+
+        # Sort by severity and savings
+        severity_order = {"error": 0, "warning": 1, "info": 2}
+        issues.sort(key=lambda x: (severity_order.get(x["severity"], 3), -x["savings_ms"]))
+
+        return issues
+
+    def _trim_details(self, details: dict) -> dict:
+        """Trim details while preserving important diagnostic data."""
+        if not details:
+            return {}
+
+        trimmed = {"type": details.get("type")}
+
+        # Keep headings and summary
+        if "headings" in details:
+            trimmed["headings"] = details["headings"]
+        if "summary" in details:
+            trimmed["summary"] = details["summary"]
+        if "overallSavingsMs" in details:
+            trimmed["overallSavingsMs"] = details["overallSavingsMs"]
+        if "overallSavingsBytes" in details:
+            trimmed["overallSavingsBytes"] = details["overallSavingsBytes"]
+
+        # Keep items with important fields
+        if "items" in details:
+            trimmed_items = []
+            for item in details["items"][:15]:
+                trimmed_item = {}
+                # Keep all important fields
+                for key in ["url", "totalBytes", "wastedBytes", "wastedMs", "cacheLifetimeMs",
+                           "cacheHitProbability", "score", "transferSize", "resourceSize"]:
+                    if key in item:
+                        trimmed_item[key] = item[key]
+                # Handle node (DOM element) data
+                if "node" in item:
+                    node = item["node"]
+                    trimmed_item["node"] = {
+                        "selector": node.get("selector", "")[:300],
+                        "snippet": node.get("snippet", "")[:500],
+                        "nodeLabel": node.get("nodeLabel", "")[:200],
+                    }
+                if trimmed_item:
+                    trimmed_items.append(trimmed_item)
+            trimmed["items"] = trimmed_items
+            trimmed["total_items"] = len(details["items"])
+
+        return trimmed
+
     def _trim_raw_data(self, data: dict) -> dict:
-        """Trim raw API response for storage."""
+        """Trim raw API response while keeping useful diagnostic data."""
+        lighthouse = data.get("lighthouseResult", {})
+
         return {
             "id": data.get("id"),
             "analysisUTCTimestamp": data.get("analysisUTCTimestamp"),
             "loadingExperience": {
                 "id": data.get("loadingExperience", {}).get("id"),
                 "overall_category": data.get("loadingExperience", {}).get("overall_category"),
+                "metrics": data.get("loadingExperience", {}).get("metrics", {}),
             },
             "originLoadingExperience": {
                 "id": data.get("originLoadingExperience", {}).get("id"),
                 "overall_category": data.get("originLoadingExperience", {}).get("overall_category"),
             },
             "lighthouseResult": {
-                "lighthouseVersion": data.get("lighthouseResult", {}).get("lighthouseVersion"),
-                "fetchTime": data.get("lighthouseResult", {}).get("fetchTime"),
+                "lighthouseVersion": lighthouse.get("lighthouseVersion"),
+                "fetchTime": lighthouse.get("fetchTime"),
+                "requestedUrl": lighthouse.get("requestedUrl"),
+                "finalUrl": lighthouse.get("finalUrl"),
+                "runWarnings": lighthouse.get("runWarnings", []),
             },
         }
 

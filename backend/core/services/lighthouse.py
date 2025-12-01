@@ -422,7 +422,7 @@ class LighthouseService:
         return issues
 
     def _trim_details(self, details: dict) -> dict:
-        """Trim details to reduce storage size."""
+        """Trim details while preserving important diagnostic data."""
         if not details:
             return {}
 
@@ -430,10 +430,91 @@ class LighthouseService:
             "type": details.get("type"),
         }
 
-        # Keep only first 10 items if present
+        # Keep headings for understanding column structure
+        if "headings" in details:
+            trimmed["headings"] = details["headings"]
+
+        # Keep summary data
+        if "summary" in details:
+            trimmed["summary"] = details["summary"]
+
+        # Keep overall savings
+        if "overallSavingsMs" in details:
+            trimmed["overallSavingsMs"] = details["overallSavingsMs"]
+        if "overallSavingsBytes" in details:
+            trimmed["overallSavingsBytes"] = details["overallSavingsBytes"]
+
+        # Keep items with important fields preserved
         if "items" in details:
-            trimmed["items"] = details["items"][:10]
+            trimmed_items = []
+            for item in details["items"][:15]:  # Keep up to 15 items
+                trimmed_item = {}
+
+                # Resource/URL information
+                if "url" in item:
+                    trimmed_item["url"] = item["url"]
+                if "requestUrl" in item:
+                    trimmed_item["requestUrl"] = item["requestUrl"]
+
+                # Size and savings
+                if "totalBytes" in item:
+                    trimmed_item["totalBytes"] = item["totalBytes"]
+                if "wastedBytes" in item:
+                    trimmed_item["wastedBytes"] = item["wastedBytes"]
+                if "wastedMs" in item:
+                    trimmed_item["wastedMs"] = item["wastedMs"]
+                if "wastedPercent" in item:
+                    trimmed_item["wastedPercent"] = item["wastedPercent"]
+
+                # Cache information
+                if "cacheLifetimeMs" in item:
+                    trimmed_item["cacheLifetimeMs"] = item["cacheLifetimeMs"]
+                if "cacheHitProbability" in item:
+                    trimmed_item["cacheHitProbability"] = item["cacheHitProbability"]
+
+                # DOM element information (crucial for CLS, accessibility)
+                if "node" in item:
+                    node = item["node"]
+                    trimmed_item["node"] = {
+                        "type": node.get("type"),
+                        "selector": node.get("selector", "")[:300],
+                        "snippet": node.get("snippet", "")[:500],
+                        "nodeLabel": node.get("nodeLabel", "")[:200],
+                    }
+
+                # Layout shift specifics
+                if "score" in item:
+                    trimmed_item["score"] = item["score"]
+                if "subItems" in item:
+                    trimmed_item["subItems"] = item["subItems"]
+
+                # Timing information
+                if "startTime" in item:
+                    trimmed_item["startTime"] = item["startTime"]
+                if "duration" in item:
+                    trimmed_item["duration"] = item["duration"]
+
+                # Resource type
+                if "resourceType" in item:
+                    trimmed_item["resourceType"] = item["resourceType"]
+                if "mimeType" in item:
+                    trimmed_item["mimeType"] = item["mimeType"]
+
+                # Transfer/resource size
+                if "transferSize" in item:
+                    trimmed_item["transferSize"] = item["transferSize"]
+                if "resourceSize" in item:
+                    trimmed_item["resourceSize"] = item["resourceSize"]
+
+                if trimmed_item:
+                    trimmed_items.append(trimmed_item)
+
+            trimmed["items"] = trimmed_items
             trimmed["total_items"] = len(details["items"])
+
+        # Keep debugData if present (often contains root cause info)
+        if "debugData" in details:
+            trimmed["debugData"] = details["debugData"]
 
         return trimmed
 

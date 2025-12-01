@@ -237,7 +237,7 @@ Format as JSON:
             return {"success": False, "error": str(e)}
 
     def _gather_audit_data(self) -> dict:
-        """Gather audit data for analysis."""
+        """Gather comprehensive audit data for analysis."""
         from ..models import PageAudit, AuditIssue
 
         page_audits = self.site_audit.page_audits.all()
@@ -253,39 +253,113 @@ Format as JSON:
                 "avg_performance": self.site_audit.avg_performance,
                 "avg_seo": self.site_audit.avg_seo,
                 "avg_accessibility": self.site_audit.avg_accessibility,
+                "avg_best_practices": self.site_audit.avg_best_practices,
             },
             "pages": [],
-            "top_issues": [],
+            "issues_by_category": {
+                "performance": [],
+                "seo": [],
+                "accessibility": [],
+                "best-practices": [],
+            },
+            "core_web_vitals": [],
         }
 
-        # Add page data
-        for page in page_audits[:10]:  # Limit to 10 pages
-            data["pages"].append({
+        # Add page data with all metrics
+        for page in page_audits[:10]:
+            page_data = {
                 "url": page.url,
                 "performance": page.performance_score,
                 "seo": page.seo_score,
                 "accessibility": page.accessibility_score,
+                "best_practices": page.best_practices_score,
                 "lcp": page.lcp,
                 "cls": page.cls,
                 "tbt": page.tbt,
+                "fcp": page.fcp,
+                "si": page.si,
+            }
+            data["pages"].append(page_data)
+
+            # Add to Core Web Vitals summary
+            data["core_web_vitals"].append({
+                "url": page.url,
+                "lcp": {"value": page.lcp, "status": "good" if page.lcp and page.lcp <= 2.5 else "needs improvement" if page.lcp and page.lcp <= 4 else "poor"},
+                "cls": {"value": page.cls, "status": "good" if page.cls and page.cls <= 0.1 else "needs improvement" if page.cls and page.cls <= 0.25 else "poor"},
+                "tbt": {"value": page.tbt, "status": "good" if page.tbt and page.tbt <= 200 else "needs improvement" if page.tbt and page.tbt <= 600 else "poor"},
             })
 
-        # Add top issues
+        # Add detailed issues with full context
         issues = AuditIssue.objects.filter(
             page_audit__site_audit=self.site_audit,
             severity__in=["error", "warning"],
-        ).order_by("severity", "-savings_ms")[:15]
+        ).select_related("page_audit").order_by("severity", "-savings_ms")[:30]
 
         for issue in issues:
-            data["top_issues"].append({
+            issue_data = {
+                "audit_id": issue.audit_id,
                 "title": issue.title,
+                "description": issue.description[:500] if issue.description else "",
                 "category": issue.category,
                 "severity": issue.severity,
                 "url": issue.page_audit.url,
+                "score": issue.score,
+                "display_value": issue.display_value,
                 "savings_ms": issue.savings_ms,
-            })
+                "savings_bytes": issue.savings_bytes,
+                # Include detailed data for specific analysis
+                "details": self._extract_important_details(issue.details) if issue.details else None,
+            }
+
+            # Add to category-specific list
+            category = issue.category
+            if category in data["issues_by_category"]:
+                data["issues_by_category"][category].append(issue_data)
 
         return data
+
+    def _extract_important_details(self, details: dict) -> dict:
+        """Extract important details from Lighthouse issue data."""
+        if not details:
+            return {}
+
+        extracted = {}
+
+        # Extract items/resources if present (used by many audits)
+        if "items" in details:
+            items = details["items"][:10]  # Limit to 10 items
+            extracted["affected_items"] = []
+            for item in items:
+                item_info = {}
+                # Common fields in Lighthouse item details
+                if "url" in item:
+                    item_info["url"] = item["url"]
+                if "totalBytes" in item:
+                    item_info["size_kb"] = round(item["totalBytes"] / 1024, 1)
+                if "wastedBytes" in item:
+                    item_info["wasted_kb"] = round(item["wastedBytes"] / 1024, 1)
+                if "wastedMs" in item:
+                    item_info["wasted_ms"] = round(item["wastedMs"], 1)
+                if "cacheLifetimeMs" in item:
+                    item_info["cache_lifetime"] = item.get("cacheHitProbability", "none")
+                if "node" in item:
+                    # Element causing issue (e.g., CLS culprit)
+                    node = item["node"]
+                    item_info["element"] = node.get("snippet", node.get("selector", ""))[:200]
+                if "score" in item:
+                    item_info["element_score"] = item["score"]
+                if extracted.get("affected_items") is not None and item_info:
+                    extracted["affected_items"].append(item_info)
+
+        # Extract headings if present
+        if "headings" in details:
+            extracted["columns"] = [h.get("label", h.get("key", "")) for h in details["headings"][:5]]
+
+        # Extract summary info
+        if "summary" in details:
+            extracted["summary"] = details["summary"]
+
+        return extracted if extracted else None
 
     @classmethod
     def generate_combined_analysis(cls, site_audits, save_to=None) -> dict:
@@ -564,139 +638,90 @@ For each fix provide:
 - Alert thresholds to set"""
 
     def _build_analysis_prompt(self, audit_data: dict) -> str:
-        """Build the analysis prompt."""
-        return f"""Analyze this site audit data and provide SPECIFIC, ACTIONABLE recommendations:
+        """Build a dynamic analysis prompt based on actual audit data."""
 
-SITE AUDIT SUMMARY:
+        # Get first page metrics for summary
+        first_page = audit_data['pages'][0] if audit_data['pages'] else {}
+
+        return f"""Analyze this ACTUAL site audit data and provide SPECIFIC recommendations based on the REAL issues found.
+
+## SITE AUDIT SUMMARY
 {json.dumps(audit_data['site_audit'], indent=2)}
 
-PAGE SCORES:
+## CORE WEB VITALS STATUS
+{json.dumps(audit_data['core_web_vitals'], indent=2)}
+
+## PAGE-LEVEL SCORES
 {json.dumps(audit_data['pages'], indent=2)}
 
-TOP ISSUES:
-{json.dumps(audit_data['top_issues'], indent=2)}
+## PERFORMANCE ISSUES (Actual from Lighthouse)
+{json.dumps(audit_data['issues_by_category'].get('performance', []), indent=2)}
 
-IMPORTANT: Be SPECIFIC with file paths, code examples, and exact steps. No generic advice.
+## ACCESSIBILITY ISSUES (Actual from Lighthouse)
+{json.dumps(audit_data['issues_by_category'].get('accessibility', []), indent=2)}
+
+## BEST PRACTICES ISSUES (Actual from Lighthouse)
+{json.dumps(audit_data['issues_by_category'].get('best-practices', []), indent=2)}
+
+## SEO ISSUES (Actual from Lighthouse)
+{json.dumps(audit_data['issues_by_category'].get('seo', []), indent=2)}
+
+---
+
+IMPORTANT INSTRUCTIONS:
+1. Use the EXACT values from the data above (LCP: {first_page.get('lcp', 'N/A')}s, CLS: {first_page.get('cls', 'N/A')}, TBT: {first_page.get('tbt', 'N/A')}ms)
+2. Reference SPECIFIC files/elements mentioned in the "details" fields
+3. Calculate ACTUAL savings from savings_bytes and savings_ms values
+4. Focus on issues that ACTUALLY exist in the data, not hypothetical ones
+5. If "affected_items" or "element" are present in details, reference them specifically
+
+Generate a report with these sections:
+
+# Site Audit Recommendations for {audit_data['site_audit']['domain']}
 
 ## 1. CRITICAL ISSUES (Fix Immediately)
 
-For each critical issue, provide:
-- **Problem**: What's wrong (be specific)
-- **Impact**: Score improvement expected (e.g., "+15 to performance")
-- **Fix**: Exact code/config change needed
-
-### LCP Issue (Current: {audit_data['pages'][0].get('lcp', 'N/A')}s)
-If LCP > 2.5s, this is the #1 priority. Common fixes:
-
-**A) Image Optimization** - Add to your React components:
-```jsx
-// Use Next.js Image or add loading="lazy" and explicit dimensions
-<img
-  src="/image.webp"
-  width="800"
-  height="600"
-  loading="lazy"
-  decoding="async"
-/>
-```
-
-**B) Preload Critical Assets** - Add to your index.html or base template:
-```html
-<link rel="preload" href="/fonts/main.woff2" as="font" crossorigin>
-<link rel="preload" href="/hero-image.webp" as="image">
-```
-
-**C) Django WhiteNoise** - In settings.py:
-```python
-WHITENOISE_MAX_AGE = 31536000  # 1 year cache
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-```
-
-### CLS Issue (Current: {audit_data['pages'][0].get('cls', 'N/A')})
-If CLS > 0.1, fix layout shifts:
-
-```css
-/* Reserve space for images */
-img, video {{ aspect-ratio: 16/9; width: 100%; height: auto; }}
-
-/* Reserve space for ads/embeds */
-.ad-container {{ min-height: 250px; }}
-```
-
-### TBT Issue (Current: {audit_data['pages'][0].get('tbt', 'N/A')}ms)
-If TBT > 200ms, reduce JavaScript blocking:
-
-```jsx
-// Code split large components
-const HeavyComponent = React.lazy(() => import('./HeavyComponent'));
-
-// Defer non-critical scripts
-<script src="analytics.js" defer></script>
-```
+For EACH critical issue found in the data above:
+- **Issue**: [Use exact title from data]
+- **Current Value**: [Use display_value from data]
+- **Affected Resources**: [List specific URLs/elements from details.affected_items]
+- **Potential Savings**: [Calculate from savings_ms and savings_bytes]
+- **Fix**: Specific code change for Django/React
 
 ## 2. QUICK WINS (30 min or less each)
 
+Create a table of quick fixes based on actual issues found:
 | Fix | Expected Impact | Code Change |
 |-----|-----------------|-------------|
-| Enable gzip | +5-10 perf | Already handled by WhiteNoise |
-| Add font-display | +2-5 perf | `font-display: swap` in CSS |
-| Preconnect to APIs | +2-5 perf | `<link rel="preconnect" href="https://api.example.com">` |
 
 ## 3. MEDIUM EFFORT (1-4 hours)
 
-### React Bundle Optimization
-Run `npm run build -- --analyze` to identify large chunks, then:
-
-```jsx
-// vite.config.js or webpack.config.js
-build: {{
-  rollupOptions: {{
-    output: {{
-      manualChunks: {{
-        vendor: ['react', 'react-dom'],
-        utils: ['lodash', 'date-fns']
-      }}
-    }}
-  }}
-}}
-```
-
-### Image Conversion to WebP
-```bash
-# Convert all images to WebP
-find public -name "*.png" -o -name "*.jpg" | xargs -I{{}} cwebp {{}} -o {{}}.webp
-```
+For issues requiring more work, provide:
+- Specific file paths
+- Code examples tailored to the actual issues
+- Step-by-step implementation
 
 ## 4. DJANGO-SPECIFIC FIXES
 
-### Database Query Optimization
-```python
-# Add select_related/prefetch_related to reduce queries
-queryset = Model.objects.select_related('foreign_key').prefetch_related('many_to_many')
-```
-
-### Cache Static API Responses
-```python
-from django.views.decorators.cache import cache_page
-
-@cache_page(60 * 15)  # 15 minutes
-def api_view(request):
-    pass
-```
+Based on the architecture (Django + React SPA with WhiteNoise):
+- Address any caching issues found
+- Server-side optimizations
+- Static file serving improvements
 
 ## 5. PRIORITY ACTION PLAN
 
+Create a prioritized table based on ACTUAL impact from the data:
 | Priority | Issue | Impact | Effort | Do This |
 |----------|-------|--------|--------|---------|
-| 1 | LCP > 2.5s | Critical | Medium | Optimize hero image, add preload |
-| 2 | TBT > 200ms | High | Medium | Code split React components |
-| 3 | No caching headers | Medium | Easy | Configure WhiteNoise |
 
 ## 6. MONITORING CHECKLIST
 
-- [ ] Set up PageSpeed Insights monitoring (weekly)
-- [ ] Add Core Web Vitals to Google Analytics
-- [ ] Set performance budget: LCP < 2.5s, CLS < 0.1, TBT < 200ms"""
+Based on the current scores, set specific targets:
+- Current Performance: {audit_data['site_audit'].get('avg_performance', 'N/A')}
+- Current SEO: {audit_data['site_audit'].get('avg_seo', 'N/A')}
+- Current Accessibility: {audit_data['site_audit'].get('avg_accessibility', 'N/A')}
+
+Remember: Only recommend fixes for issues that ACTUALLY appear in the data. Do not add generic recommendations for issues not found."""
 
 
 class SEOContentAIEngine:
