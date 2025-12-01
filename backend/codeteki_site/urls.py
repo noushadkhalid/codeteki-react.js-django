@@ -33,7 +33,7 @@ urlpatterns = [
 
     # Serve static files from build root (images, manifest, etc.)
     re_path(
-        r'^(?P<path>(?:navbar-logo|footer-logo|favicon|manifest|robots|logo192|logo512)\.(?:png|jpg|svg|ico|json|txt))$',
+        r'^(?P<path>(?:navbar-logo|footer-logo|favicon|manifest|robots|logo192|logo512|hero-desktop|hero-mobile)\.(?:png|jpg|svg|ico|json|txt|webp))$',
         serve,
         {'document_root': settings.FRONTEND_BUILD}
     ),

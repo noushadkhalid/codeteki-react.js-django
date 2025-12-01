@@ -3,7 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "../components/ui/button";
 import { Skeleton } from "../components/ui/skeleton";
 import { Phone, Play, ArrowRight, Calculator } from "lucide-react";
-import heroImage from "../assets/codeteki-hero.png";
+
+// Optimized WebP images in public folder for better LCP
+const heroImageDesktop = "/hero-desktop.webp";
+const heroImageMobile = "/hero-mobile.webp";
 
 const fallbackHero = {
   badge: "AI-Powered Business Solutions",
@@ -16,7 +19,7 @@ const fallbackHero = {
     "At Codeteki, we revolutionize business operations through advanced AI technology and human expertise. Based in Melbourne, Australia, we combine innovative design, powerful automation, and intelligent solutions.",
   primaryCta: { label: "Talk to Us Today", href: "#contact" },
   secondaryCta: { label: "View Our Services", href: "#services" },
-  image: heroImage,
+  image: heroImageDesktop,
 };
 
 export default function Hero() {
@@ -36,7 +39,8 @@ export default function Hero() {
       description: payload.description || fallbackHero.description,
       primaryCta: payload.primaryCta || fallbackHero.primaryCta,
       secondaryCta: payload.secondaryCta || fallbackHero.secondaryCta,
-      image: payload.media || payload.image || payload.image_url || fallbackHero.image,
+      image: payload.media || payload.image || payload.image_url || heroImageDesktop,
+      imageMobile: heroImageMobile,
     };
   }, [data]);
 
@@ -55,15 +59,30 @@ export default function Hero() {
         {isLoading ? (
           <Skeleton className="h-[360px] w-full rounded-2xl bg-white/20" />
         ) : (
-          <img
-            src={hero.image || heroImage}
-            alt="AI-Powered Business Workspace"
-            className="rounded-2xl shadow-2xl w-full h-auto transition-all duration-700 group-hover:scale-105 group-hover:shadow-3xl transform group-hover:rotate-1"
-            loading="eager"
-            decoding="async"
-            width="600"
-            height="400"
-          />
+          <picture>
+            {/* Mobile-optimized image for screens < 768px */}
+            <source
+              media="(max-width: 767px)"
+              srcSet={hero.imageMobile || heroImageMobile}
+              type="image/webp"
+            />
+            {/* Desktop image for larger screens */}
+            <source
+              media="(min-width: 768px)"
+              srcSet={hero.image || heroImageDesktop}
+              type="image/webp"
+            />
+            <img
+              src={hero.image || heroImageDesktop}
+              alt="AI-Powered Business Workspace"
+              className="rounded-2xl shadow-2xl w-full h-auto transition-all duration-700 group-hover:scale-105 group-hover:shadow-3xl transform group-hover:rotate-1"
+              loading="eager"
+              decoding="async"
+              fetchpriority="high"
+              width="600"
+              height="339"
+            />
+          </picture>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
         <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-sm font-medium text-gray-800 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-2 group-hover:translate-y-0">
