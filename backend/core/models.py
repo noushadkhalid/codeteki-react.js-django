@@ -4,6 +4,8 @@ from django.db import models
 from django.utils import timezone
 from ckeditor.fields import RichTextField
 
+from .fields import WebPImageField, OptimizedImageField, ThumbnailImageField
+
 
 class TimestampedModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
@@ -43,7 +45,7 @@ class HeroSection(TimestampedModel):
     secondary_cta_label = models.CharField(max_length=80)
     secondary_cta_href = models.CharField(max_length=200)
     image_url = models.URLField(blank=True)
-    media = models.ImageField(upload_to="hero/", blank=True, null=True)
+    media = OptimizedImageField(upload_to="hero/", blank=True, null=True)
     background_pattern = models.CharField(max_length=60, default="sunrise-glow")
     is_active = models.BooleanField(default=True)
 
@@ -423,7 +425,7 @@ class WhyChooseReason(models.Model):
 class FooterSection(TimestampedModel):
     company_name = models.CharField(max_length=160, default="Codeteki Digital Services")
     company_description = models.TextField()
-    logo = models.ImageField(upload_to='footer/', blank=True, null=True)
+    logo = WebPImageField(upload_to='footer/', blank=True, null=True)
     abn = models.CharField(max_length=100, blank=True)
 
     # Social Media
@@ -472,9 +474,9 @@ class SiteSettings(TimestampedModel):
     site_description = models.TextField(blank=True)
 
     # Logos
-    logo = models.ImageField(upload_to='site/', blank=True, null=True, help_text="Main logo")
-    logo_dark = models.ImageField(upload_to='site/', blank=True, null=True, help_text="Logo for dark backgrounds")
-    favicon = models.ImageField(upload_to='site/', blank=True, null=True)
+    logo = WebPImageField(upload_to='site/', blank=True, null=True, help_text="Main logo")
+    logo_dark = WebPImageField(upload_to='site/', blank=True, null=True, help_text="Logo for dark backgrounds")
+    favicon = WebPImageField(upload_to='site/', blank=True, null=True, convert_to_webp=False)
 
     # Contact Information
     primary_email = models.EmailField(blank=True)
@@ -610,7 +612,7 @@ class PageSEO(TimestampedModel):
     meta_keywords = models.TextField(blank=True, help_text="Comma separated keywords")
     og_title = models.CharField(max_length=160, blank=True, verbose_name="Open Graph Title")
     og_description = models.TextField(max_length=320, blank=True)
-    og_image = models.ImageField(upload_to='seo/', blank=True, null=True)
+    og_image = OptimizedImageField(upload_to='seo/', blank=True, null=True, webp_max_size=(1200, 630))
     canonical_url = models.URLField(blank=True)
 
     class Meta:
@@ -626,7 +628,7 @@ class Testimonial(TimestampedModel):
     name = models.CharField(max_length=160)
     position = models.CharField(max_length=160, blank=True)
     company = models.CharField(max_length=160, blank=True)
-    image = models.ImageField(upload_to='testimonials/', blank=True, null=True)
+    image = ThumbnailImageField(upload_to='testimonials/', blank=True, null=True)
     rating = models.PositiveSmallIntegerField(default=5, help_text="Rating out of 5")
     content = models.TextField()
     is_featured = models.BooleanField(default=False)
@@ -688,11 +690,11 @@ class DemoShowcase(TimestampedModel):
     slug = models.SlugField(unique=True)
     short_description = models.TextField()
     full_description = RichTextField()
-    thumbnail = models.ImageField(upload_to='demos/', help_text="Main image for the demo")
+    thumbnail = ThumbnailImageField(upload_to='demos/', help_text="Main image for the demo")
     demo_url = models.URLField(blank=True, help_text="Link to live demo")
     video_url = models.URLField(blank=True, help_text="YouTube or Vimeo URL")
     client_name = models.CharField(max_length=160, blank=True)
-    client_logo = models.ImageField(upload_to='demos/clients/', blank=True, null=True)
+    client_logo = ThumbnailImageField(upload_to='demos/clients/', blank=True, null=True)
     technologies_used = models.TextField(blank=True, help_text="Comma separated list")
     completion_date = models.DateField(blank=True, null=True)
     is_featured = models.BooleanField(default=False)
@@ -705,7 +707,7 @@ class DemoShowcase(TimestampedModel):
     features = models.TextField(blank=True, help_text="One feature per line")
     feature_count = models.PositiveIntegerField(default=0, help_text="Optional count for additional features")
     highlight_badge = models.CharField(max_length=80, blank=True)
-    screenshot = models.ImageField(upload_to='demos/screenshots/', blank=True, null=True)
+    screenshot = OptimizedImageField(upload_to='demos/screenshots/', blank=True, null=True)
 
     class Meta:
         ordering = ["-is_featured", "order"]
@@ -722,7 +724,7 @@ class DemoShowcase(TimestampedModel):
 
 class DemoImage(models.Model):
     demo = models.ForeignKey(DemoShowcase, related_name="images", on_delete=models.CASCADE)
-    image = models.ImageField(upload_to='demos/gallery/')
+    image = OptimizedImageField(upload_to='demos/gallery/')
     caption = models.CharField(max_length=255, blank=True)
     order = models.PositiveIntegerField(default=0)
 
@@ -869,7 +871,7 @@ class BlogPost(TimestampedModel):
     slug = models.SlugField(unique=True)
     excerpt = models.TextField(max_length=320, help_text="Brief summary for previews (max 320 chars)")
     content = RichTextField()
-    featured_image = models.ImageField(upload_to='blog/', blank=True, null=True)
+    featured_image = OptimizedImageField(upload_to='blog/', blank=True, null=True)
     author = models.CharField(max_length=120, default="Codeteki Team")
 
     # Category - now a foreign key
@@ -889,7 +891,7 @@ class BlogPost(TimestampedModel):
     # Open Graph
     og_title = models.CharField(max_length=100, blank=True, help_text="Open Graph title for social sharing")
     og_description = models.TextField(max_length=300, blank=True, help_text="Open Graph description for social sharing")
-    og_image = models.ImageField(upload_to='blog/og/', blank=True, null=True, help_text="Image for social sharing (1200x630 recommended)")
+    og_image = OptimizedImageField(upload_to='blog/og/', blank=True, null=True, webp_max_size=(1200, 630), help_text="Image for social sharing (1200x630 recommended)")
 
     # Publishing
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_DRAFT)
@@ -1125,7 +1127,7 @@ class ChatbotSettings(TimestampedModel):
     contact_email = models.EmailField(blank=True)
     meeting_link = models.URLField(blank=True)
     accent_color = models.CharField(max_length=12, default="#f9cb07")
-    hero_image = models.ImageField(upload_to="chatbot/", blank=True, null=True)
+    hero_image = OptimizedImageField(upload_to="chatbot/", blank=True, null=True)
     quick_replies = models.JSONField(default=list, blank=True)
     escalation_threshold = models.PositiveSmallIntegerField(default=3, help_text="How many exchanges before suggesting human hand-off.")
 
@@ -1181,7 +1183,7 @@ class KnowledgeArticle(TimestampedModel):
     )
     call_to_action = models.CharField(max_length=160, blank=True)
     call_to_action_url = models.URLField(blank=True)
-    cover_image = models.ImageField(upload_to="knowledge/", blank=True, null=True)
+    cover_image = OptimizedImageField(upload_to="knowledge/", blank=True, null=True)
     tags = models.CharField(max_length=255, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_DRAFT)
     published_at = models.DateTimeField(blank=True, null=True)

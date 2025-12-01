@@ -107,6 +107,24 @@ DATABASES = {
     }
 }
 
+# Cache configuration for API response caching
+# Uses local memory cache (upgrade to Redis/Memcached for production)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'codeteki-cache',
+        'TIMEOUT': 300,  # 5 minutes default
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+        }
+    }
+}
+
+# Cache timeouts for different content types (in seconds)
+CACHE_TIMEOUT_SHORT = 60  # 1 minute - for dynamic content
+CACHE_TIMEOUT_MEDIUM = 300  # 5 minutes - for semi-static content
+CACHE_TIMEOUT_LONG = 900  # 15 minutes - for mostly static content
+
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators

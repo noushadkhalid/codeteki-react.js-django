@@ -3,9 +3,11 @@ from __future__ import annotations
 import json
 
 from django.conf import settings
+from django.core.cache import cache
 from django.db import models
 from django.http import JsonResponse
 from django.views import View
+from django.views.decorators.cache import cache_page
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
@@ -506,7 +508,7 @@ def _serialize_contact_details(include_inquiries: bool = False) -> dict:
         }
         for method in ContactMethod.objects.order_by("order")
     ]
-    settings_obj = SiteSettings.objects.order_by("-updated_at").first()
+    settings_obj = SiteSettings.objects.prefetch_related('hours').order_by("-updated_at").first()
     info = {
         "primaryEmail": settings_obj.primary_email if settings_obj else "",
         "secondaryEmail": settings_obj.secondary_email if settings_obj else "",
@@ -546,6 +548,7 @@ class JSONAPIView(View):
         return JsonResponse({self.payload_key: payload}, status=status, safe=False)
 
 
+@method_decorator(cache_page(getattr(settings, 'CACHE_TIMEOUT_MEDIUM', 300)), name='dispatch')
 class ServicesAPIView(JSONAPIView):
     def get(self, request):
         featured_flag = (request.GET.get("featured") or "").strip().lower()
@@ -553,6 +556,7 @@ class ServicesAPIView(JSONAPIView):
         return self.render(_serialize_services_section(featured_only=featured_only))
 
 
+@method_decorator(cache_page(getattr(settings, 'CACHE_TIMEOUT_LONG', 900)), name='dispatch')
 class FAQAPIView(JSONAPIView):
     def get(self, request):
         return self.render({
@@ -589,6 +593,7 @@ class ContactAPIView(JSONAPIView):
         return self.render({"message": "Thanks! We'll be in touch shortly.", "id": inquiry.id}, status=201)
 
 
+@method_decorator(cache_page(getattr(settings, 'CACHE_TIMEOUT_MEDIUM', 300)), name='dispatch')
 class HeroContentAPIView(JSONAPIView):
     def get(self, request):
         page = request.GET.get("page", "home")
@@ -697,6 +702,7 @@ class WhyChooseContentAPIView(JSONAPIView):
         return self.render({"whyChoose": _serialize_why_choose_section()})
 
 
+@method_decorator(cache_page(getattr(settings, 'CACHE_TIMEOUT_LONG', 900)), name='dispatch')
 class FooterContentAPIView(JSONAPIView):
     """Footer section content."""
     def get(self, request):
@@ -736,10 +742,11 @@ class FooterContentAPIView(JSONAPIView):
         return self.render({"footer": payload})
 
 
+@method_decorator(cache_page(getattr(settings, 'CACHE_TIMEOUT_LONG', 900)), name='dispatch')
 class SiteSettingsAPIView(JSONAPIView):
     """Site-wide settings."""
     def get(self, request):
-        settings_obj = SiteSettings.objects.order_by("-updated_at").first()
+        settings_obj = SiteSettings.objects.prefetch_related('hours').order_by("-updated_at").first()
         if not settings_obj:
             return self.render({"settings": {}})
 
@@ -958,6 +965,7 @@ class NavigationAPIView(JSONAPIView):
         return self.render({"navigation": root_items})
 
 
+@method_decorator(cache_page(getattr(settings, 'CACHE_TIMEOUT_MEDIUM', 300)), name='dispatch')
 class HomePageAPIView(JSONAPIView):
     """Aggregate payload for the marketing home page."""
 
@@ -983,6 +991,7 @@ class HomePageAPIView(JSONAPIView):
         )
 
 
+@method_decorator(cache_page(getattr(settings, 'CACHE_TIMEOUT_MEDIUM', 300)), name='dispatch')
 class ServicesPageAPIView(JSONAPIView):
     """Aggregate payload for the services page."""
 
@@ -1000,6 +1009,7 @@ class ServicesPageAPIView(JSONAPIView):
         )
 
 
+@method_decorator(cache_page(getattr(settings, 'CACHE_TIMEOUT_MEDIUM', 300)), name='dispatch')
 class AIToolsPageAPIView(JSONAPIView):
     """Aggregate payload for the AI tools showcase page."""
 
@@ -1014,6 +1024,7 @@ class AIToolsPageAPIView(JSONAPIView):
         )
 
 
+@method_decorator(cache_page(getattr(settings, 'CACHE_TIMEOUT_MEDIUM', 300)), name='dispatch')
 class DemosPageAPIView(JSONAPIView):
     """Aggregate payload for the demos page."""
 

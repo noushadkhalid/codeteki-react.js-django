@@ -71,6 +71,8 @@ export default function Footer() {
                 className="h-12 w-auto mb-4"
                 loading="lazy"
                 decoding="async"
+                width="140"
+                height="48"
               />
             ) : (
               <img
@@ -79,6 +81,8 @@ export default function Footer() {
                 className="h-12 w-auto mb-4"
                 loading="lazy"
                 decoding="async"
+                width="140"
+                height="48"
               />
             )}
             <p className="text-gray-400 leading-relaxed text-sm mb-4">

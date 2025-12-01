@@ -34,6 +34,9 @@ export default function Header() {
               className="h-12 cursor-pointer transition-transform duration-300 hover:scale-110"
               loading="eager"
               decoding="async"
+              width="140"
+              height="48"
+              fetchpriority="high"
             />
           </Link>
           
