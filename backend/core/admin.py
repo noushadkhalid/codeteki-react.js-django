@@ -1106,10 +1106,50 @@ class PricingPlanAdmin(ModelAdmin):
 class PageAuditInline(TabularInline):
     model = PageAudit
     extra = 0
-    readonly_fields = ('url', 'performance_score', 'seo_score', 'accessibility_score', 'lcp', 'cls')
-    fields = ('url', 'performance_score', 'seo_score', 'accessibility_score', 'lcp', 'cls')
-    can_delete = False
-    max_num = 20
+    readonly_fields = ('url', 'status', 'performance_display', 'seo_display', 'lcp_display', 'cls_display', 'tbt_display')
+    fields = ('url', 'status', 'performance_display', 'seo_display', 'lcp_display', 'cls_display', 'tbt_display')
+    can_delete = True
+    max_num = 50
+
+    @display(description="Performance")
+    def performance_display(self, obj):
+        if obj.performance_score is None:
+            return "—"
+        score = obj.performance_score
+        color = "#0cce6b" if score >= 90 else "#ffa400" if score >= 50 else "#ff4e42"
+        return format_html('<span style="color: {}; font-weight: bold;">{}</span>', color, score)
+
+    @display(description="SEO")
+    def seo_display(self, obj):
+        if obj.seo_score is None:
+            return "—"
+        score = obj.seo_score
+        color = "#0cce6b" if score >= 90 else "#ffa400" if score >= 50 else "#ff4e42"
+        return format_html('<span style="color: {}; font-weight: bold;">{}</span>', color, score)
+
+    @display(description="LCP (s)")
+    def lcp_display(self, obj):
+        if obj.lcp is None:
+            return "—"
+        lcp = obj.lcp
+        color = "#0cce6b" if lcp <= 2.5 else "#ffa400" if lcp <= 4 else "#ff4e42"
+        return format_html('<span style="color: {};">{:.2f}s</span>', color, lcp)
+
+    @display(description="CLS")
+    def cls_display(self, obj):
+        if obj.cls is None:
+            return "—"
+        cls = obj.cls
+        color = "#0cce6b" if cls <= 0.1 else "#ffa400" if cls <= 0.25 else "#ff4e42"
+        return format_html('<span style="color: {};">{:.3f}</span>', color, cls)
+
+    @display(description="TBT (ms)")
+    def tbt_display(self, obj):
+        if obj.tbt is None:
+            return "—"
+        tbt = obj.tbt
+        color = "#0cce6b" if tbt <= 200 else "#ffa400" if tbt <= 600 else "#ff4e42"
+        return format_html('<span style="color: {};">{:.0f}ms</span>', color, tbt)
 
 
 class SiteAuditForm(forms.ModelForm):
@@ -1193,19 +1233,58 @@ class SiteAuditAdmin(ModelAdmin):
 
     @action(description="🔍 Run Lighthouse audit")
     def run_lighthouse_audit(self, request, queryset):
+        from .services.lighthouse import LighthouseService
+        import logging
+        logger = logging.getLogger(__name__)
+
         for audit in queryset:
             try:
-                result = audit.run_audit()
-                if result.get('success'):
+                # First check if Lighthouse is installed
+                service = LighthouseService(audit)
+                if not service.check_lighthouse_installed():
                     self.message_user(
                         request,
-                        f"✅ Lighthouse '{audit.name}': {result.get('pages_audited')} pages, {result.get('total_issues')} issues. "
-                        f"View in Page Audits & Audit Issues tabs",
-                        messages.SUCCESS
+                        f"❌ Lighthouse CLI not installed. Run: sudo npm install -g lighthouse",
+                        messages.ERROR
                     )
+                    return
+
+                logger.info(f"Starting Lighthouse audit for {audit.name}")
+                result = audit.run_audit()
+                logger.info(f"Lighthouse result: {result}")
+
+                if result.get('success'):
+                    pages_done = result.get('pages_audited', 0)
+                    issues = result.get('total_issues', 0)
+
+                    if pages_done > 0:
+                        self.message_user(
+                            request,
+                            f"✅ Lighthouse '{audit.name}': {pages_done} pages analyzed, {issues} issues found. "
+                            f"Scroll down to see Page Audits results.",
+                            messages.SUCCESS
+                        )
+                    else:
+                        self.message_user(
+                            request,
+                            f"⚠️ Lighthouse completed but no pages were audited. Check if URLs are accessible.",
+                            messages.WARNING
+                        )
+
+                    # Log any errors from individual pages
+                    for error in result.get('errors', []):
+                        self.message_user(
+                            request,
+                            f"⚠️ {error.get('url')}: {error.get('error')}",
+                            messages.WARNING
+                        )
                 else:
-                    self.message_user(request, f"❌ Audit failed: {result.get('error')}", messages.ERROR)
+                    error_msg = result.get('error', 'Unknown error')
+                    logger.error(f"Lighthouse audit failed: {error_msg}")
+                    self.message_user(request, f"❌ Lighthouse failed: {error_msg}", messages.ERROR)
+
             except Exception as e:
+                logger.exception(f"Error running Lighthouse: {e}")
                 self.message_user(request, f"❌ Error: {str(e)}", messages.ERROR)
 
     @action(description="⚡ Run PageSpeed analysis")

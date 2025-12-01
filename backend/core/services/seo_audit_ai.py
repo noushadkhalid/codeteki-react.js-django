@@ -565,7 +565,7 @@ For each fix provide:
 
     def _build_analysis_prompt(self, audit_data: dict) -> str:
         """Build the analysis prompt."""
-        return f"""Analyze this site audit data and provide a comprehensive SEO analysis:
+        return f"""Analyze this site audit data and provide SPECIFIC, ACTIONABLE recommendations:
 
 SITE AUDIT SUMMARY:
 {json.dumps(audit_data['site_audit'], indent=2)}
@@ -576,38 +576,127 @@ PAGE SCORES:
 TOP ISSUES:
 {json.dumps(audit_data['top_issues'], indent=2)}
 
-Please provide:
+IMPORTANT: Be SPECIFIC with file paths, code examples, and exact steps. No generic advice.
 
-## 1. EXECUTIVE SUMMARY
-- Overall SEO health assessment
-- Key strengths and weaknesses
-- Critical issues requiring immediate attention
+## 1. CRITICAL ISSUES (Fix Immediately)
 
-## 2. PERFORMANCE ANALYSIS
-- Core Web Vitals assessment (LCP, CLS, TBT)
-- Performance bottlenecks identified
-- Quick wins vs long-term improvements
+For each critical issue, provide:
+- **Problem**: What's wrong (be specific)
+- **Impact**: Score improvement expected (e.g., "+15 to performance")
+- **Fix**: Exact code/config change needed
 
-## 3. SEO ISSUES BREAKDOWN
-For each major issue:
-- Impact on rankings
-- Fix complexity (easy/medium/hard)
-- Recommended priority
+### LCP Issue (Current: {audit_data['pages'][0].get('lcp', 'N/A')}s)
+If LCP > 2.5s, this is the #1 priority. Common fixes:
 
-## 4. DJANGO/REACT SPECIFIC RECOMMENDATIONS
-- Static file optimization (WhiteNoise config)
-- React bundle optimization
-- Server-side rendering considerations
-- Meta tag handling for SPA
+**A) Image Optimization** - Add to your React components:
+```jsx
+// Use Next.js Image or add loading="lazy" and explicit dimensions
+<img
+  src="/image.webp"
+  width="800"
+  height="600"
+  loading="lazy"
+  decoding="async"
+/>
+```
 
-## 5. ACTION PLAN
-Prioritized list of fixes with:
-- Expected impact
-- Estimated effort
-- Dependencies
+**B) Preload Critical Assets** - Add to your index.html or base template:
+```html
+<link rel="preload" href="/fonts/main.woff2" as="font" crossorigin>
+<link rel="preload" href="/hero-image.webp" as="image">
+```
 
-## 6. MONITORING RECOMMENDATIONS
-What metrics to track going forward."""
+**C) Django WhiteNoise** - In settings.py:
+```python
+WHITENOISE_MAX_AGE = 31536000  # 1 year cache
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+```
+
+### CLS Issue (Current: {audit_data['pages'][0].get('cls', 'N/A')})
+If CLS > 0.1, fix layout shifts:
+
+```css
+/* Reserve space for images */
+img, video {{ aspect-ratio: 16/9; width: 100%; height: auto; }}
+
+/* Reserve space for ads/embeds */
+.ad-container {{ min-height: 250px; }}
+```
+
+### TBT Issue (Current: {audit_data['pages'][0].get('tbt', 'N/A')}ms)
+If TBT > 200ms, reduce JavaScript blocking:
+
+```jsx
+// Code split large components
+const HeavyComponent = React.lazy(() => import('./HeavyComponent'));
+
+// Defer non-critical scripts
+<script src="analytics.js" defer></script>
+```
+
+## 2. QUICK WINS (30 min or less each)
+
+| Fix | Expected Impact | Code Change |
+|-----|-----------------|-------------|
+| Enable gzip | +5-10 perf | Already handled by WhiteNoise |
+| Add font-display | +2-5 perf | `font-display: swap` in CSS |
+| Preconnect to APIs | +2-5 perf | `<link rel="preconnect" href="https://api.example.com">` |
+
+## 3. MEDIUM EFFORT (1-4 hours)
+
+### React Bundle Optimization
+Run `npm run build -- --analyze` to identify large chunks, then:
+
+```jsx
+// vite.config.js or webpack.config.js
+build: {{
+  rollupOptions: {{
+    output: {{
+      manualChunks: {{
+        vendor: ['react', 'react-dom'],
+        utils: ['lodash', 'date-fns']
+      }}
+    }}
+  }}
+}}
+```
+
+### Image Conversion to WebP
+```bash
+# Convert all images to WebP
+find public -name "*.png" -o -name "*.jpg" | xargs -I{{}} cwebp {{}} -o {{}}.webp
+```
+
+## 4. DJANGO-SPECIFIC FIXES
+
+### Database Query Optimization
+```python
+# Add select_related/prefetch_related to reduce queries
+queryset = Model.objects.select_related('foreign_key').prefetch_related('many_to_many')
+```
+
+### Cache Static API Responses
+```python
+from django.views.decorators.cache import cache_page
+
+@cache_page(60 * 15)  # 15 minutes
+def api_view(request):
+    pass
+```
+
+## 5. PRIORITY ACTION PLAN
+
+| Priority | Issue | Impact | Effort | Do This |
+|----------|-------|--------|--------|---------|
+| 1 | LCP > 2.5s | Critical | Medium | Optimize hero image, add preload |
+| 2 | TBT > 200ms | High | Medium | Code split React components |
+| 3 | No caching headers | Medium | Easy | Configure WhiteNoise |
+
+## 6. MONITORING CHECKLIST
+
+- [ ] Set up PageSpeed Insights monitoring (weekly)
+- [ ] Add Core Web Vitals to Google Analytics
+- [ ] Set performance budget: LCP < 2.5s, CLS < 0.1, TBT < 200ms"""
 
 
 class SEOContentAIEngine:
