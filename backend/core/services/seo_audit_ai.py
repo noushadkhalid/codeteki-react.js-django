@@ -33,6 +33,13 @@ class SEOAuditAIEngine:
 for Codeteki, a company running a Django backend with React.js frontend (Single Page Application)
 served from a single server.
 
+PROJECT STRUCTURE:
+- Backend: Django 4.x at /backend/
+- Frontend: React at /frontend/src/ with .jsx file extensions (NOT .js)
+- Components: /frontend/src/components/*.jsx
+- Pages: /frontend/src/pages/*.jsx
+- Static files served via WhiteNoise with content hashing
+
 Your role is to:
 1. Analyze audit issues and prioritize them by impact
 2. Provide specific, actionable fix recommendations
@@ -40,8 +47,13 @@ Your role is to:
 4. Consider the SPA architecture when suggesting fixes
 5. Focus on Core Web Vitals and SEO best practices
 
-Always format your responses with clear sections and bullet points.
-Be specific with file paths and code examples where possible."""
+IMPORTANT RULES:
+- Use .jsx extension for React components (NOT .js)
+- Reference bundled file URLs exactly as shown in the audit data
+- Do NOT guess source file paths if you don't know them - reference the bundled files instead
+- Be specific about which bundled files (main.xxx.js, xxx.chunk.js) need attention
+
+Always format your responses with clear sections and bullet points."""
 
     def __init__(self, site_audit=None, ai_engine: Optional[AIContentEngine] = None):
         """
@@ -325,9 +337,19 @@ Format as JSON:
 
         extracted = {}
 
+        # Extract type for context
+        if "type" in details:
+            extracted["type"] = details["type"]
+
+        # Extract overall savings
+        if "overallSavingsMs" in details:
+            extracted["total_savings_ms"] = round(details["overallSavingsMs"], 1)
+        if "overallSavingsBytes" in details:
+            extracted["total_savings_kb"] = round(details["overallSavingsBytes"] / 1024, 1)
+
         # Extract items/resources if present (used by many audits)
         if "items" in details:
-            items = details["items"][:10]  # Limit to 10 items
+            items = details["items"][:15]  # Keep more items for better analysis
             extracted["affected_items"] = []
             for item in items:
                 item_info = {}
@@ -340,20 +362,50 @@ Format as JSON:
                     item_info["wasted_kb"] = round(item["wastedBytes"] / 1024, 1)
                 if "wastedMs" in item:
                     item_info["wasted_ms"] = round(item["wastedMs"], 1)
+                if "transferSize" in item:
+                    item_info["transfer_kb"] = round(item["transferSize"] / 1024, 1)
+                if "resourceSize" in item:
+                    item_info["resource_kb"] = round(item["resourceSize"] / 1024, 1)
                 if "cacheLifetimeMs" in item:
-                    item_info["cache_lifetime"] = item.get("cacheHitProbability", "none")
+                    cache_ms = item["cacheLifetimeMs"]
+                    if cache_ms == 0:
+                        item_info["cache"] = "no-cache"
+                    elif cache_ms < 86400000:  # Less than 1 day
+                        item_info["cache"] = f"{round(cache_ms / 3600000, 1)}h"
+                    else:
+                        item_info["cache"] = f"{round(cache_ms / 86400000, 1)}d"
+                if "cacheHitProbability" in item:
+                    item_info["cache_hit_prob"] = round(item["cacheHitProbability"] * 100)
                 if "node" in item:
-                    # Element causing issue (e.g., CLS culprit)
+                    # Element causing issue (e.g., CLS culprit, accessibility)
                     node = item["node"]
-                    item_info["element"] = node.get("snippet", node.get("selector", ""))[:200]
+                    if node.get("snippet"):
+                        item_info["element"] = node["snippet"][:250]
+                    if node.get("selector"):
+                        item_info["selector"] = node["selector"][:150]
+                    if node.get("nodeLabel"):
+                        item_info["label"] = node["nodeLabel"][:100]
                 if "score" in item:
-                    item_info["element_score"] = item["score"]
-                if extracted.get("affected_items") is not None and item_info:
+                    item_info["score"] = round(item["score"] * 100)
+                if "label" in item:
+                    item_info["item_label"] = item["label"][:100]
+                # Source location (for JS/CSS issues)
+                if "source" in item:
+                    source = item["source"]
+                    if isinstance(source, dict):
+                        item_info["source"] = source.get("url", "")[:100]
+                    else:
+                        item_info["source"] = str(source)[:100]
+
+                if item_info:
                     extracted["affected_items"].append(item_info)
 
-        # Extract headings if present
+            # Add count info
+            extracted["total_affected"] = details.get("total_items", len(details["items"]))
+
+        # Extract headings for context
         if "headings" in details:
-            extracted["columns"] = [h.get("label", h.get("key", "")) for h in details["headings"][:5]]
+            extracted["columns"] = [h.get("label", h.get("key", "")) for h in details["headings"][:6]]
 
         # Extract summary info
         if "summary" in details:
@@ -670,10 +722,13 @@ For each fix provide:
 
 IMPORTANT INSTRUCTIONS:
 1. Use the EXACT values from the data above (LCP: {first_page.get('lcp', 'N/A')}s, CLS: {first_page.get('cls', 'N/A')}, TBT: {first_page.get('tbt', 'N/A')}ms)
-2. Reference SPECIFIC files/elements mentioned in the "details" fields
+2. Reference the EXACT bundled file URLs from "affected_items" (e.g., /static/js/main.xxx.js) - do NOT guess source file paths
 3. Calculate ACTUAL savings from savings_bytes and savings_ms values
 4. Focus on issues that ACTUALLY exist in the data, not hypothetical ones
-5. If "affected_items" or "element" are present in details, reference them specifically
+5. If "affected_items" or "element" are present in details, reference them EXACTLY as shown
+6. For React components, use .jsx extension (NOT .js) - e.g., Footer.jsx, Header.jsx
+7. Do NOT invent file paths - if you don't know the source file, just reference the bundled file URL
+8. Use actual element selectors/snippets from the "element" field when available
 
 Generate a report with these sections:
 
@@ -697,7 +752,8 @@ Create a table of quick fixes based on actual issues found:
 ## 3. MEDIUM EFFORT (1-4 hours)
 
 For issues requiring more work, provide:
-- Specific file paths
+- The bundled file or element causing the issue (from audit data)
+- Which component type likely needs changes (e.g., "Footer component", "image elements")
 - Code examples tailored to the actual issues
 - Step-by-step implementation
 

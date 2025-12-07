@@ -2,17 +2,8 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { Bot, Globe, Cog, Repeat, Cable, Code, Search } from "lucide-react";
-
-const iconMap = {
-  bot: Bot,
-  globe: Globe,
-  cog: Cog,
-  repeat: Repeat,
-  cable: Cable,
-  code: Code,
-  search: Search,
-};
+import { Bot } from "lucide-react";
+import { getIcon } from "../lib/iconMap";
 
 const accentStyles = {
   automation: { iconBg: "bg-blue-50", iconColor: "text-blue-600", pill: "bg-blue-100 text-blue-700" },
@@ -134,7 +125,7 @@ export default function Services({ featuredOnly = false }) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {cards.map((service) => {
-              const IconComponent = iconMap[service.icon] || Bot;
+              const IconComponent = getIcon(service.icon, Bot);
               const accents = accentStyles[service.category] || accentStyles.automation;
               return (
                 <Card

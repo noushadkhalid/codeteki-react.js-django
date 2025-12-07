@@ -2,27 +2,10 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import {
-  Bot,
-  Globe,
-  Cog,
-  ArrowRight,
-  Mic,
-  Sparkles,
-  Rocket,
-  ClipboardCheck,
-  Layers,
-  Star,
-} from "lucide-react";
+import { ArrowRight, Bot, Star, Sparkles } from "lucide-react";
 import { Link } from "wouter";
 import SEOHead from "../components/SEOHead";
-
-const serviceIconMap = {
-  bot: Bot,
-  globe: Globe,
-  cog: Cog,
-  mic: Mic,
-};
+import { getIcon } from "../lib/iconMap";
 
 const accentStyles = {
   automation: { text: "text-blue-600", bg: "bg-blue-100", gradient: "from-blue-500 to-blue-600" },
@@ -33,12 +16,6 @@ const accentStyles = {
   ai: { text: "text-indigo-600", bg: "bg-indigo-100", gradient: "from-indigo-500 to-indigo-600" },
 };
 
-const processIconMap = {
-  sparkles: Sparkles,
-  layers: Layers,
-  clipboardcheck: ClipboardCheck,
-  rocket: Rocket,
-};
 
 const fallbackServices = [
   {
@@ -274,7 +251,7 @@ export default function Services() {
           ) : (
             <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
               {servicesToDisplay.map((service) => {
-                const IconComponent = serviceIconMap[service.icon] || Bot;
+                const IconComponent = getIcon(service.icon, Bot);
                 const accent = accentStyles[service.badge?.toLowerCase()] || accentStyles.automation;
                 return (
                   <Card
@@ -343,7 +320,7 @@ export default function Services() {
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {processSteps.map((step, idx) => {
-              const IconComponent = processIconMap[(step.icon || "").toLowerCase()] || Sparkles;
+              const IconComponent = getIcon(step.icon, Sparkles);
               return (
                 <div key={step.title} className="rounded-2xl border border-[#eef1f7] bg-white/90 p-6 shadow-sm">
                   <div className="flex items-center gap-3 mb-4">

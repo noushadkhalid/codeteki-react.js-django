@@ -95,6 +95,9 @@ class PageSpeedService:
             audits = lighthouse.get("audits", {})
 
             result["lab_performance_score"] = self._extract_score(categories.get("performance"))
+            result["seo_score"] = self._extract_score(categories.get("seo"))
+            result["accessibility_score"] = self._extract_score(categories.get("accessibility"))
+            result["best_practices_score"] = self._extract_score(categories.get("best-practices"))
 
             # Extract lab metrics
             result["lab_lcp"] = self._extract_metric(audits, "largest-contentful-paint", ms_to_s=True)
@@ -374,21 +377,37 @@ class PageSpeedService:
         # Keep items with important fields
         if "items" in details:
             trimmed_items = []
-            for item in details["items"][:15]:
+            for item in details["items"][:20]:  # Keep more items for thorough analysis
                 trimmed_item = {}
-                # Keep all important fields
+                # Keep all important metric fields
                 for key in ["url", "totalBytes", "wastedBytes", "wastedMs", "cacheLifetimeMs",
-                           "cacheHitProbability", "score", "transferSize", "resourceSize"]:
+                           "cacheHitProbability", "score", "transferSize", "resourceSize",
+                           "label", "groupLabel", "requestCount", "mainThreadTime"]:
                     if key in item:
                         trimmed_item[key] = item[key]
-                # Handle node (DOM element) data
+                # Handle node (DOM element) data - important for accessibility/CLS issues
                 if "node" in item:
                     node = item["node"]
                     trimmed_item["node"] = {
                         "selector": node.get("selector", "")[:300],
                         "snippet": node.get("snippet", "")[:500],
                         "nodeLabel": node.get("nodeLabel", "")[:200],
+                        "boundingRect": node.get("boundingRect"),  # For CLS diagnosis
                     }
+                # Handle source location (for JS/CSS issues)
+                if "source" in item:
+                    source = item["source"]
+                    if isinstance(source, dict):
+                        trimmed_item["source"] = {
+                            "url": source.get("url", "")[:200],
+                            "line": source.get("line"),
+                            "column": source.get("column"),
+                        }
+                    else:
+                        trimmed_item["source"] = str(source)[:200]
+                # Handle subItems (nested resources)
+                if "subItems" in item and item["subItems"].get("items"):
+                    trimmed_item["subItems"] = item["subItems"]["items"][:5]
                 if trimmed_item:
                     trimmed_items.append(trimmed_item)
             trimmed["items"] = trimmed_items

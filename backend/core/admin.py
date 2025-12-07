@@ -1202,7 +1202,7 @@ class SiteAuditAdmin(ModelAdmin):
                        'started_at', 'completed_at', 'ai_analysis', 'created_at', 'updated_at')
     inlines = [PageAuditInline]
     date_hierarchy = 'created_at'
-    actions = ['run_lighthouse_audit', 'run_pagespeed_analysis', 'generate_ai_analysis', 'generate_combined_ai_analysis']
+    actions = ['run_lighthouse_audit', 'run_pagespeed_analysis', 'generate_ai_analysis', 'generate_combined_ai_analysis', 'preview_ai_data']
 
     class Media:
         js = ('admin/js/seo-loading.js',)
@@ -1292,7 +1292,7 @@ class SiteAuditAdmin(ModelAdmin):
         """Run PageSpeed and save results to PageAudit (shows inline below)."""
         from django.utils import timezone
         from .services.pagespeed import PageSpeedService
-        from .models import PageAudit
+        from .models import PageAudit, AuditIssue
 
         service = PageSpeedService()
 
@@ -1312,7 +1312,7 @@ class SiteAuditAdmin(ModelAdmin):
                         continue
 
                     # Save to PageAudit (shows inline in Site Audits)
-                    PageAudit.objects.update_or_create(
+                    page_audit, created = PageAudit.objects.update_or_create(
                         site_audit=audit,
                         url=url,
                         defaults={
@@ -1326,17 +1326,32 @@ class SiteAuditAdmin(ModelAdmin):
                             'fcp': data.get('lab_fcp'),
                             'tbt': data.get('lab_tbt'),
                             'si': data.get('lab_si'),
-                            'ttfb': data.get('ttfb'),
+                            'ttfb': data.get('field_ttfb'),
                             'status': 'completed',
-                            'raw_data': {
-                                'source': 'pagespeed_api',
-                                'field_lcp': data.get('field_lcp'),
-                                'field_cls': data.get('field_cls'),
-                                'field_inp': data.get('field_inp'),
-                                'overall_category': data.get('overall_category'),
-                            }
+                            'raw_data': data.get('raw_data', {})
                         }
                     )
+
+                    # Save issues to AuditIssue model (for AI analysis)
+                    if data.get('issues'):
+                        # Clear existing issues for this page audit
+                        AuditIssue.objects.filter(page_audit=page_audit).delete()
+
+                        for issue_data in data['issues']:
+                            AuditIssue.objects.create(
+                                page_audit=page_audit,
+                                audit_id=issue_data.get('id', ''),
+                                title=issue_data.get('title', ''),
+                                description=issue_data.get('description', ''),
+                                category=issue_data.get('category', ''),
+                                severity=issue_data.get('severity', 'info'),
+                                score=issue_data.get('score'),
+                                display_value=issue_data.get('display_value', ''),
+                                savings_ms=issue_data.get('savings_ms', 0),
+                                savings_bytes=issue_data.get('savings_bytes', 0),
+                                details=issue_data.get('details', {}),
+                            )
+
                     pages_done += 1
                 except Exception as e:
                     self.message_user(request, f"❌ {url}: {str(e)}", messages.ERROR)
@@ -1344,13 +1359,23 @@ class SiteAuditAdmin(ModelAdmin):
             # Update audit totals
             page_audits = audit.page_audits.all()
             if page_audits.exists():
-                scores = page_audits.exclude(performance_score__isnull=True)
-                if scores.exists():
-                    audit.avg_performance = sum(p.performance_score for p in scores) / scores.count()
-                    audit.avg_seo = sum(p.seo_score or 0 for p in scores) / scores.count()
-                    audit.avg_accessibility = sum(p.accessibility_score or 0 for p in scores) / scores.count()
-                    audit.avg_best_practices = sum(p.best_practices_score or 0 for p in scores) / scores.count()
+                # Calculate averages only from non-null values
+                perf_scores = [p.performance_score for p in page_audits if p.performance_score is not None]
+                seo_scores = [p.seo_score for p in page_audits if p.seo_score is not None]
+                acc_scores = [p.accessibility_score for p in page_audits if p.accessibility_score is not None]
+                bp_scores = [p.best_practices_score for p in page_audits if p.best_practices_score is not None]
+
+                audit.avg_performance = sum(perf_scores) / len(perf_scores) if perf_scores else None
+                audit.avg_seo = sum(seo_scores) / len(seo_scores) if seo_scores else None
+                audit.avg_accessibility = sum(acc_scores) / len(acc_scores) if acc_scores else None
+                audit.avg_best_practices = sum(bp_scores) / len(bp_scores) if bp_scores else None
                 audit.total_pages = page_audits.count()
+
+            # Update issue counts from AuditIssue
+            all_issues = AuditIssue.objects.filter(page_audit__site_audit=audit)
+            audit.total_issues = all_issues.count()
+            audit.critical_issues = all_issues.filter(severity='error').count()
+            audit.warning_issues = all_issues.filter(severity='warning').count()
 
             audit.status = 'completed'
             audit.completed_at = timezone.now()
@@ -1402,6 +1427,55 @@ class SiteAuditAdmin(ModelAdmin):
                 self.message_user(request, f"❌ Combined analysis failed: {result.get('error')}", messages.ERROR)
         except Exception as e:
             self.message_user(request, f"❌ Error: {str(e)}", messages.ERROR)
+
+    @action(description="🔍 Preview AI Data (Debug)")
+    def preview_ai_data(self, request, queryset):
+        """Preview what data will be sent to AI for analysis - useful for debugging."""
+        from django.http import JsonResponse
+        from .services.seo_audit_ai import SEOAuditAIEngine
+        import json
+
+        audit = queryset.first()
+        if not audit:
+            self.message_user(request, "❌ No audit selected", messages.ERROR)
+            return
+
+        try:
+            engine = SEOAuditAIEngine(audit)
+            data = engine._gather_audit_data()
+
+            # Count issues by category
+            issue_counts = {cat: len(issues) for cat, issues in data.get('issues_by_category', {}).items()}
+
+            # Summary message
+            summary = (
+                f"📊 Data Preview for '{audit.name}':\n"
+                f"• Pages: {len(data.get('pages', []))}\n"
+                f"• Performance issues: {issue_counts.get('performance', 0)}\n"
+                f"• SEO issues: {issue_counts.get('seo', 0)}\n"
+                f"• Accessibility issues: {issue_counts.get('accessibility', 0)}\n"
+                f"• Best Practices issues: {issue_counts.get('best-practices', 0)}\n"
+                f"• Total issues with details: {sum(1 for cat in data.get('issues_by_category', {}).values() for issue in cat if issue.get('details'))}"
+            )
+
+            self.message_user(request, summary, messages.INFO)
+
+            # Return JSON response with full data for inspection
+            return JsonResponse({
+                'audit_name': audit.name,
+                'data_summary': {
+                    'pages_count': len(data.get('pages', [])),
+                    'issue_counts': issue_counts,
+                    'has_core_web_vitals': len(data.get('core_web_vitals', [])) > 0,
+                },
+                'site_audit': data.get('site_audit', {}),
+                'pages': data.get('pages', []),
+                'core_web_vitals': data.get('core_web_vitals', []),
+                'issues_by_category': data.get('issues_by_category', {}),
+            }, json_dumps_params={'indent': 2})
+
+        except Exception as e:
+            self.message_user(request, f"❌ Error gathering data: {str(e)}", messages.ERROR)
 
     class Meta:
         verbose_name_plural = "🔍 SEO Engine: Site Audits"

@@ -31,10 +31,10 @@ export default function Header() {
             <img
               src={logoSrc}
               alt="Codeteki - AI Business Solutions"
-              className="h-12 cursor-pointer transition-transform duration-300 hover:scale-110"
+              className="h-12 w-auto cursor-pointer transition-transform duration-300 hover:scale-110"
               loading="eager"
               decoding="async"
-              width="140"
+              width="93"
               height="48"
               fetchpriority="high"
             />
@@ -70,8 +70,9 @@ export default function Header() {
             
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden">
+                <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open navigation menu">
                   <Menu className="h-6 w-6" />
+                  <span className="sr-only">Menu</span>
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[300px] sm:w-[400px]">

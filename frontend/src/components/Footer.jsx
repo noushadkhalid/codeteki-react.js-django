@@ -71,7 +71,7 @@ export default function Footer() {
                 className="h-12 w-auto mb-4"
                 loading="lazy"
                 decoding="async"
-                width="140"
+                width="185"
                 height="48"
               />
             ) : (
@@ -81,7 +81,7 @@ export default function Footer() {
                 className="h-12 w-auto mb-4"
                 loading="lazy"
                 decoding="async"
-                width="140"
+                width="185"
                 height="48"
               />
             )}
@@ -116,7 +116,7 @@ export default function Footer() {
 
           {/* Services Column 1 */}
           <div>
-            <h4 className="text-lg font-semibold mb-4">Services</h4>
+            <h3 className="text-lg font-semibold mb-4">Services</h3>
             <ul className="space-y-2">
               {servicesCol1.map((link, idx) => (
                 <li key={idx}>
@@ -132,7 +132,7 @@ export default function Footer() {
 
           {/* Services Column 2 */}
           <div>
-            <h4 className="text-lg font-semibold mb-4 invisible">Services</h4>
+            <h3 className="text-lg font-semibold mb-4 invisible" aria-hidden="true">Services</h3>
             <ul className="space-y-2">
               {servicesCol2.map((link, idx) => (
                 <li key={idx}>
@@ -148,7 +148,7 @@ export default function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h4 className="text-lg font-semibold mb-4">Quick Links</h4>
+            <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2">
               <li>
                 <Link href="/ai-tools">
@@ -176,7 +176,7 @@ export default function Footer() {
 
           {/* Contact Info */}
           <div>
-            <h4 className="text-lg font-semibold mb-4">Contact Info</h4>
+            <h3 className="text-lg font-semibold mb-4">Contact Info</h3>
             <div className="space-y-3">
               <div className="flex items-start gap-2">
                 <MapPin className="h-4 w-4 text-[#f9cb07] mt-0.5 flex-shrink-0" />

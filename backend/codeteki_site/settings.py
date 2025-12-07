@@ -173,6 +173,9 @@ for path in [BASE_DIR / "static", FRONTEND_BUILD, FRONTEND_BUILD / "static"]:
 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+# WhiteNoise cache settings - cache static files for 1 year (files have hashed names)
+WHITENOISE_MAX_AGE = 31536000  # 1 year in seconds
+
 # Use Django's static file finders in development so React build assets load
 if DEBUG:
     WHITENOISE_USE_FINDERS = True
