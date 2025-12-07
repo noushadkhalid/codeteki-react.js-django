@@ -141,13 +141,25 @@ class BusinessImpactLogo(models.Model):
 
 
 class Service(TimestampedModel):
+    # Basic info (for cards/listing)
     title = models.CharField(max_length=160)
     slug = models.SlugField(unique=True)
-    badge = models.CharField(max_length=120, blank=True)
-    description = models.TextField()
-    icon = models.CharField(max_length=40, default="Sparkles")
+    badge = models.CharField(max_length=120, blank=True, help_text="Short badge text e.g. 'Enterprise Ready'")
+    description = models.TextField(help_text="Short description for service cards")
+    icon = models.CharField(max_length=40, default="Sparkles", help_text="Lucide icon name")
     is_featured = models.BooleanField(default=False)
     order = models.PositiveIntegerField(default=0)
+
+    # Detail page content
+    tagline = models.CharField(max_length=160, blank=True, help_text="Short tagline shown in hero badge")
+    subtitle = models.CharField(max_length=255, blank=True, help_text="Longer subtitle for hero section")
+    full_description = models.TextField(blank=True, help_text="Full description for the Overview section")
+    hero_image = WebPImageField(upload_to='services/', blank=True, null=True, help_text="Hero image for detail page")
+    hero_image_url = models.URLField(blank=True, help_text="Or use external image URL")
+
+    # Styling
+    gradient_from = models.CharField(max_length=30, default="purple-600", help_text="Tailwind gradient start e.g. 'purple-600'")
+    gradient_to = models.CharField(max_length=30, default="indigo-600", help_text="Tailwind gradient end e.g. 'indigo-600'")
 
     class Meta:
         ordering = ["order"]
@@ -155,8 +167,16 @@ class Service(TimestampedModel):
     def __str__(self):
         return self.title
 
+    @property
+    def hero_image_src(self):
+        """Return hero image URL from either upload or external URL."""
+        if self.hero_image:
+            return self.hero_image.url
+        return self.hero_image_url or ""
+
 
 class ServiceOutcome(models.Model):
+    """Features/outcomes shown on service cards (short list)."""
     service = models.ForeignKey(
         Service, related_name="outcomes", on_delete=models.CASCADE
     )
@@ -165,11 +185,86 @@ class ServiceOutcome(models.Model):
 
     class Meta:
         ordering = ["order"]
+        verbose_name = "Service Feature (Card)"
+        verbose_name_plural = "Service Features (Card)"
 
     def __str__(self):
         return self.text
 
 
+class ServiceFeature(models.Model):
+    """Detailed features for the service detail page (8 items grid)."""
+    service = models.ForeignKey(
+        Service, related_name="features", on_delete=models.CASCADE
+    )
+    text = models.CharField(max_length=255)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order"]
+        verbose_name = "Service Feature (Detail Page)"
+        verbose_name_plural = "Service Features (Detail Page)"
+
+    def __str__(self):
+        return self.text
+
+
+class ServiceCapability(models.Model):
+    """Capability cards with icon, title, and description."""
+    service = models.ForeignKey(
+        Service, related_name="capabilities", on_delete=models.CASCADE
+    )
+    icon = models.CharField(max_length=40, default="Sparkles", help_text="Lucide icon name")
+    title = models.CharField(max_length=120)
+    description = models.TextField()
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order"]
+        verbose_name = "Service Capability"
+        verbose_name_plural = "Service Capabilities"
+
+    def __str__(self):
+        return self.title
+
+
+class ServiceBenefit(models.Model):
+    """Benefits list for the 'Why Choose Us' section."""
+    service = models.ForeignKey(
+        Service, related_name="benefits", on_delete=models.CASCADE
+    )
+    text = models.CharField(max_length=255)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order"]
+        verbose_name = "Service Benefit"
+        verbose_name_plural = "Service Benefits"
+
+    def __str__(self):
+        return self.text
+
+
+class ServiceProcess(models.Model):
+    """Process steps specific to each service."""
+    service = models.ForeignKey(
+        Service, related_name="process_steps", on_delete=models.CASCADE
+    )
+    step_number = models.PositiveIntegerField(default=1)
+    title = models.CharField(max_length=120)
+    description = models.TextField()
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order", "step_number"]
+        verbose_name = "Service Process Step"
+        verbose_name_plural = "Service Process Steps"
+
+    def __str__(self):
+        return f"{self.step_number}. {self.title}"
+
+
+# Legacy: Global process steps (kept for backwards compatibility)
 class ServiceProcessStep(TimestampedModel):
     title = models.CharField(max_length=160)
     description = models.TextField()
@@ -179,7 +274,7 @@ class ServiceProcessStep(TimestampedModel):
 
     class Meta:
         ordering = ["order"]
-        verbose_name = "Service Process Step"
+        verbose_name = "Global Process Step (Legacy)"
 
     def __str__(self):
         return self.title

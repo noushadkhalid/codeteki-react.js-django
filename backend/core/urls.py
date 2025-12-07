@@ -26,6 +26,7 @@ from .views import (
     ROICalculatorContentAPIView,
     SEOAutomationInsightsAPIView,
     ServicesAPIView,
+    ServiceDetailAPIView,
     ServicesPageAPIView,
     SiteSettingsAPIView,
     StatsAPIView,
@@ -39,6 +40,7 @@ urlpatterns = [
     # Original endpoints
     path("hero/", HeroContentAPIView.as_view(), name="hero"),
     path("services/", ServicesAPIView.as_view(), name="services"),
+    path("services/<slug:slug>/", ServiceDetailAPIView.as_view(), name="service-detail"),
     path("faq/", FAQAPIView.as_view(), name="faq"),
     path("contact/", ContactAPIView.as_view(), name="contact"),
     path("impact/", BusinessImpactAPIView.as_view(), name="impact"),

@@ -31,6 +31,10 @@ from .models import (
     ROICalculatorSection,
     SEODataUpload,
     Service,
+    ServiceFeature,
+    ServiceCapability,
+    ServiceBenefit,
+    ServiceProcess,
     ServiceProcessStep,
     SiteSettings,
     StatMetric,
@@ -153,16 +157,27 @@ def _serialize_business_impact_section() -> dict:
     }
 
 
-def _serialize_services_section(featured_only: bool = False) -> dict:
+def _serialize_services_section(featured_only: bool = False, include_details: bool = False) -> dict:
+    """
+    Serialize services for API response.
+
+    Args:
+        featured_only: If True, only return featured services
+        include_details: If True, include full detail page content (features, capabilities, etc.)
+    """
     services_qs = (
-        Service.objects.prefetch_related("outcomes")
+        Service.objects.prefetch_related(
+            "outcomes", "features", "capabilities", "benefits", "process_steps"
+        )
         .order_by("order")
     )
     if featured_only:
         services_qs = services_qs.filter(is_featured=True)
     services = services_qs.all()
-    service_payload = [
-        {
+
+    service_payload = []
+    for service in services:
+        service_data = {
             "id": service.slug,
             "title": service.title,
             "description": service.description,
@@ -170,8 +185,41 @@ def _serialize_services_section(featured_only: bool = False) -> dict:
             "icon": service.icon,
             "outcomes": [item.text for item in service.outcomes.all()],
         }
-        for service in services
-    ]
+
+        # Include detail page content if requested
+        if include_details:
+            service_data.update({
+                # Detail page fields
+                "tagline": service.tagline or service.badge,
+                "subtitle": service.subtitle or service.description[:150],
+                "fullDescription": service.full_description or service.description,
+                "heroImage": service.hero_image_src,
+                "gradient": f"from-{service.gradient_from} to-{service.gradient_to}",
+                "gradientFrom": service.gradient_from,
+                "gradientTo": service.gradient_to,
+                # Related content
+                "features": [item.text for item in service.features.all()],
+                "capabilities": [
+                    {
+                        "icon": cap.icon,
+                        "title": cap.title,
+                        "description": cap.description,
+                    }
+                    for cap in service.capabilities.all()
+                ],
+                "benefits": [item.text for item in service.benefits.all()],
+                "process": [
+                    {
+                        "step": step.step_number,
+                        "title": step.title,
+                        "description": step.description,
+                    }
+                    for step in service.process_steps.all()
+                ],
+            })
+
+        service_payload.append(service_data)
+
     stats_payload = [
         {
             "value": stat.value,
@@ -194,6 +242,52 @@ def _serialize_services_section(featured_only: bool = False) -> dict:
         "services": service_payload,
         "stats": stats_payload,
         "process": process_steps,
+    }
+
+
+def _serialize_single_service(slug: str) -> dict | None:
+    """Serialize a single service with full detail page content."""
+    try:
+        service = Service.objects.prefetch_related(
+            "outcomes", "features", "capabilities", "benefits", "process_steps"
+        ).get(slug=slug)
+    except Service.DoesNotExist:
+        return None
+
+    return {
+        "id": service.slug,
+        "title": service.title,
+        "description": service.description,
+        "badge": service.badge,
+        "icon": service.icon,
+        "outcomes": [item.text for item in service.outcomes.all()],
+        # Detail page fields
+        "tagline": service.tagline or service.badge,
+        "subtitle": service.subtitle or service.description[:150],
+        "fullDescription": service.full_description or service.description,
+        "heroImage": service.hero_image_src,
+        "gradient": f"from-{service.gradient_from} to-{service.gradient_to}",
+        "gradientFrom": service.gradient_from,
+        "gradientTo": service.gradient_to,
+        # Related content
+        "features": [item.text for item in service.features.all()],
+        "capabilities": [
+            {
+                "icon": cap.icon,
+                "title": cap.title,
+                "description": cap.description,
+            }
+            for cap in service.capabilities.all()
+        ],
+        "benefits": [item.text for item in service.benefits.all()],
+        "process": [
+            {
+                "step": step.step_number,
+                "title": step.title,
+                "description": step.description,
+            }
+            for step in service.process_steps.all()
+        ],
     }
 
 
@@ -553,7 +647,22 @@ class ServicesAPIView(JSONAPIView):
     def get(self, request):
         featured_flag = (request.GET.get("featured") or "").strip().lower()
         featured_only = featured_flag in {"1", "true", "yes", "on"}
-        return self.render(_serialize_services_section(featured_only=featured_only))
+        details_flag = (request.GET.get("details") or "").strip().lower()
+        include_details = details_flag in {"1", "true", "yes", "on"}
+        return self.render(_serialize_services_section(
+            featured_only=featured_only,
+            include_details=include_details
+        ))
+
+
+@method_decorator(cache_page(getattr(settings, 'CACHE_TIMEOUT_MEDIUM', 300)), name='dispatch')
+class ServiceDetailAPIView(JSONAPIView):
+    """Get a single service with full detail page content."""
+    def get(self, request, slug):
+        service_data = _serialize_single_service(slug)
+        if not service_data:
+            return self.render({"error": "Service not found"}, status=404)
+        return self.render({"service": service_data})
 
 
 @method_decorator(cache_page(getattr(settings, 'CACHE_TIMEOUT_LONG', 900)), name='dispatch')

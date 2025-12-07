@@ -33,7 +33,7 @@ from .models import (
     Testimonial,
 
     # Services
-    Service, ServiceOutcome, ServiceProcessStep,
+    Service, ServiceOutcome, ServiceFeature, ServiceCapability, ServiceBenefit, ServiceProcess, ServiceProcessStep,
 
     # AI Tools
     AIToolsSection, AITool,
@@ -234,9 +234,48 @@ class WhyChooseSectionAdmin(ModelAdmin):
 # =============================================================================
 
 class ServiceOutcomeInline(TabularInline):
+    """Short features shown on service cards."""
     model = ServiceOutcome
     extra = 1
     fields = ('text', 'order')
+    verbose_name = "Card Feature"
+    verbose_name_plural = "📋 Card Features (shown on service cards - keep to 3-4 items)"
+
+
+class ServiceFeatureInline(TabularInline):
+    """Detailed features for service detail page."""
+    model = ServiceFeature
+    extra = 1
+    fields = ('text', 'order')
+    verbose_name = "Detail Feature"
+    verbose_name_plural = "✅ Detail Page Features (shown in 'Key Features' grid - aim for 8 items)"
+
+
+class ServiceCapabilityInline(StackedInline):
+    """Capability cards with icon, title, description."""
+    model = ServiceCapability
+    extra = 1
+    fields = ('icon', 'title', 'description', 'order')
+    verbose_name = "Capability"
+    verbose_name_plural = "💪 Capabilities (cards with icon + description - aim for 6 items)"
+
+
+class ServiceBenefitInline(TabularInline):
+    """Benefits for 'Why Choose Us' section."""
+    model = ServiceBenefit
+    extra = 1
+    fields = ('text', 'order')
+    verbose_name = "Benefit"
+    verbose_name_plural = "🎯 Benefits (shown in 'Why Choose Us' section - aim for 6 items)"
+
+
+class ServiceProcessInline(TabularInline):
+    """Process steps specific to this service."""
+    model = ServiceProcess
+    extra = 1
+    fields = ('step_number', 'title', 'description', 'order')
+    verbose_name = "Process Step"
+    verbose_name_plural = "🔄 Process Steps (shown in 'Our Process' section - aim for 4 steps)"
 
 
 @admin.register(Service)
@@ -246,19 +285,34 @@ class ServiceAdmin(ModelAdmin):
     list_filter = ('badge', 'is_featured')
     search_fields = ('title', 'description')
     prepopulated_fields = {'slug': ('title',)}
-    inlines = [ServiceOutcomeInline]
+    inlines = [
+        ServiceOutcomeInline,
+        ServiceFeatureInline,
+        ServiceCapabilityInline,
+        ServiceBenefitInline,
+        ServiceProcessInline,
+    ]
     ordering = ('order',)
 
     fieldsets = (
-        ('⚙️ Service Information', {
-            'fields': ('title', 'slug', 'badge', 'description')
+        ('⚙️ Basic Info (for service cards)', {
+            'fields': ('title', 'slug', 'badge', 'description', 'icon', 'order', 'is_featured'),
+            'description': 'This information appears on service cards in listings and home page.'
         }),
-        ('🎨 Display', {
-            'fields': ('icon', 'order')
+        ('📄 Detail Page Content', {
+            'fields': ('tagline', 'subtitle', 'full_description'),
+            'description': 'Content shown on the service detail page hero and overview sections.',
+            'classes': ('collapse',),
         }),
-        ('🔥 Featured', {
-            'fields': ('is_featured',),
-            'description': 'Highlight services that should appear in the home page featured list.'
+        ('🖼️ Hero Image', {
+            'fields': ('hero_image', 'hero_image_url'),
+            'description': 'Upload an image or provide an external URL. Recommended: 1200x800px landscape.',
+            'classes': ('collapse',),
+        }),
+        ('🎨 Styling', {
+            'fields': ('gradient_from', 'gradient_to'),
+            'description': 'Tailwind color classes for gradients, e.g. "purple-600", "indigo-600"',
+            'classes': ('collapse',),
         }),
     )
 
@@ -279,7 +333,7 @@ class ServiceProcessStepAdmin(ModelAdmin):
     )
 
     class Meta:
-        verbose_name_plural = "⚙️ Services: Process Steps"
+        verbose_name_plural = "⚙️ Services: Global Process Steps (Legacy)"
 
 
 # =============================================================================
