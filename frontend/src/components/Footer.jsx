@@ -30,29 +30,55 @@ export default function Footer() {
 
   const footer = footerData?.data?.footer || footerData?.footer || {};
   const services = servicesData?.data?.services || servicesData?.services || [];
+  const footerLinks = footer.links || {};
 
   const contactEmail = settings?.contact?.primaryEmail || "info@codeteki.au";
   const primaryPhone = settings?.contact?.primaryPhone || "+61 469 754 386";
   const secondaryPhone = settings?.contact?.secondaryPhone || "+61 424 538 777";
   const officeAddress = settings?.contact?.address || "Melbourne, Victoria";
 
-  // Split services into two columns
+  // Service links - use footer links if set, otherwise fall back to services API
   const serviceLinks = useMemo(() => {
+    // First check if footer has custom service links
+    if (footerLinks.services && footerLinks.services.length > 0) {
+      return footerLinks.services.map((link) => ({
+        name: link.title,
+        href: link.url,
+      }));
+    }
+    // Fall back to services from API
     if (services.length > 0) {
       return services.map((svc) => ({
         name: svc.title,
-        href: `/services#${svc.id || svc.slug}`,
+        href: `/services/${svc.id || svc.slug}`,
       }));
     }
+    // Default fallback
     return [
-      { name: "AI Workforce", href: "/services" },
-      { name: "Web Development", href: "/services" },
-      { name: "Custom Automation", href: "/services" },
-      { name: "AI Tools", href: "/ai-tools" },
-      { name: "MCP Integration", href: "/services" },
-      { name: "SEO Engine", href: "/services" },
+      { name: "AI Workforce Solutions", href: "/services/ai-workforce" },
+      { name: "Web Development", href: "/services/web-development" },
+      { name: "Custom Automation", href: "/services/automation" },
+      { name: "SEO & Digital Marketing", href: "/services/seo" },
+      { name: "System Integration", href: "/services/integration" },
+      { name: "AI Consulting", href: "/services/consulting" },
     ];
-  }, [services]);
+  }, [footerLinks.services, services]);
+
+  // Quick links - use footer links if set, otherwise use defaults
+  const quickLinks = useMemo(() => {
+    if (footerLinks.company && footerLinks.company.length > 0) {
+      return footerLinks.company.map((link) => ({
+        name: link.title,
+        href: link.url,
+      }));
+    }
+    // Default quick links
+    return [
+      { name: "AI Tools", href: "/ai-tools" },
+      { name: "FAQ", href: "/faq" },
+      { name: "Contact Us", href: "/contact" },
+    ];
+  }, [footerLinks.company]);
 
   const midPoint = Math.ceil(serviceLinks.length / 2);
   const servicesCol1 = serviceLinks.slice(0, midPoint);
@@ -120,11 +146,22 @@ export default function Footer() {
             <ul className="space-y-2">
               {servicesCol1.map((link, idx) => (
                 <li key={idx}>
-                  <Link href={link.href}>
-                    <span className="text-gray-400 hover:text-[#f9cb07] transition-colors cursor-pointer text-sm">
+                  {link.href.startsWith("http") ? (
+                    <a
+                      href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-gray-400 hover:text-[#f9cb07] transition-colors cursor-pointer text-sm"
+                    >
                       {link.name}
-                    </span>
-                  </Link>
+                    </a>
+                  ) : (
+                    <Link href={link.href}>
+                      <span className="text-gray-400 hover:text-[#f9cb07] transition-colors cursor-pointer text-sm">
+                        {link.name}
+                      </span>
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>
@@ -136,11 +173,22 @@ export default function Footer() {
             <ul className="space-y-2">
               {servicesCol2.map((link, idx) => (
                 <li key={idx}>
-                  <Link href={link.href}>
-                    <span className="text-gray-400 hover:text-[#f9cb07] transition-colors cursor-pointer text-sm">
+                  {link.href.startsWith("http") ? (
+                    <a
+                      href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-gray-400 hover:text-[#f9cb07] transition-colors cursor-pointer text-sm"
+                    >
                       {link.name}
-                    </span>
-                  </Link>
+                    </a>
+                  ) : (
+                    <Link href={link.href}>
+                      <span className="text-gray-400 hover:text-[#f9cb07] transition-colors cursor-pointer text-sm">
+                        {link.name}
+                      </span>
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>
@@ -150,27 +198,26 @@ export default function Footer() {
           <div>
             <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2">
-              <li>
-                <Link href="/ai-tools">
-                  <span className="text-gray-400 hover:text-[#f9cb07] transition-colors cursor-pointer text-sm">
-                    AI Tools
-                  </span>
-                </Link>
-              </li>
-              <li>
-                <Link href="/faq">
-                  <span className="text-gray-400 hover:text-[#f9cb07] transition-colors cursor-pointer text-sm">
-                    FAQ
-                  </span>
-                </Link>
-              </li>
-              <li>
-                <Link href="/contact">
-                  <span className="text-gray-400 hover:text-[#f9cb07] transition-colors cursor-pointer text-sm">
-                    Contact Us
-                  </span>
-                </Link>
-              </li>
+              {quickLinks.map((link, idx) => (
+                <li key={idx}>
+                  {link.href.startsWith("http") ? (
+                    <a
+                      href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-gray-400 hover:text-[#f9cb07] transition-colors cursor-pointer text-sm"
+                    >
+                      {link.name}
+                    </a>
+                  ) : (
+                    <Link href={link.href}>
+                      <span className="text-gray-400 hover:text-[#f9cb07] transition-colors cursor-pointer text-sm">
+                        {link.name}
+                      </span>
+                    </Link>
+                  )}
+                </li>
+              ))}
             </ul>
           </div>
 
