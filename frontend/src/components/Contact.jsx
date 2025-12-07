@@ -75,6 +75,20 @@ const iconMap = {
   clock: Clock,
 };
 
+  const { data: contactData, isLoading: contactLoading } = useQuery({
+    queryKey: ["/api/contact/"],
+  });
+
+  // Extract contact info from API
+  const contactInfo = useMemo(() => {
+    const info = contactData?.data?.info || contactData?.info || {};
+    return {
+      email: info.primaryEmail || settings?.contact?.email || "info@codeteki.au",
+      phone: info.primaryPhone || settings?.contact?.phone || "+61 469 754 386",
+      address: info.address || settings?.contact?.address || "Melbourne, Victoria",
+    };
+  }, [contactData, settings]);
+
   const quickActions = useMemo(
     () => [
       {
@@ -91,7 +105,7 @@ const iconMap = {
         title: "Email Us",
         description: supportMeta.responseMessage,
         action: () => {
-          window.location.href = "mailto:info@codeteki.au";
+          window.location.href = `mailto:${contactInfo.email}`;
         },
         accent: "from-[#38bdf8] to-[#6366f1]",
       },
@@ -105,36 +119,33 @@ const iconMap = {
         accent: "from-[#f472b6] to-[#c084fc]",
       },
     ],
-    [setBookingOpen, setLocation, supportMeta.responseMessage]
+    [setBookingOpen, setLocation, supportMeta.responseMessage, contactInfo.email]
   );
-
-  const { data: contactData, isLoading: contactLoading } = useQuery({
-    queryKey: ["/api/contact/"],
-  });
 
   const contactMethods = useMemo(() => {
     const methods = contactData?.data?.methods || contactData?.methods;
     if (!methods || !methods.length) {
+      // Use dynamic contact info from API with fallbacks
       return [
         {
           icon: Phone,
           title: "Call Us",
-          value: "+61 469 754 386",
+          value: contactInfo.phone,
           description: "Melbourne-based support team",
-          href: "tel:+61469754386",
+          href: `tel:${contactInfo.phone.replace(/\s+/g, "")}`,
         },
         {
           icon: MapPin,
           title: "Visit Us",
-          value: "Melbourne, Victoria",
+          value: contactInfo.address,
           description: "Local team available across Australia",
         },
         {
           icon: Mail,
           title: "Email",
-          value: "info@codeteki.au",
+          value: contactInfo.email,
           description: supportMeta.responseMessage,
-          href: "mailto:info@codeteki.au",
+          href: `mailto:${contactInfo.email}`,
         },
       ];
     }
@@ -160,11 +171,12 @@ const iconMap = {
         cta: method.cta,
       };
     });
-  }, [contactData, supportMeta.responseMessage]);
+  }, [contactData, supportMeta.responseMessage, contactInfo]);
 
   const businessHours = useMemo(() => {
-    const hours = settings?.business?.hours;
-    if (!hours) {
+    // Try contact API first, then settings API, then fallback
+    const hours = contactData?.data?.businessHours || contactData?.businessHours || settings?.business?.hours;
+    if (!hours || (Array.isArray(hours) && hours.length === 0)) {
       return [
         { day: "Monday - Friday", hours: "9:00 AM - 6:00 PM AEDT" },
         { day: "Saturday", hours: "10:00 AM - 4:00 PM AEDT" },
@@ -188,7 +200,7 @@ const iconMap = {
         return { day, hours: value };
       });
     }
-  }, [settings]);
+  }, [settings, contactData]);
 
   return (
     <section id="contact" className="relative py-24 overflow-hidden bg-[#111827]">
