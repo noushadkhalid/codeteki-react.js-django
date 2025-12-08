@@ -85,32 +85,34 @@ export default function Footer() {
   const servicesCol2 = serviceLinks.slice(midPoint);
 
   return (
-    <footer className="bg-black text-white py-12">
+    <footer className="bg-black text-white py-12 min-h-[400px]">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 min-h-[280px]">
           {/* Logo & Description */}
-          <div className="lg:col-span-1">
-            {footer.logo ? (
-              <img
-                src={footer.logo}
-                alt={`${footer.company || "Codeteki"} Logo`}
-                className="h-12 w-auto mb-4"
-                loading="lazy"
-                decoding="async"
-                width="185"
-                height="48"
-              />
-            ) : (
-              <img
-                src="/footer-logo.png"
-                alt="Codeteki Logo"
-                className="h-12 w-auto mb-4"
-                loading="lazy"
-                decoding="async"
-                width="185"
-                height="48"
-              />
-            )}
+          <div className="lg:col-span-1 min-h-[200px]">
+            <div className="h-12 w-[185px] mb-4">
+              {footer.logo ? (
+                <img
+                  src={footer.logo}
+                  alt={`${footer.company || "Codeteki"} Logo`}
+                  className="h-12 w-auto"
+                  loading="lazy"
+                  decoding="async"
+                  width="185"
+                  height="48"
+                />
+              ) : (
+                <img
+                  src="/footer-logo.png"
+                  alt="Codeteki Logo"
+                  className="h-12 w-auto"
+                  loading="lazy"
+                  decoding="async"
+                  width="185"
+                  height="48"
+                />
+              )}
+            </div>
             <p className="text-gray-400 leading-relaxed text-sm mb-4">
               {footer.description || "Revolutionizing business operations through advanced AI technology and human expertise."}
             </p>
@@ -141,7 +143,7 @@ export default function Footer() {
           </div>
 
           {/* Services Column 1 */}
-          <div>
+          <div className="min-h-[180px]">
             <h3 className="text-lg font-semibold mb-4">Services</h3>
             <ul className="space-y-2">
               {servicesCol1.map((link, idx) => (
@@ -168,7 +170,7 @@ export default function Footer() {
           </div>
 
           {/* Services Column 2 */}
-          <div>
+          <div className="min-h-[180px]">
             <h3 className="text-lg font-semibold mb-4 invisible" aria-hidden="true">Services</h3>
             <ul className="space-y-2">
               {servicesCol2.map((link, idx) => (
@@ -195,7 +197,7 @@ export default function Footer() {
           </div>
 
           {/* Quick Links */}
-          <div>
+          <div className="min-h-[180px]">
             <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2">
               {quickLinks.map((link, idx) => (
@@ -222,7 +224,7 @@ export default function Footer() {
           </div>
 
           {/* Contact Info */}
-          <div>
+          <div className="min-h-[180px]">
             <h3 className="text-lg font-semibold mb-4">Contact Info</h3>
             <div className="space-y-3">
               <div className="flex items-start gap-2">

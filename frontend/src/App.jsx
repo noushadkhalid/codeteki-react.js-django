@@ -10,8 +10,10 @@ import { initGA } from "./lib/analytics";
 
 // Critical components - load immediately
 import Header from "./components/Header";
-import Footer from "./components/Footer";
 import Home from "./pages/Home";
+
+// Footer is below the fold - lazy load it
+const Footer = lazy(() => import("./components/Footer"));
 
 // Lazy load non-critical pages for code splitting
 const Services = lazy(() => import("./pages/Services"));
@@ -71,7 +73,9 @@ function Router() {
           </Switch>
         </Suspense>
       </main>
-      <Footer />
+      <Suspense fallback={<div className="bg-black h-64" />}>
+        <Footer />
+      </Suspense>
     </>
   );
 }

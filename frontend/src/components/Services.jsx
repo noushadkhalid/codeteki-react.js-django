@@ -2,8 +2,24 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { Bot } from "lucide-react";
-import { getIcon } from "../lib/iconMap";
+import { Bot, Code, Cog, Cable, Repeat, Globe, Search, Sparkles } from "lucide-react";
+
+// Small inline icon map - only icons used by services
+const serviceIconMap = {
+  bot: Bot,
+  code: Code,
+  cog: Cog,
+  cable: Cable,
+  repeat: Repeat,
+  globe: Globe,
+  search: Search,
+  sparkles: Sparkles,
+};
+
+const getServiceIcon = (iconName) => {
+  const normalized = (iconName || "bot").toLowerCase();
+  return serviceIconMap[normalized] || Bot;
+};
 
 const accentStyles = {
   automation: { iconBg: "bg-blue-50", iconColor: "text-blue-600", pill: "bg-blue-100 text-blue-700" },
@@ -125,7 +141,7 @@ export default function Services({ featuredOnly = false }) {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {cards.map((service) => {
-              const IconComponent = getIcon(service.icon, Bot);
+              const IconComponent = getServiceIcon(service.icon);
               const accents = accentStyles[service.category] || accentStyles.automation;
               return (
                 <Card

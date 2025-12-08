@@ -24,7 +24,7 @@ export default function Header() {
   ];
 
   return (
-    <header className="bg-white/95 backdrop-blur-md shadow-sm sticky top-0 z-50 border-b border-gray-100/50">
+    <header className="bg-white sticky top-0 z-50 border-t-0 border-b border-gray-100">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between py-4">
           <Link href="/" aria-label="Codeteki Home">

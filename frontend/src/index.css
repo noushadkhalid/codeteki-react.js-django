@@ -88,7 +88,7 @@ body {
 /* Accessibility: Skip link for keyboard navigation */
 .skip-link {
   position: absolute;
-  top: -50px;
+  top: -100px;
   left: 8px;
   background: #0f172a;
   color: #ffffff;
@@ -100,6 +100,7 @@ body {
   font-size: 14px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   transition: top 0.2s ease-in-out;
+  border: none;
 }
 
 .skip-link:focus {
@@ -222,7 +223,7 @@ select:focus-visible {
 }
 
 :root {
-  --background: hsl(0, 0%, 99.2%);
+  --background: hsl(0, 0%, 100%);
   --foreground: hsl(0, 0%, 0%);
   --muted: hsl(0, 0%, 96%);
   --muted-foreground: hsl(0, 0%, 40%);
@@ -243,7 +244,7 @@ select:focus-visible {
   --ring: hsl(0, 0%, 0%);
   --radius: 0.5rem;
   --codeteki-yellow: hsl(51, 95%, 52%);
-  --codeteki-bg: hsl(0, 0%, 99.2%);
+  --codeteki-bg: hsl(0, 0%, 100%);
   --codeteki-gray: hsl(0, 0%, 40%);
 }
 
@@ -271,12 +272,23 @@ select:focus-visible {
 }
 
 @layer base {
-  * {
-    @apply border-border;
+  *,
+  ::before,
+  ::after {
+    border-color: hsl(var(--border));
+  }
+
+  html, body, #root {
+    margin: 0;
+    padding: 0;
+    border: none !important;
+    box-shadow: none;
+    outline: none;
+    background: #fff;
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-sans antialiased text-foreground;
     font-family: 'Inter', sans-serif;
   }
 }
