@@ -84,7 +84,7 @@ export default function BookingModal({ open, onOpenChange }) {
   // Submit booking mutation
   const submitBooking = useMutation({
     mutationFn: async (data) => {
-      const response = await fetch('/api/contact-inquiries', {
+      const response = await fetch('/api/contact/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
