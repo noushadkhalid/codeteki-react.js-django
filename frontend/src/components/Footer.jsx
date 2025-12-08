@@ -4,14 +4,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useSiteSettings } from "../hooks/useSiteSettings";
 import { MapPin, Mail, Phone, Facebook, Twitter, Linkedin, Instagram, Youtube, Github } from "lucide-react";
 
-// Map platform names to Lucide icons
+// Map platform names to Lucide icons and their brand colors
 const socialIcons = {
-  facebook: Facebook,
-  twitter: Twitter,
-  linkedin: Linkedin,
-  instagram: Instagram,
-  youtube: Youtube,
-  github: Github,
+  facebook: { icon: Facebook, color: "#1877F2", hoverBg: "#1877F2" },
+  twitter: { icon: Twitter, color: "#000000", hoverBg: "#000000" },
+  linkedin: { icon: Linkedin, color: "#0A66C2", hoverBg: "#0A66C2" },
+  instagram: { icon: Instagram, color: "#E4405F", hoverBg: "linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)" },
+  youtube: { icon: Youtube, color: "#FF0000", hoverBg: "#FF0000" },
+  github: { icon: Github, color: "#181717", hoverBg: "#181717" },
 };
 
 export default function Footer() {
@@ -103,7 +103,7 @@ export default function Footer() {
                 />
               ) : (
                 <img
-                  src="/footer-logo.png"
+                  src="/static/images/navbar-logo.png"
                   alt="Codeteki Logo"
                   className="h-12 w-auto"
                   loading="lazy"
@@ -116,24 +116,28 @@ export default function Footer() {
             <p className="text-gray-400 leading-relaxed text-sm mb-4">
               {footer.description || "Revolutionizing business operations through advanced AI technology and human expertise."}
             </p>
-            {/* Social Links */}
+            {/* Social Links with brand colors */}
             {footer.socialLinks?.length > 0 && (
               <div className="flex gap-3">
                 {footer.socialLinks.map((social, idx) => {
-                  const IconComponent = socialIcons[social.platform];
+                  const socialConfig = socialIcons[social.platform];
+                  const IconComponent = socialConfig?.icon;
+                  const brandColor = socialConfig?.color || "#f9cb07";
                   return (
                     <a
                       key={idx}
                       href={social.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-9 h-9 rounded-full bg-gray-800 hover:bg-[#f9cb07] flex items-center justify-center transition-colors"
-                      title={social.label}
+                      className="w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
+                      style={{ backgroundColor: brandColor }}
+                      title={social.label || social.platform}
+                      aria-label={`Follow us on ${social.platform}`}
                     >
                       {IconComponent ? (
-                        <IconComponent className="h-4 w-4 text-gray-400 hover:text-black" />
+                        <IconComponent className="h-4 w-4 text-white" />
                       ) : (
-                        <span className="text-xs text-gray-400">{social.platform.charAt(0).toUpperCase()}</span>
+                        <span className="text-xs text-white font-bold">{social.platform.charAt(0).toUpperCase()}</span>
                       )}
                     </a>
                   );

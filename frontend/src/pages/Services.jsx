@@ -156,11 +156,12 @@ function ServicesHero({ statsFallback = [] }) {
           <p className="text-lg text-[#52525b]">{hero.description}</p>
         </div>
 
-        <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-3">
+        {/* Stats grid with min-height to prevent CLS */}
+        <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-3 min-h-[120px]">
           {heroStats.map((stat) => (
             <div
               key={`${stat.label}-${stat.value}`}
-              className="rounded-2xl border border-white/80 bg-white shadow-[0_15px_35px_rgba(15,23,42,0.08)] p-6 text-center"
+              className="rounded-2xl border border-white/80 bg-white shadow-[0_15px_35px_rgba(15,23,42,0.08)] p-6 text-center min-h-[100px]"
             >
               <p className="text-3xl font-bold text-[#0f172a]">{stat.value}</p>
               <p className="mt-2 text-sm font-semibold uppercase tracking-[0.2em] text-gray-500">
@@ -287,7 +288,10 @@ export default function Services() {
                       )}
 
                       <div className="mt-auto space-y-3">
-                        <Link href={`/services/${service.slug || service.id}`}>
+                        <Link
+                          href={`/services/${service.slug || service.id}`}
+                          aria-label={`Learn more about ${service.title}`}
+                        >
                           <Button className="w-full bg-gradient-to-r from-[#f9cb07] to-[#ffcd3c] text-black font-bold py-3">
                             Learn More
                             <ArrowRight className="ml-2 h-4 w-4" />
@@ -368,14 +372,20 @@ export default function Services() {
           <p className="text-lg text-gray-600 mb-8">{ctaSection.description}</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             {ctaSection.primaryButton && (
-              <Link href={ctaSection.primaryButton.url || "/contact"}>
+              <Link
+                href={ctaSection.primaryButton.url || "/contact"}
+                aria-label={ctaSection.primaryButton.text || "Start a free consultation with Codeteki"}
+              >
                 <Button size="lg" className="bg-gradient-to-r from-[#f9cb07] to-[#ffcd3c] text-black font-semibold px-8 py-4">
                   {ctaSection.primaryButton.text || "Start Free Consultation"}
                 </Button>
               </Link>
             )}
             {ctaSection.secondaryButton && (
-              <Link href={ctaSection.secondaryButton.url || "/ai-tools"}>
+              <Link
+                href={ctaSection.secondaryButton.url || "/ai-tools"}
+                aria-label={ctaSection.secondaryButton.text || "View Codeteki AI tools portfolio"}
+              >
                 <Button
                   variant="outline"
                   size="lg"
