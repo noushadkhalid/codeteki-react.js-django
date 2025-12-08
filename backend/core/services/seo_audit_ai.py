@@ -275,9 +275,10 @@ Format as JSON:
                 "best-practices": [],
             },
             "core_web_vitals": [],
+            "diagnostics": {},  # Comprehensive diagnostics like Chrome DevTools
         }
 
-        # Add page data with all metrics
+        # Add page data with all metrics and diagnostics
         for page in page_audits[:10]:
             page_data = {
                 "url": page.url,
@@ -300,6 +301,25 @@ Format as JSON:
                 "cls": {"value": page.cls, "status": "good" if page.cls and page.cls <= 0.1 else "needs improvement" if page.cls and page.cls <= 0.25 else "poor"},
                 "tbt": {"value": page.tbt, "status": "good" if page.tbt and page.tbt <= 200 else "needs improvement" if page.tbt and page.tbt <= 600 else "poor"},
             })
+
+            # Extract diagnostics from raw_data (Chrome DevTools style data)
+            raw_data = page.raw_data or {}
+            if raw_data.get("diagnostics"):
+                page_diag = raw_data["diagnostics"]
+                page_key = page.url.split("/")[-1] or "homepage"
+
+                # Store diagnostics per page
+                data["diagnostics"][page_key] = {
+                    "mainthread_breakdown": page_diag.get("mainthread_breakdown", {}),
+                    "script_bootup": page_diag.get("script_bootup", []),
+                    "long_tasks": page_diag.get("long_tasks", {}),
+                    "cls_elements": page_diag.get("cls_elements", []),
+                    "lcp_element": page_diag.get("lcp_element", {}),
+                    "unsized_images": page_diag.get("unsized_images", []),
+                    "http1_requests": page_diag.get("http1_requests", []),
+                    "console_errors": page_diag.get("console_errors", []),
+                    "third_party": page_diag.get("third_party", []),
+                }
 
         # Add detailed issues with full context
         issues = AuditIssue.objects.filter(
@@ -1009,6 +1029,10 @@ For each fix provide:
         bp_issues = audit_data['issues_by_category'].get('best-practices', [])
         bp_section = self._format_issues_for_prompt(bp_issues)
 
+        # Format diagnostics section (Chrome DevTools style data)
+        diagnostics = audit_data.get('diagnostics', {})
+        diagnostics_section = self._format_diagnostics_for_prompt(diagnostics)
+
         return f"""ANALYZE THIS REAL AUDIT DATA AND PROVIDE SPECIFIC, ACTIONABLE FIXES.
 
 ## SITE OVERVIEW
@@ -1042,6 +1066,9 @@ For each fix provide:
 
 ## BEST PRACTICES ISSUES - WITH AFFECTED FILES/ELEMENTS
 {bp_section}
+
+## DIAGNOSTICS (Chrome DevTools Data)
+{diagnostics_section}
 
 ---
 
@@ -1170,6 +1197,88 @@ REMEMBER: Every recommendation MUST reference specific files, elements, or metri
             formatted.append(section)
 
         return "\n".join(formatted)
+
+    def _format_diagnostics_for_prompt(self, diagnostics: dict) -> str:
+        """Format Chrome DevTools style diagnostics for the AI prompt."""
+        if not diagnostics:
+            return "No diagnostics data available."
+
+        sections = []
+
+        for page_key, page_diag in diagnostics.items():
+            page_section = f"\n### Page: {page_key}"
+
+            # Main thread breakdown
+            if page_diag.get("mainthread_breakdown"):
+                page_section += "\n\n**Main Thread Work:**"
+                for category, time_ms in sorted(
+                    page_diag["mainthread_breakdown"].items(),
+                    key=lambda x: x[1], reverse=True
+                )[:5]:
+                    page_section += f"\n- {category}: {time_ms}ms"
+
+            # Script bootup time
+            if page_diag.get("script_bootup"):
+                page_section += "\n\n**Script Bootup Time:**"
+                for script in page_diag["script_bootup"][:5]:
+                    page_section += f"\n- {script.get('url', 'unknown')}: {script.get('total_ms', 0)}ms"
+
+            # Long tasks
+            if page_diag.get("long_tasks") and page_diag["long_tasks"].get("tasks"):
+                page_section += f"\n\n**Long Tasks ({page_diag['long_tasks'].get('count', 0)} found):**"
+                for task in page_diag["long_tasks"]["tasks"][:3]:
+                    page_section += f"\n- {task.get('url', 'unknown')}: {task.get('duration_ms', 0)}ms"
+
+            # CLS elements
+            if page_diag.get("cls_elements"):
+                page_section += "\n\n**Layout Shift Elements:**"
+                for elem in page_diag["cls_elements"][:3]:
+                    page_section += f"\n- Score: {elem.get('score', 0)}"
+                    if elem.get("selector"):
+                        page_section += f" | Selector: {elem['selector']}"
+                    if elem.get("snippet"):
+                        page_section += f"\n  HTML: {elem['snippet'][:150]}"
+
+            # LCP element
+            if page_diag.get("lcp_element"):
+                lcp = page_diag["lcp_element"]
+                page_section += f"\n\n**LCP Element:**"
+                if lcp.get("selector"):
+                    page_section += f"\n- Selector: {lcp['selector']}"
+                if lcp.get("node_label"):
+                    page_section += f"\n- Label: {lcp['node_label']}"
+
+            # Unsized images
+            if page_diag.get("unsized_images"):
+                page_section += "\n\n**Unsized Images (CLS cause):**"
+                for img in page_diag["unsized_images"][:3]:
+                    page_section += f"\n- {img.get('url', 'unknown')}"
+                    if img.get("selector"):
+                        page_section += f" ({img['selector']})"
+
+            # HTTP/1.1 requests
+            if page_diag.get("http1_requests"):
+                page_section += f"\n\n**HTTP/1.1 Requests ({len(page_diag['http1_requests'])} found):**"
+                for url in page_diag["http1_requests"][:5]:
+                    page_section += f"\n- {url}"
+
+            # Console errors
+            if page_diag.get("console_errors"):
+                page_section += "\n\n**Console Errors:**"
+                for err in page_diag["console_errors"][:3]:
+                    page_section += f"\n- {err.get('description', 'unknown')[:100]}"
+                    if err.get("location"):
+                        page_section += f"\n  Location: {err['location']}"
+
+            # Third-party impact
+            if page_diag.get("third_party"):
+                page_section += "\n\n**Third-Party Impact:**"
+                for tp in page_diag["third_party"][:3]:
+                    page_section += f"\n- {tp.get('entity', 'unknown')}: {tp.get('blocking_time', 0)}ms blocking"
+
+            sections.append(page_section)
+
+        return "\n".join(sections) if sections else "No diagnostics data available."
 
 
 class SEOContentAIEngine:

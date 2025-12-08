@@ -135,6 +135,12 @@ class LighthouseService:
                 )
 
                 if page_result.get("success"):
+                    # Combine raw_data with diagnostics for comprehensive storage
+                    raw_data = page_result.get("raw_data", {})
+                    raw_data["diagnostics"] = page_result.get("diagnostics", {})
+                    raw_data["passed_audits"] = page_result.get("passed_audits", {})
+                    raw_data["run_warnings"] = page_result.get("run_warnings", [])
+
                     # Create PageAudit record
                     page_audit = PageAudit.objects.create(
                         site_audit=self.site_audit,
@@ -152,7 +158,7 @@ class LighthouseService:
                         ttfb=page_result.get("ttfb"),
                         si=page_result.get("si"),
                         tbt=page_result.get("tbt"),
-                        raw_data=page_result.get("raw_data", {}),
+                        raw_data=raw_data,
                         status="completed",
                     )
 
@@ -220,16 +226,17 @@ class LighthouseService:
 
         return results
 
-    def audit_page(self, url: str, strategy: str = "mobile") -> dict:
+    def audit_page(self, url: str, strategy: str = "mobile", full_report: bool = True) -> dict:
         """
-        Run Lighthouse audit for a single page.
+        Run Lighthouse audit for a single page - matching Chrome DevTools output.
 
         Args:
             url: URL to audit
             strategy: "mobile" or "desktop"
+            full_report: If True, capture all audits including passed ones
 
         Returns:
-            dict with audit results
+            dict with audit results matching Chrome DevTools Lighthouse
         """
         result = {
             "success": False,
@@ -246,31 +253,50 @@ class LighthouseService:
             with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
                 output_path = tmp.name
 
-            # Build Lighthouse command
+            # Build Lighthouse command - matching Chrome DevTools configuration
             cmd = [
                 "lighthouse",
                 url,
-                f"--output=json",
+                "--output=json",
                 f"--output-path={output_path}",
                 f"--chrome-flags={' '.join(self.chrome_flags)}",
                 "--quiet",
+                # Match Chrome DevTools throttling
+                "--throttling-method=devtools",
+                # Enable all categories
+                "--only-categories=performance,accessibility,best-practices,seo",
+                # Enable additional audits for detailed diagnostics
+                "--enable-error-reporting=false",
             ]
 
-            # Add form factor
+            # Add preset and form factor based on strategy
             if strategy == "mobile":
-                cmd.append("--form-factor=mobile")
-                cmd.append("--screenEmulation.mobile")
+                cmd.extend([
+                    "--preset=perf",
+                    "--form-factor=mobile",
+                    "--screenEmulation.mobile",
+                    "--screenEmulation.width=412",
+                    "--screenEmulation.height=823",
+                    "--screenEmulation.deviceScaleFactor=1.75",
+                    # Mobile throttling (Moto G Power - same as PageSpeed)
+                    "--throttling.cpuSlowdownMultiplier=4",
+                ])
             else:
-                cmd.append("--form-factor=desktop")
-                cmd.append("--screenEmulation.disabled")
+                cmd.extend([
+                    "--preset=desktop",
+                    "--form-factor=desktop",
+                    "--screenEmulation.disabled",
+                    # Desktop has no CPU throttling
+                    "--throttling.cpuSlowdownMultiplier=1",
+                ])
 
-            # Run Lighthouse
-            logger.info(f"Running Lighthouse audit for {url}")
+            # Run Lighthouse with extended timeout for comprehensive audit
+            logger.info(f"Running comprehensive Lighthouse audit for {url} ({strategy})")
             process = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=120  # 2 minute timeout
+                timeout=180  # 3 minute timeout for full audit
             )
 
             if process.returncode != 0:
@@ -293,11 +319,23 @@ class LighthouseService:
             cwv = self._extract_cwv(audits)
             result.update(cwv)
 
-            # Extract issues
+            # Extract ALL issues (failed audits with details)
             result["issues"] = self._extract_issues(lighthouse_data)
 
-            # Store raw data (trimmed)
+            # Extract additional diagnostic data (like Chrome DevTools)
+            result["diagnostics"] = self._extract_diagnostics(lighthouse_data)
+
+            # Extract passed audits summary for complete reporting
+            if full_report:
+                result["passed_audits"] = self._extract_passed_audits(lighthouse_data)
+
+            # Store comprehensive raw data
             result["raw_data"] = self._trim_raw_data(lighthouse_data)
+
+            # Add Lighthouse metadata
+            result["lighthouse_version"] = lighthouse_data.get("lighthouseVersion")
+            result["fetch_time"] = lighthouse_data.get("fetchTime")
+            result["run_warnings"] = lighthouse_data.get("runWarnings", [])
 
             result["success"] = True
 
@@ -305,7 +343,7 @@ class LighthouseService:
             Path(output_path).unlink(missing_ok=True)
 
         except subprocess.TimeoutExpired:
-            result["error"] = "Lighthouse audit timed out (>2 minutes)"
+            result["error"] = "Lighthouse audit timed out (>3 minutes)"
         except json.JSONDecodeError as e:
             result["error"] = f"Failed to parse Lighthouse output: {e}"
         except Exception as e:
@@ -313,6 +351,178 @@ class LighthouseService:
             logger.exception(f"Error running Lighthouse for {url}")
 
         return result
+
+    def _extract_diagnostics(self, lighthouse_data: dict) -> dict:
+        """Extract comprehensive diagnostics matching Chrome DevTools output."""
+        audits = lighthouse_data.get("audits", {})
+        diagnostics = {}
+
+        # Network diagnostics
+        network_rtt = audits.get("network-rtt", {})
+        if network_rtt.get("numericValue"):
+            diagnostics["network_rtt_ms"] = network_rtt["numericValue"]
+
+        network_server_latency = audits.get("network-server-latency", {})
+        if network_server_latency.get("numericValue"):
+            diagnostics["server_latency_ms"] = network_server_latency["numericValue"]
+
+        # Main thread diagnostics
+        mainthread_work = audits.get("mainthread-work-breakdown", {})
+        if mainthread_work.get("details", {}).get("items"):
+            diagnostics["mainthread_breakdown"] = {}
+            for item in mainthread_work["details"]["items"]:
+                group = item.get("groupLabel") or item.get("group", "Other")
+                diagnostics["mainthread_breakdown"][group] = round(item.get("duration", 0))
+
+        # Bootup time by script
+        bootup = audits.get("bootup-time", {})
+        if bootup.get("details", {}).get("items"):
+            diagnostics["script_bootup"] = []
+            for item in bootup["details"]["items"][:10]:
+                diagnostics["script_bootup"].append({
+                    "url": item.get("url", ""),
+                    "total_ms": round(item.get("total", 0)),
+                    "scripting_ms": round(item.get("scripting", 0)),
+                })
+
+        # DOM size
+        dom_size = audits.get("dom-size", {})
+        if dom_size.get("details", {}).get("items"):
+            diagnostics["dom_stats"] = {}
+            for item in dom_size["details"]["items"]:
+                stat = item.get("statistic", "")
+                diagnostics["dom_stats"][stat] = {
+                    "value": item.get("value"),
+                    "element": item.get("node", {}).get("selector", "") if item.get("node") else "",
+                }
+
+        # Third-party summary
+        third_party = audits.get("third-party-summary", {})
+        if third_party.get("details", {}).get("items"):
+            diagnostics["third_party"] = []
+            for item in third_party["details"]["items"][:10]:
+                diagnostics["third_party"].append({
+                    "entity": item.get("entity", ""),
+                    "transfer_size": item.get("transferSize", 0),
+                    "blocking_time": item.get("blockingTime", 0),
+                    "main_thread_time": item.get("mainThreadTime", 0),
+                })
+
+        # Largest Contentful Paint element
+        lcp_element = audits.get("largest-contentful-paint-element", {})
+        if lcp_element.get("details", {}).get("items"):
+            item = lcp_element["details"]["items"][0]
+            diagnostics["lcp_element"] = {
+                "node_label": item.get("node", {}).get("nodeLabel", "") if item.get("node") else "",
+                "selector": item.get("node", {}).get("selector", "") if item.get("node") else "",
+            }
+
+        # Layout shift elements
+        cls_elements = audits.get("layout-shift-elements", {})
+        if cls_elements.get("details", {}).get("items"):
+            diagnostics["cls_elements"] = []
+            for item in cls_elements["details"]["items"][:5]:
+                elem = {
+                    "score": item.get("score"),
+                }
+                if item.get("node"):
+                    elem["selector"] = item["node"].get("selector", "")
+                    elem["snippet"] = item["node"].get("snippet", "")[:200]
+                diagnostics["cls_elements"].append(elem)
+
+        # Long tasks
+        long_tasks = audits.get("long-tasks", {})
+        if long_tasks.get("details", {}).get("items"):
+            diagnostics["long_tasks"] = {
+                "count": len(long_tasks["details"]["items"]),
+                "tasks": []
+            }
+            for item in long_tasks["details"]["items"][:5]:
+                diagnostics["long_tasks"]["tasks"].append({
+                    "url": item.get("url", ""),
+                    "duration_ms": item.get("duration"),
+                    "start_time": item.get("startTime"),
+                })
+
+        # Unsized images (common CLS cause)
+        unsized_images = audits.get("unsized-images", {})
+        if unsized_images.get("details", {}).get("items"):
+            diagnostics["unsized_images"] = []
+            for item in unsized_images["details"]["items"][:5]:
+                diagnostics["unsized_images"].append({
+                    "url": item.get("url", ""),
+                    "selector": item.get("node", {}).get("selector", "") if item.get("node") else "",
+                })
+
+        # Preload LCP image
+        preload_lcp = audits.get("preload-lcp-image", {})
+        if preload_lcp.get("details", {}).get("items"):
+            diagnostics["preload_lcp_candidates"] = []
+            for item in preload_lcp["details"]["items"][:3]:
+                diagnostics["preload_lcp_candidates"].append({
+                    "url": item.get("url", ""),
+                    "wasted_ms": item.get("wastedMs", 0),
+                })
+
+        # Uses HTTP/2
+        uses_http2 = audits.get("uses-http2", {})
+        if uses_http2.get("details", {}).get("items"):
+            diagnostics["http1_requests"] = []
+            for item in uses_http2["details"]["items"][:10]:
+                if item.get("protocol") == "http/1.1":
+                    diagnostics["http1_requests"].append(item.get("url", ""))
+
+        # Console errors
+        errors_in_console = audits.get("errors-in-console", {})
+        if errors_in_console.get("details", {}).get("items"):
+            diagnostics["console_errors"] = []
+            for item in errors_in_console["details"]["items"][:10]:
+                error = {
+                    "source": item.get("source", ""),
+                    "description": item.get("description", "")[:300],
+                }
+                if item.get("sourceLocation"):
+                    loc = item["sourceLocation"]
+                    error["location"] = f"{loc.get('url', '')}:{loc.get('line', '')}"
+                diagnostics["console_errors"].append(error)
+
+        return diagnostics
+
+    def _extract_passed_audits(self, lighthouse_data: dict) -> dict:
+        """Extract summary of passed audits for complete reporting."""
+        audits = lighthouse_data.get("audits", {})
+        categories = lighthouse_data.get("categories", {})
+
+        passed = {
+            "performance": [],
+            "accessibility": [],
+            "best-practices": [],
+            "seo": [],
+        }
+
+        # Map audit IDs to categories
+        audit_to_category = {}
+        for cat_id, cat_data in categories.items():
+            for audit_ref in cat_data.get("auditRefs", []):
+                audit_to_category[audit_ref.get("id")] = cat_id
+
+        for audit_id, audit_data in audits.items():
+            score = audit_data.get("score")
+            if score == 1:  # Passed
+                category = audit_to_category.get(audit_id, "performance")
+                if category in passed:
+                    passed[category].append({
+                        "id": audit_id,
+                        "title": audit_data.get("title", ""),
+                    })
+
+        # Add counts
+        passed["counts"] = {
+            cat: len(audits_list) for cat, audits_list in passed.items()
+            if cat != "counts"
+        }
+
+        return passed
 
     def _extract_score(self, category_data: Optional[dict]) -> Optional[int]:
         """Extract score from category data (0-100)."""
