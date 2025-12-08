@@ -4,9 +4,9 @@ import { Button } from "../components/ui/button";
 import { Skeleton } from "../components/ui/skeleton";
 import { Phone, Play, ArrowRight, Calculator } from "lucide-react";
 
-// Optimized WebP images in public folder for better LCP
-const heroImageDesktop = "/hero-desktop.webp";
-const heroImageMobile = "/hero-mobile.webp";
+// Optimized WebP images served via Django static with proper cache headers
+const heroImageDesktop = "/static/images/hero-desktop.webp";
+const heroImageMobile = "/static/images/hero-mobile.webp";
 
 const fallbackHero = {
   badge: "AI-Powered Business Solutions",

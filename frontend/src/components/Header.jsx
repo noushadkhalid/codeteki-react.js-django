@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Button } from "../components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "../components/ui/sheet";
 import { Menu, ArrowRight, Calendar } from "lucide-react";
@@ -9,10 +9,8 @@ export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [location] = useLocation();
-  const logoSrc = useMemo(
-    () => `${process.env.PUBLIC_URL || ""}/navbar-logo.png`,
-    []
-  );
+  // Use Django static path for proper cache headers
+  const logoSrc = "/static/images/navbar-logo.png";
 
   const navigation = [
     { name: 'Home', href: '/' },

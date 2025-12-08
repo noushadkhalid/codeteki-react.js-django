@@ -70,11 +70,11 @@
     <link rel="dns-prefetch" href="//www.googletagmanager.com" />
     <link rel="dns-prefetch" href="//www.google-analytics.com" />
 
-    <!-- Preload critical assets for LCP improvement -->
-    <link rel="preload" href="/navbar-logo.png" as="image" fetchpriority="high" />
+    <!-- Preload critical assets for LCP improvement (served via Django static with cache headers) -->
+    <link rel="preload" href="/static/images/navbar-logo.png" as="image" fetchpriority="high" />
     <!-- Hero image preloads - responsive for mobile/desktop -->
-    <link rel="preload" href="/hero-mobile.webp" as="image" type="image/webp" media="(max-width: 767px)" fetchpriority="high" />
-    <link rel="preload" href="/hero-desktop.webp" as="image" type="image/webp" media="(min-width: 768px)" fetchpriority="high" />
+    <link rel="preload" href="/static/images/hero-mobile.webp" as="image" type="image/webp" media="(max-width: 767px)" fetchpriority="high" />
+    <link rel="preload" href="/static/images/hero-desktop.webp" as="image" type="image/webp" media="(min-width: 768px)" fetchpriority="high" />
     <!-- Google Fonts -->
     <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
