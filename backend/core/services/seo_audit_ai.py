@@ -250,7 +250,7 @@ Format as JSON:
 
     def _gather_audit_data(self) -> dict:
         """Gather comprehensive audit data for analysis."""
-        from ..models import PageAudit, AuditIssue
+        from ..models import PageAudit, AuditIssue, PageSpeedResult
 
         page_audits = self.site_audit.page_audits.all()
 
@@ -302,13 +302,27 @@ Format as JSON:
                 "tbt": {"value": page.tbt, "status": "good" if page.tbt and page.tbt <= 200 else "needs improvement" if page.tbt and page.tbt <= 600 else "poor"},
             })
 
-            # Extract diagnostics from raw_data (Chrome DevTools style data)
+            page_key = page.url.split("/")[-1] or "homepage"
+            page_diag = None
+
+            # Try to get diagnostics from PageAudit.raw_data first (Lighthouse CLI)
             raw_data = page.raw_data or {}
             if raw_data.get("diagnostics"):
                 page_diag = raw_data["diagnostics"]
-                page_key = page.url.split("/")[-1] or "homepage"
 
-                # Store diagnostics per page
+            # Also check PageSpeedResult for diagnostics (PageSpeed API)
+            if not page_diag:
+                try:
+                    ps_result = PageSpeedResult.objects.filter(page_audit=page).first()
+                    if ps_result and ps_result.raw_data:
+                        ps_raw = ps_result.raw_data
+                        if ps_raw.get("diagnostics"):
+                            page_diag = ps_raw["diagnostics"]
+                except Exception:
+                    pass
+
+            # Store diagnostics per page if found
+            if page_diag:
                 data["diagnostics"][page_key] = {
                     "mainthread_breakdown": page_diag.get("mainthread_breakdown", {}),
                     "script_bootup": page_diag.get("script_bootup", []),
@@ -319,6 +333,8 @@ Format as JSON:
                     "http1_requests": page_diag.get("http1_requests", []),
                     "console_errors": page_diag.get("console_errors", []),
                     "third_party": page_diag.get("third_party", []),
+                    "render_blocking": page_diag.get("render_blocking", []),
+                    "cache_issues": page_diag.get("cache_issues", []),
                 }
 
         # Add detailed issues with full context
@@ -1275,6 +1291,18 @@ REMEMBER: Every recommendation MUST reference specific files, elements, or metri
                 page_section += "\n\n**Third-Party Impact:**"
                 for tp in page_diag["third_party"][:3]:
                     page_section += f"\n- {tp.get('entity', 'unknown')}: {tp.get('blocking_time', 0)}ms blocking"
+
+            # Render blocking resources
+            if page_diag.get("render_blocking"):
+                page_section += "\n\n**Render Blocking Resources:**"
+                for res in page_diag["render_blocking"][:5]:
+                    page_section += f"\n- {res.get('url', 'unknown')}: {res.get('wasted_ms', 0)}ms"
+
+            # Cache issues
+            if page_diag.get("cache_issues"):
+                page_section += "\n\n**Resources Without Cache:**"
+                for res in page_diag["cache_issues"][:5]:
+                    page_section += f"\n- {res.get('url', 'unknown')} [TTL: {res.get('cache_ttl', 'None')}]"
 
             sections.append(page_section)
 

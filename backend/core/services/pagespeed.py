@@ -950,6 +950,7 @@ class PageSpeedService:
     def _trim_raw_data(self, data: dict) -> dict:
         """Trim raw API response while keeping useful diagnostic data."""
         lighthouse = data.get("lighthouseResult", {})
+        audits = lighthouse.get("audits", {})
 
         return {
             "id": data.get("id"),
@@ -970,7 +971,149 @@ class PageSpeedService:
                 "finalUrl": lighthouse.get("finalUrl"),
                 "runWarnings": lighthouse.get("runWarnings", []),
             },
+            # Add diagnostics for AI analysis - matching Lighthouse CLI format
+            "diagnostics": self._extract_diagnostics_from_audits(audits),
         }
+
+    def _extract_diagnostics_from_audits(self, audits: dict) -> dict:
+        """Extract comprehensive diagnostics from PageSpeed audits for AI analysis."""
+        diagnostics = {}
+
+        # Main thread breakdown
+        if "mainthread-work-breakdown" in audits:
+            audit = audits["mainthread-work-breakdown"]
+            diagnostics["mainthread_breakdown"] = {}
+            for item in audit.get("details", {}).get("items", []):
+                group = item.get("groupLabel") or item.get("group", "Other")
+                diagnostics["mainthread_breakdown"][group] = round(item.get("duration", 0))
+
+        # Script bootup time
+        if "bootup-time" in audits:
+            audit = audits["bootup-time"]
+            diagnostics["script_bootup"] = []
+            for item in audit.get("details", {}).get("items", [])[:10]:
+                diagnostics["script_bootup"].append({
+                    "url": item.get("url", ""),
+                    "total_ms": round(item.get("total", 0)),
+                    "scripting_ms": round(item.get("scripting", 0)),
+                })
+
+        # Long tasks
+        if "long-tasks" in audits:
+            audit = audits["long-tasks"]
+            items = audit.get("details", {}).get("items", [])
+            diagnostics["long_tasks"] = {
+                "count": len(items),
+                "tasks": [
+                    {
+                        "url": item.get("url", ""),
+                        "duration_ms": round(item.get("duration", 0)),
+                        "start_time": round(item.get("startTime", 0)),
+                    }
+                    for item in items[:10]
+                ],
+            }
+
+        # Layout shift elements
+        if "layout-shift-elements" in audits:
+            audit = audits["layout-shift-elements"]
+            diagnostics["cls_elements"] = []
+            for item in audit.get("details", {}).get("items", [])[:10]:
+                elem = {
+                    "score": item.get("score"),
+                    "contribution": item.get("contribution"),
+                }
+                if "node" in item:
+                    node = item["node"]
+                    elem["selector"] = node.get("selector", "")
+                    elem["snippet"] = node.get("snippet", "")[:300]
+                    elem["node_label"] = node.get("nodeLabel", "")
+                diagnostics["cls_elements"].append(elem)
+
+        # LCP element
+        if "largest-contentful-paint-element" in audits:
+            audit = audits["largest-contentful-paint-element"]
+            items = audit.get("details", {}).get("items", [])
+            if items:
+                item = items[0]
+                diagnostics["lcp_element"] = {}
+                if "node" in item:
+                    node = item["node"]
+                    diagnostics["lcp_element"] = {
+                        "selector": node.get("selector", ""),
+                        "snippet": node.get("snippet", "")[:300],
+                        "node_label": node.get("nodeLabel", ""),
+                    }
+
+        # Unsized images
+        if "unsized-images" in audits:
+            audit = audits["unsized-images"]
+            diagnostics["unsized_images"] = []
+            for item in audit.get("details", {}).get("items", [])[:10]:
+                img = {"url": item.get("url", "")}
+                if "node" in item:
+                    node = item["node"]
+                    img["selector"] = node.get("selector", "")
+                diagnostics["unsized_images"].append(img)
+
+        # HTTP/1.1 requests
+        if "uses-http2" in audits:
+            audit = audits["uses-http2"]
+            diagnostics["http1_requests"] = []
+            for item in audit.get("details", {}).get("items", [])[:15]:
+                if item.get("protocol") == "http/1.1":
+                    diagnostics["http1_requests"].append(item.get("url", ""))
+
+        # Console errors
+        if "errors-in-console" in audits:
+            audit = audits["errors-in-console"]
+            diagnostics["console_errors"] = []
+            for item in audit.get("details", {}).get("items", [])[:10]:
+                error = {
+                    "description": item.get("description", ""),
+                    "source": item.get("source", ""),
+                }
+                if "sourceLocation" in item:
+                    loc = item["sourceLocation"]
+                    error["location"] = f"{loc.get('url', '')}:{loc.get('line', '')}"
+                diagnostics["console_errors"].append(error)
+
+        # Third-party impact
+        if "third-party-summary" in audits:
+            audit = audits["third-party-summary"]
+            diagnostics["third_party"] = []
+            for item in audit.get("details", {}).get("items", [])[:10]:
+                diagnostics["third_party"].append({
+                    "entity": item.get("entity", {}).get("text", "") if isinstance(item.get("entity"), dict) else item.get("entity", ""),
+                    "transfer_size": item.get("transferSize", 0),
+                    "blocking_time": round(item.get("blockingTime", 0)),
+                    "main_thread_time": round(item.get("mainThreadTime", 0)),
+                })
+
+        # Render blocking resources
+        if "render-blocking-resources" in audits:
+            audit = audits["render-blocking-resources"]
+            diagnostics["render_blocking"] = []
+            for item in audit.get("details", {}).get("items", [])[:10]:
+                diagnostics["render_blocking"].append({
+                    "url": item.get("url", ""),
+                    "wasted_ms": round(item.get("wastedMs", 0)),
+                    "total_bytes": item.get("totalBytes", 0),
+                })
+
+        # Cache policy issues
+        if "uses-long-cache-ttl" in audits:
+            audit = audits["uses-long-cache-ttl"]
+            diagnostics["cache_issues"] = []
+            for item in audit.get("details", {}).get("items", [])[:15]:
+                cache_ms = item.get("cacheLifetimeMs", 0)
+                diagnostics["cache_issues"].append({
+                    "url": item.get("url", ""),
+                    "cache_ttl": self._format_cache_ttl(cache_ms),
+                    "total_bytes": item.get("totalBytes", 0),
+                })
+
+        return diagnostics
 
 
 def quick_pagespeed_check(url: str, strategy: str = "mobile") -> dict:
