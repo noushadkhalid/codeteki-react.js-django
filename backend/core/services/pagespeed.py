@@ -358,7 +358,7 @@ class PageSpeedService:
         return issues
 
     def _trim_details(self, details: dict) -> dict:
-        """Trim details while preserving important diagnostic data."""
+        """Trim details while preserving ALL important diagnostic data for AI analysis."""
         if not details:
             return {}
 
@@ -374,44 +374,83 @@ class PageSpeedService:
         if "overallSavingsBytes" in details:
             trimmed["overallSavingsBytes"] = details["overallSavingsBytes"]
 
-        # Keep items with important fields
+        # Keep debugData for additional context
+        if "debugData" in details:
+            debug = details["debugData"]
+            trimmed["debugData"] = {
+                "type": debug.get("type"),
+                "impact": debug.get("impact"),
+            }
+            # Keep script attribution data
+            if "manifestValue" in debug:
+                trimmed["debugData"]["manifestValue"] = debug["manifestValue"]
+
+        # Keep ALL items with comprehensive fields (increased limit for better analysis)
         if "items" in details:
             trimmed_items = []
-            for item in details["items"][:20]:  # Keep more items for thorough analysis
+            for item in details["items"][:30]:  # Increased to 30 for comprehensive analysis
                 trimmed_item = {}
+
                 # Keep all important metric fields
-                for key in ["url", "totalBytes", "wastedBytes", "wastedMs", "cacheLifetimeMs",
-                           "cacheHitProbability", "score", "transferSize", "resourceSize",
-                           "label", "groupLabel", "requestCount", "mainThreadTime"]:
+                important_keys = [
+                    "url", "totalBytes", "wastedBytes", "wastedMs", "cacheLifetimeMs",
+                    "cacheHitProbability", "score", "transferSize", "resourceSize",
+                    "label", "groupLabel", "requestCount", "mainThreadTime",
+                    "startTime", "duration", "transferSizeInKb", "blockingTime",
+                    "tbtImpact", "cumulativeLayoutShiftMainFrame", "contribution"
+                ]
+                for key in important_keys:
                     if key in item:
                         trimmed_item[key] = item[key]
-                # Handle node (DOM element) data - important for accessibility/CLS issues
+
+                # Handle node (DOM element) data - CRITICAL for accessibility/CLS issues
                 if "node" in item:
                     node = item["node"]
                     trimmed_item["node"] = {
-                        "selector": node.get("selector", "")[:300],
-                        "snippet": node.get("snippet", "")[:500],
-                        "nodeLabel": node.get("nodeLabel", "")[:200],
+                        "selector": node.get("selector", "")[:400],
+                        "snippet": node.get("snippet", "")[:600],
+                        "nodeLabel": node.get("nodeLabel", "")[:250],
                         "boundingRect": node.get("boundingRect"),  # For CLS diagnosis
+                        "path": node.get("path", "")[:200],  # DOM path
                     }
+
                 # Handle source location (for JS/CSS issues)
                 if "source" in item:
                     source = item["source"]
                     if isinstance(source, dict):
                         trimmed_item["source"] = {
-                            "url": source.get("url", "")[:200],
+                            "url": source.get("url", "")[:300],
                             "line": source.get("line"),
                             "column": source.get("column"),
                         }
                     else:
-                        trimmed_item["source"] = str(source)[:200]
+                        trimmed_item["source"] = str(source)[:300]
+
+                # Handle entity data (third-party resources)
+                if "entity" in item:
+                    trimmed_item["entity"] = item["entity"]
+
                 # Handle subItems (nested resources)
                 if "subItems" in item and item["subItems"].get("items"):
-                    trimmed_item["subItems"] = item["subItems"]["items"][:5]
+                    sub_items = []
+                    for sub in item["subItems"]["items"][:10]:
+                        sub_item = {}
+                        for key in ["url", "transferSize", "resourceSize", "blockingTime", "mainThreadTime"]:
+                            if key in sub:
+                                sub_item[key] = sub[key]
+                        if sub_item:
+                            sub_items.append(sub_item)
+                    if sub_items:
+                        trimmed_item["subItems"] = sub_items
+
                 if trimmed_item:
                     trimmed_items.append(trimmed_item)
+
             trimmed["items"] = trimmed_items
             trimmed["total_items"] = len(details["items"])
+            if len(details["items"]) > 30:
+                trimmed["items_truncated"] = True
+                trimmed["total_items_in_audit"] = len(details["items"])
 
         return trimmed
 

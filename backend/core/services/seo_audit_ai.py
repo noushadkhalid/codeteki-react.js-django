@@ -331,7 +331,7 @@ Format as JSON:
         return data
 
     def _extract_important_details(self, details: dict) -> dict:
-        """Extract important details from Lighthouse issue data."""
+        """Extract important details from Lighthouse issue data - COMPREHENSIVE version."""
         if not details:
             return {}
 
@@ -347,69 +347,113 @@ Format as JSON:
         if "overallSavingsBytes" in details:
             extracted["total_savings_kb"] = round(details["overallSavingsBytes"] / 1024, 1)
 
-        # Extract items/resources if present (used by many audits)
+        # Extract items/resources if present - KEEP ALL ITEMS for thorough analysis
         if "items" in details:
-            items = details["items"][:15]  # Keep more items for better analysis
-            extracted["affected_items"] = []
-            for item in items:
-                item_info = {}
-                # Common fields in Lighthouse item details
+            items = details["items"]  # Keep ALL items, not just first 15
+            extracted["affected_resources"] = []
+
+            for item in items[:25]:  # Increased limit for more context
+                resource = {}
+
+                # URL/Source - the most important field
                 if "url" in item:
-                    item_info["url"] = item["url"]
+                    resource["file"] = item["url"]
+
+                # Size metrics
                 if "totalBytes" in item:
-                    item_info["size_kb"] = round(item["totalBytes"] / 1024, 1)
+                    resource["total_size"] = f"{round(item['totalBytes'] / 1024, 1)} KB"
                 if "wastedBytes" in item:
-                    item_info["wasted_kb"] = round(item["wastedBytes"] / 1024, 1)
+                    resource["wasted"] = f"{round(item['wastedBytes'] / 1024, 1)} KB"
                 if "wastedMs" in item:
-                    item_info["wasted_ms"] = round(item["wastedMs"], 1)
+                    resource["time_wasted"] = f"{round(item['wastedMs'])} ms"
                 if "transferSize" in item:
-                    item_info["transfer_kb"] = round(item["transferSize"] / 1024, 1)
-                if "resourceSize" in item:
-                    item_info["resource_kb"] = round(item["resourceSize"] / 1024, 1)
+                    resource["transfer_size"] = f"{round(item['transferSize'] / 1024, 1)} KB"
+
+                # Cache info - critical for cache issues
                 if "cacheLifetimeMs" in item:
                     cache_ms = item["cacheLifetimeMs"]
                     if cache_ms == 0:
-                        item_info["cache"] = "no-cache"
+                        resource["cache_policy"] = "NO CACHE (must fix!)"
+                    elif cache_ms < 3600000:  # Less than 1 hour
+                        resource["cache_policy"] = f"{round(cache_ms / 60000)} minutes"
                     elif cache_ms < 86400000:  # Less than 1 day
-                        item_info["cache"] = f"{round(cache_ms / 3600000, 1)}h"
+                        resource["cache_policy"] = f"{round(cache_ms / 3600000, 1)} hours"
                     else:
-                        item_info["cache"] = f"{round(cache_ms / 86400000, 1)}d"
-                if "cacheHitProbability" in item:
-                    item_info["cache_hit_prob"] = round(item["cacheHitProbability"] * 100)
+                        resource["cache_policy"] = f"{round(cache_ms / 86400000)} days"
+
+                # DOM element info - critical for CLS/accessibility
                 if "node" in item:
-                    # Element causing issue (e.g., CLS culprit, accessibility)
                     node = item["node"]
                     if node.get("snippet"):
-                        item_info["element"] = node["snippet"][:250]
+                        resource["html_element"] = node["snippet"][:400]
                     if node.get("selector"):
-                        item_info["selector"] = node["selector"][:150]
+                        resource["css_selector"] = node["selector"]
                     if node.get("nodeLabel"):
-                        item_info["label"] = node["nodeLabel"][:100]
-                if "score" in item:
-                    item_info["score"] = round(item["score"] * 100)
+                        resource["element_label"] = node["nodeLabel"]
+                    if node.get("boundingRect"):
+                        rect = node["boundingRect"]
+                        resource["element_size"] = f"{rect.get('width', 0)}x{rect.get('height', 0)}px"
+
+                # CLS specific data
+                if "cumulativeLayoutShiftMainFrame" in item:
+                    resource["cls_contribution"] = round(item["cumulativeLayoutShiftMainFrame"], 4)
+                if "score" in item and isinstance(item["score"], (int, float)):
+                    resource["impact_score"] = round(item["score"] * 100)
+
+                # Label/description
                 if "label" in item:
-                    item_info["item_label"] = item["label"][:100]
-                # Source location (for JS/CSS issues)
+                    resource["description"] = item["label"]
+                if "groupLabel" in item:
+                    resource["group"] = item["groupLabel"]
+
+                # Source location for JS/CSS
                 if "source" in item:
                     source = item["source"]
                     if isinstance(source, dict):
-                        item_info["source"] = source.get("url", "")[:100]
+                        source_info = source.get("url", "")
+                        if source.get("line"):
+                            source_info += f" (line {source['line']})"
+                        resource["source_location"] = source_info
                     else:
-                        item_info["source"] = str(source)[:100]
+                        resource["source_location"] = str(source)
 
-                if item_info:
-                    extracted["affected_items"].append(item_info)
+                # Sub-items (nested resources)
+                if "subItems" in item and item["subItems"].get("items"):
+                    sub_resources = []
+                    for sub in item["subItems"]["items"][:5]:
+                        sub_info = {}
+                        if "url" in sub:
+                            sub_info["file"] = sub["url"]
+                        if "transferSize" in sub:
+                            sub_info["size"] = f"{round(sub['transferSize'] / 1024, 1)} KB"
+                        if sub_info:
+                            sub_resources.append(sub_info)
+                    if sub_resources:
+                        resource["sub_resources"] = sub_resources
 
-            # Add count info
-            extracted["total_affected"] = details.get("total_items", len(details["items"]))
+                if resource:
+                    extracted["affected_resources"].append(resource)
 
-        # Extract headings for context
+            # Count info
+            extracted["total_resources_affected"] = len(details["items"])
+            if len(details["items"]) > 25:
+                extracted["note"] = f"Showing 25 of {len(details['items'])} affected resources"
+
+        # Extract headings for table context
         if "headings" in details:
-            extracted["columns"] = [h.get("label", h.get("key", "")) for h in details["headings"][:6]]
+            extracted["data_columns"] = [h.get("label", h.get("key", "")) for h in details["headings"][:8]]
 
-        # Extract summary info
+        # Extract summary
         if "summary" in details:
             extracted["summary"] = details["summary"]
+
+        # Extract debugData if present (contains useful diagnostic info)
+        if "debugData" in details:
+            debug = details["debugData"]
+            if "type" in debug:
+                extracted["debug_type"] = debug["type"]
+            if "impact" in debug:
+                extracted["impact"] = debug["impact"]
 
         return extracted if extracted else None
 
@@ -695,89 +739,181 @@ For each fix provide:
         # Get first page metrics for summary
         first_page = audit_data['pages'][0] if audit_data['pages'] else {}
 
-        return f"""Analyze this ACTUAL site audit data and provide SPECIFIC recommendations based on the REAL issues found.
+        # Format performance issues with full details
+        perf_issues = audit_data['issues_by_category'].get('performance', [])
+        perf_section = self._format_issues_for_prompt(perf_issues)
 
-## SITE AUDIT SUMMARY
-{json.dumps(audit_data['site_audit'], indent=2)}
+        # Format other issues
+        seo_issues = audit_data['issues_by_category'].get('seo', [])
+        seo_section = self._format_issues_for_prompt(seo_issues)
 
-## CORE WEB VITALS STATUS
-{json.dumps(audit_data['core_web_vitals'], indent=2)}
+        acc_issues = audit_data['issues_by_category'].get('accessibility', [])
+        acc_section = self._format_issues_for_prompt(acc_issues)
 
-## PAGE-LEVEL SCORES
-{json.dumps(audit_data['pages'], indent=2)}
+        bp_issues = audit_data['issues_by_category'].get('best-practices', [])
+        bp_section = self._format_issues_for_prompt(bp_issues)
 
-## PERFORMANCE ISSUES (Actual from Lighthouse)
-{json.dumps(audit_data['issues_by_category'].get('performance', []), indent=2)}
+        return f"""ANALYZE THIS REAL AUDIT DATA AND PROVIDE SPECIFIC, ACTIONABLE FIXES.
 
-## ACCESSIBILITY ISSUES (Actual from Lighthouse)
-{json.dumps(audit_data['issues_by_category'].get('accessibility', []), indent=2)}
+## SITE OVERVIEW
+- Domain: {audit_data['site_audit']['domain']}
+- Strategy: {audit_data['site_audit']['strategy']}
+- Pages Audited: {audit_data['site_audit']['total_pages']}
+- Total Issues: {audit_data['site_audit']['total_issues']}
+- Critical Issues: {audit_data['site_audit']['critical_issues']}
 
-## BEST PRACTICES ISSUES (Actual from Lighthouse)
-{json.dumps(audit_data['issues_by_category'].get('best-practices', []), indent=2)}
+## CURRENT SCORES (Averages)
+- Performance: {audit_data['site_audit'].get('avg_performance', 'N/A')}
+- SEO: {audit_data['site_audit'].get('avg_seo', 'N/A')}
+- Accessibility: {audit_data['site_audit'].get('avg_accessibility', 'N/A')}
+- Best Practices: {audit_data['site_audit'].get('avg_best_practices', 'N/A')}
 
-## SEO ISSUES (Actual from Lighthouse)
-{json.dumps(audit_data['issues_by_category'].get('seo', []), indent=2)}
+## CORE WEB VITALS (First Page)
+- LCP: {first_page.get('lcp', 'N/A')}s (target: <2.5s)
+- CLS: {first_page.get('cls', 'N/A')} (target: <0.1)
+- TBT: {first_page.get('tbt', 'N/A')}ms (target: <200ms)
 
 ---
 
-IMPORTANT INSTRUCTIONS:
-1. Use the EXACT values from the data above (LCP: {first_page.get('lcp', 'N/A')}s, CLS: {first_page.get('cls', 'N/A')}, TBT: {first_page.get('tbt', 'N/A')}ms)
-2. Reference the EXACT bundled file URLs from "affected_items" (e.g., /static/js/main.xxx.js) - do NOT guess source file paths
-3. Calculate ACTUAL savings from savings_bytes and savings_ms values
-4. Focus on issues that ACTUALLY exist in the data, not hypothetical ones
-5. If "affected_items" or "element" are present in details, reference them EXACTLY as shown
-6. For React components, use .jsx extension (NOT .js) - e.g., Footer.jsx, Header.jsx
-7. Do NOT invent file paths - if you don't know the source file, just reference the bundled file URL
-8. Use actual element selectors/snippets from the "element" field when available
+## PERFORMANCE ISSUES - WITH AFFECTED FILES/ELEMENTS
+{perf_section}
 
-Generate a report with these sections:
+## SEO ISSUES - WITH AFFECTED FILES/ELEMENTS
+{seo_section}
+
+## ACCESSIBILITY ISSUES - WITH AFFECTED FILES/ELEMENTS
+{acc_section}
+
+## BEST PRACTICES ISSUES - WITH AFFECTED FILES/ELEMENTS
+{bp_section}
+
+---
+
+CRITICAL INSTRUCTIONS FOR YOUR RESPONSE:
+
+1. FOR EACH ISSUE: You MUST list the EXACT files/elements from "affected_resources" in your response.
+   Example: "File: https://codeteki.au/static/js/main.xxx.js (wasted: 148 KB)"
+
+2. DO NOT give generic advice like "implement code splitting". Instead say:
+   "Split the code in main.xxx.js - specifically lazy load these components that are causing the 148KB waste"
+
+3. FOR CLS ISSUES: Quote the exact HTML element and CSS selector from the data.
+   Example: "Element causing shift: <footer class='bg-black...'> (selector: footer.bg-black)"
+
+4. FOR CACHE ISSUES: List each file with its current cache policy.
+   Example: "main.xxx.js has NO CACHE - add Cache-Control: max-age=31536000"
+
+5. USE EXACT NUMBERS from the data:
+   - Savings in KB (not KiB)
+   - Time savings in ms
+   - Current cache policies
+
+---
+
+Generate a report with these EXACT sections:
 
 # Site Audit Recommendations for {audit_data['site_audit']['domain']}
 
 ## 1. CRITICAL ISSUES (Fix Immediately)
 
-For EACH critical issue found in the data above:
-- **Issue**: [Use exact title from data]
-- **Current Value**: [Use display_value from data]
-- **Affected Resources**: [List specific URLs/elements from details.affected_items]
-- **Potential Savings**: [Calculate from savings_ms and savings_bytes]
-- **Fix**: Specific code change for Django/React
+For EACH issue with severity="error", provide:
+- **Issue Title**: [exact title from data]
+- **Current State**: [use display_value]
+- **Affected Files/Elements**:
+  - [List EACH file/element from affected_resources with its metrics]
+- **Potential Savings**: [X] KB, [Y] ms
+- **Exact Fix**:
+  ```python
+  # Django fix if applicable
+  ```
+  ```javascript
+  // React fix if applicable - use .jsx extension
+  ```
 
 ## 2. QUICK WINS (30 min or less each)
 
-Create a table of quick fixes based on actual issues found:
-| Fix | Expected Impact | Code Change |
-|-----|-----------------|-------------|
+| Issue | Affected Resource | Savings | Fix |
+|-------|-------------------|---------|-----|
+[Table with SPECIFIC files and fixes]
 
 ## 3. MEDIUM EFFORT (1-4 hours)
 
-For issues requiring more work, provide:
-- The bundled file or element causing the issue (from audit data)
-- Which component type likely needs changes (e.g., "Footer component", "image elements")
-- Code examples tailored to the actual issues
-- Step-by-step implementation
+For each medium issue:
+- **Affected Bundle/Element**: [exact from data]
+- **Root Cause**: [based on the metrics]
+- **Step-by-Step Fix**:
+  1. [specific step with file references]
+  2. [specific step with code example]
 
 ## 4. DJANGO-SPECIFIC FIXES
 
-Based on the architecture (Django + React SPA with WhiteNoise):
-- Address any caching issues found
-- Server-side optimizations
-- Static file serving improvements
+Address ONLY issues actually found in the data:
+- Cache headers (if cache issues found)
+- Static file configuration
+- WhiteNoise settings
 
 ## 5. PRIORITY ACTION PLAN
 
-Create a prioritized table based on ACTUAL impact from the data:
-| Priority | Issue | Impact | Effort | Do This |
-|----------|-------|--------|--------|---------|
+| # | Issue | File/Element | Savings | Effort | Implementation |
+|---|-------|--------------|---------|--------|----------------|
+[Numbered by impact, with EXACT file references]
 
 ## 6. MONITORING CHECKLIST
 
-Based on the current scores, set specific targets:
-- Current Performance: {audit_data['site_audit'].get('avg_performance', 'N/A')}
-- Current SEO: {audit_data['site_audit'].get('avg_seo', 'N/A')}
-- Current Accessibility: {audit_data['site_audit'].get('avg_accessibility', 'N/A')}
+- Target Performance: {max(80, (audit_data['site_audit'].get('avg_performance') or 50) + 20)}+ (current: {audit_data['site_audit'].get('avg_performance', 'N/A')})
+- Target SEO: 100 (current: {audit_data['site_audit'].get('avg_seo', 'N/A')})
+- Target Accessibility: 100 (current: {audit_data['site_audit'].get('avg_accessibility', 'N/A')})
 
-Remember: Only recommend fixes for issues that ACTUALLY appear in the data. Do not add generic recommendations for issues not found."""
+REMEMBER: Every recommendation MUST reference specific files, elements, or metrics from the audit data. NO GENERIC ADVICE."""
+
+    def _format_issues_for_prompt(self, issues: list) -> str:
+        """Format issues with their full details for the AI prompt."""
+        if not issues:
+            return "No issues found in this category."
+
+        formatted = []
+        for i, issue in enumerate(issues[:15], 1):  # Top 15 issues per category
+            section = f"""
+### Issue {i}: {issue['title']}
+- Severity: {issue['severity'].upper()}
+- URL: {issue['url']}
+- Display Value: {issue.get('display_value', 'N/A')}
+- Score: {issue.get('score', 'N/A')}
+- Potential Savings: {issue.get('savings_ms', 0)}ms, {round(issue.get('savings_bytes', 0)/1024, 1)}KB"""
+
+            # Add detailed affected resources
+            details = issue.get('details', {})
+            if details:
+                if details.get('total_savings_ms'):
+                    section += f"\n- Total Time Savings: {details['total_savings_ms']}ms"
+                if details.get('total_savings_kb'):
+                    section += f"\n- Total Size Savings: {details['total_savings_kb']}KB"
+
+                resources = details.get('affected_resources', [])
+                if resources:
+                    section += "\n- **Affected Resources:**"
+                    for j, res in enumerate(resources[:10], 1):
+                        res_line = f"\n  {j}."
+                        if res.get('file'):
+                            res_line += f" File: {res['file']}"
+                        if res.get('wasted'):
+                            res_line += f" (wasted: {res['wasted']})"
+                        if res.get('time_wasted'):
+                            res_line += f" ({res['time_wasted']})"
+                        if res.get('cache_policy'):
+                            res_line += f" [cache: {res['cache_policy']}]"
+                        if res.get('html_element'):
+                            res_line += f"\n     Element: {res['html_element'][:200]}"
+                        if res.get('css_selector'):
+                            res_line += f"\n     Selector: {res['css_selector']}"
+                        section += res_line
+
+                    if details.get('total_resources_affected', 0) > 10:
+                        section += f"\n  ... and {details['total_resources_affected'] - 10} more resources"
+
+            formatted.append(section)
+
+        return "\n".join(formatted)
 
 
 class SEOContentAIEngine:
