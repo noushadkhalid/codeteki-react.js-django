@@ -412,7 +412,7 @@ class LighthouseService:
                 "display_value": audit_data.get("displayValue", ""),
                 "savings_ms": savings_ms,
                 "savings_bytes": savings_bytes,
-                "details": self._trim_details(details),
+                "details": self._extract_detailed_audit_data(audit_id, audit_data),
             })
 
         # Sort by severity and savings
@@ -420,6 +420,490 @@ class LighthouseService:
         issues.sort(key=lambda x: (severity_order.get(x["severity"], 3), -x["savings_ms"]))
 
         return issues
+
+    def _extract_detailed_audit_data(self, audit_id: str, audit_data: dict) -> dict:
+        """Extract comprehensive detailed data based on specific audit types."""
+        details = audit_data.get("details", {})
+        if not details:
+            return {}
+
+        # Special handling for specific audit types
+        handlers = {
+            "layout-shift-elements": self._extract_layout_shift_details,
+            "uses-http2": self._extract_http_protocol_details,
+            "forced-style-recalc": self._extract_forced_reflow_details,
+            "errors-in-console": self._extract_console_errors,
+            "mainthread-work-breakdown": self._extract_mainthread_breakdown,
+            "uses-rel-preconnect": self._extract_preconnect_details,
+            "experimental-interaction-to-next-paint": self._extract_inp_details,
+            "critical-request-chains": self._extract_critical_chains,
+            "render-blocking-resources": self._extract_render_blocking,
+            "uses-long-cache-ttl": self._extract_cache_details,
+            "unused-javascript": self._extract_unused_js_details,
+            "unused-css-rules": self._extract_unused_css_details,
+            "long-tasks": self._extract_long_tasks,
+            "non-composited-animations": self._extract_animation_issues,
+            "dom-size": self._extract_dom_size,
+            "bootup-time": self._extract_bootup_time,
+            "duplicated-javascript": self._extract_duplicated_js,
+            "lcp-lazy-loaded": self._extract_lcp_details,
+            "largest-contentful-paint-element": self._extract_lcp_element,
+            "color-contrast": self._extract_contrast_issues,
+            "button-name": self._extract_element_issues,
+            "link-name": self._extract_element_issues,
+            "image-alt": self._extract_element_issues,
+            "tap-targets": self._extract_tap_target_issues,
+        }
+
+        handler = handlers.get(audit_id, self._trim_details)
+        return handler(details)
+
+    def _extract_layout_shift_details(self, details: dict) -> dict:
+        """Extract detailed layout shift culprits with exact elements and scores."""
+        result = {"type": "layout-shift", "elements": []}
+
+        for item in details.get("items", [])[:20]:
+            element = {
+                "score": item.get("score"),
+                "contribution": item.get("contribution"),
+            }
+
+            if "node" in item:
+                node = item["node"]
+                element["selector"] = node.get("selector", "")
+                element["snippet"] = node.get("snippet", "")[:500]
+                element["nodeLabel"] = node.get("nodeLabel", "")
+                if node.get("boundingRect"):
+                    element["boundingRect"] = node["boundingRect"]
+
+            if item.get("cause"):
+                element["cause"] = item["cause"]
+
+            result["elements"].append(element)
+
+        result["total_shift"] = sum(e.get("score", 0) for e in result["elements"])
+        return result
+
+    def _extract_http_protocol_details(self, details: dict) -> dict:
+        """Extract HTTP protocol information for each request."""
+        result = {"type": "http-protocol", "requests": []}
+
+        for item in details.get("items", [])[:30]:
+            request = {
+                "url": item.get("url", ""),
+                "protocol": item.get("protocol", ""),
+            }
+            result["requests"].append(request)
+
+        protocols = {}
+        for req in result["requests"]:
+            proto = req.get("protocol", "unknown")
+            protocols[proto] = protocols.get(proto, 0) + 1
+        result["protocol_summary"] = protocols
+
+        return result
+
+    def _extract_forced_reflow_details(self, details: dict) -> dict:
+        """Extract forced reflow/style recalculation data."""
+        result = {"type": "forced-reflow", "sources": []}
+
+        for item in details.get("items", [])[:15]:
+            source = {
+                "totalTime": item.get("duration") or item.get("totalTime"),
+            }
+
+            if "source" in item:
+                src = item["source"]
+                if isinstance(src, dict):
+                    source["url"] = src.get("url", "")
+                    source["line"] = src.get("line")
+                    source["column"] = src.get("column")
+                    source["function"] = src.get("functionName", "")
+                else:
+                    source["location"] = str(src)
+
+            result["sources"].append(source)
+
+        result["total_reflow_time"] = sum(s.get("totalTime", 0) for s in result["sources"])
+        return result
+
+    def _extract_console_errors(self, details: dict) -> dict:
+        """Extract browser console errors logged during audit."""
+        result = {"type": "console-errors", "errors": []}
+
+        for item in details.get("items", [])[:20]:
+            error = {
+                "source": item.get("source", ""),
+                "description": item.get("description", ""),
+                "level": item.get("sourceLocation", {}).get("type", "error"),
+            }
+
+            if "sourceLocation" in item:
+                loc = item["sourceLocation"]
+                error["url"] = loc.get("url", "")
+                error["line"] = loc.get("line")
+                error["column"] = loc.get("column")
+
+            result["errors"].append(error)
+
+        return result
+
+    def _extract_mainthread_breakdown(self, details: dict) -> dict:
+        """Extract main thread work breakdown by category."""
+        result = {"type": "mainthread-breakdown", "categories": {}}
+
+        for item in details.get("items", []):
+            group = item.get("groupLabel") or item.get("group", "Other")
+            duration = item.get("duration", 0)
+            result["categories"][group] = duration
+
+        result["total_time"] = sum(result["categories"].values())
+        return result
+
+    def _extract_preconnect_details(self, details: dict) -> dict:
+        """Extract preconnect hints analysis."""
+        result = {"type": "preconnect", "origins": [], "unused": [], "candidates": []}
+
+        for item in details.get("items", [])[:15]:
+            origin = {
+                "url": item.get("url", ""),
+                "wastedMs": item.get("wastedMs", 0),
+            }
+
+            if item.get("wastedMs", 0) == 0 and "unused" in str(item).lower():
+                result["unused"].append(origin)
+            else:
+                result["origins"].append(origin)
+
+        return result
+
+    def _extract_inp_details(self, details: dict) -> dict:
+        """Extract INP (Interaction to Next Paint) breakdown."""
+        result = {"type": "inp-breakdown", "interactions": []}
+
+        for item in details.get("items", [])[:10]:
+            interaction = {
+                "inputDelay": item.get("inputDelay"),
+                "processingDuration": item.get("processingDuration"),
+                "presentationDelay": item.get("presentationDelay"),
+                "totalDuration": item.get("duration"),
+            }
+
+            if "node" in item:
+                node = item["node"]
+                interaction["element"] = {
+                    "selector": node.get("selector", ""),
+                    "snippet": node.get("snippet", "")[:300],
+                    "nodeLabel": node.get("nodeLabel", ""),
+                }
+
+            result["interactions"].append(interaction)
+
+        return result
+
+    def _extract_critical_chains(self, details: dict) -> dict:
+        """Extract critical request chain (network dependency tree)."""
+        result = {"type": "critical-chains", "longestChain": {}}
+
+        if "longestChain" in details:
+            chain = details["longestChain"]
+            result["longestChain"] = {
+                "length": chain.get("length"),
+                "duration": chain.get("duration"),
+                "transferSize": chain.get("transferSize"),
+            }
+
+        if "chains" in details:
+            result["chains"] = self._flatten_chains(details["chains"])
+
+        return result
+
+    def _flatten_chains(self, chains: dict, depth: int = 0) -> list:
+        """Flatten nested chain structure."""
+        result = []
+        for chain_id, chain in chains.items():
+            item = {
+                "depth": depth,
+                "url": chain.get("request", {}).get("url", ""),
+                "startTime": chain.get("request", {}).get("startTime"),
+                "endTime": chain.get("request", {}).get("endTime"),
+                "transferSize": chain.get("request", {}).get("transferSize"),
+            }
+            result.append(item)
+
+            if "children" in chain:
+                result.extend(self._flatten_chains(chain["children"], depth + 1))
+
+        return result[:20]
+
+    def _extract_render_blocking(self, details: dict) -> dict:
+        """Extract render-blocking resources details."""
+        result = {"type": "render-blocking", "resources": []}
+
+        for item in details.get("items", [])[:15]:
+            resource = {
+                "url": item.get("url", ""),
+                "totalBytes": item.get("totalBytes"),
+                "wastedMs": item.get("wastedMs", 0),
+            }
+            result["resources"].append(resource)
+
+        result["total_blocking_time"] = details.get("overallSavingsMs", 0)
+        return result
+
+    def _extract_cache_details(self, details: dict) -> dict:
+        """Extract cache lifetime details for each resource."""
+        result = {"type": "cache-lifetime", "resources": []}
+
+        for item in details.get("items", [])[:25]:
+            resource = {
+                "url": item.get("url", ""),
+                "cacheLifetimeMs": item.get("cacheLifetimeMs"),
+                "cacheTTL": self._format_cache_ttl(item.get("cacheLifetimeMs")),
+                "totalBytes": item.get("totalBytes"),
+                "wastedBytes": item.get("wastedBytes", 0),
+                "cacheHitProbability": item.get("cacheHitProbability"),
+            }
+            result["resources"].append(resource)
+
+        result["total_cacheable_bytes"] = sum(r.get("totalBytes", 0) for r in result["resources"])
+        return result
+
+    def _format_cache_ttl(self, ms) -> str:
+        """Format cache TTL in human-readable format."""
+        if ms is None or ms == 0:
+            return "None"
+
+        seconds = ms / 1000
+        if seconds < 60:
+            return f"{int(seconds)}s"
+        elif seconds < 3600:
+            return f"{int(seconds/60)}m"
+        elif seconds < 86400:
+            return f"{int(seconds/3600)}h"
+        else:
+            return f"{int(seconds/86400)}d"
+
+    def _extract_unused_js_details(self, details: dict) -> dict:
+        """Extract detailed unused JavaScript breakdown by module."""
+        result = {"type": "unused-javascript", "scripts": [], "modules": []}
+
+        for item in details.get("items", [])[:20]:
+            script = {
+                "url": item.get("url", ""),
+                "totalBytes": item.get("totalBytes"),
+                "wastedBytes": item.get("wastedBytes", 0),
+                "wastedPercent": item.get("wastedPercent"),
+            }
+
+            if "subItems" in item and item["subItems"].get("items"):
+                script["modules"] = []
+                for sub in item["subItems"]["items"][:10]:
+                    module = {
+                        "source": sub.get("source", ""),
+                        "sourceBytes": sub.get("sourceBytes"),
+                        "sourceWastedBytes": sub.get("sourceWastedBytes", 0),
+                    }
+                    script["modules"].append(module)
+                    result["modules"].append(module)
+
+            result["scripts"].append(script)
+
+        result["total_wasted_bytes"] = details.get("overallSavingsBytes", 0)
+        result["total_wasted_ms"] = details.get("overallSavingsMs", 0)
+        return result
+
+    def _extract_unused_css_details(self, details: dict) -> dict:
+        """Extract detailed unused CSS breakdown."""
+        result = {"type": "unused-css", "stylesheets": []}
+
+        for item in details.get("items", [])[:15]:
+            stylesheet = {
+                "url": item.get("url", ""),
+                "totalBytes": item.get("totalBytes"),
+                "wastedBytes": item.get("wastedBytes", 0),
+                "wastedPercent": item.get("wastedPercent"),
+            }
+            result["stylesheets"].append(stylesheet)
+
+        result["total_wasted_bytes"] = details.get("overallSavingsBytes", 0)
+        return result
+
+    def _extract_long_tasks(self, details: dict) -> dict:
+        """Extract long main-thread tasks."""
+        result = {"type": "long-tasks", "tasks": []}
+
+        for item in details.get("items", [])[:15]:
+            task = {
+                "url": item.get("url", ""),
+                "startTime": item.get("startTime"),
+                "duration": item.get("duration"),
+            }
+            result["tasks"].append(task)
+
+        result["count"] = len(result["tasks"])
+        return result
+
+    def _extract_animation_issues(self, details: dict) -> dict:
+        """Extract non-composited animation issues."""
+        result = {"type": "animations", "elements": []}
+
+        for item in details.get("items", [])[:10]:
+            element = {
+                "failureReason": item.get("failureReason", ""),
+                "animation": item.get("animation", ""),
+            }
+
+            if "node" in item:
+                node = item["node"]
+                element["selector"] = node.get("selector", "")
+                element["snippet"] = node.get("snippet", "")[:300]
+
+            result["elements"].append(element)
+
+        return result
+
+    def _extract_dom_size(self, details: dict) -> dict:
+        """Extract DOM size statistics."""
+        result = {"type": "dom-size", "stats": {}}
+
+        for item in details.get("items", []):
+            stat_type = item.get("statistic", "")
+            result["stats"][stat_type] = {
+                "value": item.get("value"),
+                "element": item.get("node", {}).get("selector", "") if item.get("node") else "",
+            }
+
+        return result
+
+    def _extract_bootup_time(self, details: dict) -> dict:
+        """Extract script evaluation/bootup time."""
+        result = {"type": "bootup-time", "scripts": []}
+
+        for item in details.get("items", [])[:15]:
+            script = {
+                "url": item.get("url", ""),
+                "total": item.get("total"),
+                "scripting": item.get("scripting"),
+                "scriptParseCompile": item.get("scriptParseCompile"),
+            }
+            result["scripts"].append(script)
+
+        result["total_time"] = sum(s.get("total", 0) for s in result["scripts"])
+        return result
+
+    def _extract_duplicated_js(self, details: dict) -> dict:
+        """Extract duplicated JavaScript modules."""
+        result = {"type": "duplicated-js", "modules": []}
+
+        for item in details.get("items", [])[:15]:
+            module = {
+                "source": item.get("source", ""),
+                "wastedBytes": item.get("wastedBytes", 0),
+            }
+
+            if "subItems" in item and item["subItems"].get("items"):
+                module["locations"] = [sub.get("url", "") for sub in item["subItems"]["items"][:5]]
+
+            result["modules"].append(module)
+
+        result["total_wasted"] = details.get("overallSavingsBytes", 0)
+        return result
+
+    def _extract_lcp_details(self, details: dict) -> dict:
+        """Extract LCP element lazy loading issues."""
+        result = {"type": "lcp-lazy", "elements": []}
+
+        for item in details.get("items", [])[:5]:
+            element = {"url": item.get("url", "")}
+
+            if "node" in item:
+                node = item["node"]
+                element["selector"] = node.get("selector", "")
+                element["snippet"] = node.get("snippet", "")[:400]
+
+            result["elements"].append(element)
+
+        return result
+
+    def _extract_lcp_element(self, details: dict) -> dict:
+        """Extract LCP element details."""
+        result = {"type": "lcp-element", "element": None}
+
+        items = details.get("items", [])
+        if items:
+            item = items[0]
+            result["element"] = {"url": item.get("url", "")}
+
+            if "node" in item:
+                node = item["node"]
+                result["element"]["selector"] = node.get("selector", "")
+                result["element"]["snippet"] = node.get("snippet", "")[:400]
+                result["element"]["nodeLabel"] = node.get("nodeLabel", "")
+
+        return result
+
+    def _extract_contrast_issues(self, details: dict) -> dict:
+        """Extract color contrast accessibility issues."""
+        result = {"type": "contrast", "elements": []}
+
+        for item in details.get("items", [])[:15]:
+            element = {}
+
+            if "node" in item:
+                node = item["node"]
+                element["selector"] = node.get("selector", "")
+                element["snippet"] = node.get("snippet", "")[:400]
+                element["nodeLabel"] = node.get("nodeLabel", "")
+                element["explanation"] = node.get("explanation", "")
+
+            result["elements"].append(element)
+
+        return result
+
+    def _extract_element_issues(self, details: dict) -> dict:
+        """Extract generic element-based accessibility issues."""
+        result = {"type": "element-issues", "elements": []}
+
+        for item in details.get("items", [])[:15]:
+            element = {}
+
+            if "node" in item:
+                node = item["node"]
+                element["selector"] = node.get("selector", "")
+                element["snippet"] = node.get("snippet", "")[:400]
+                element["nodeLabel"] = node.get("nodeLabel", "")
+                element["explanation"] = node.get("explanation", "")
+
+            result["elements"].append(element)
+
+        return result
+
+    def _extract_tap_target_issues(self, details: dict) -> dict:
+        """Extract tap target sizing issues."""
+        result = {"type": "tap-targets", "elements": []}
+
+        for item in details.get("items", [])[:15]:
+            element = {
+                "size": item.get("size", ""),
+                "overlappingTarget": {},
+            }
+
+            if "tapTarget" in item:
+                tap = item["tapTarget"]
+                element["selector"] = tap.get("selector", "")
+                element["snippet"] = tap.get("snippet", "")[:300]
+
+            if "overlappingTarget" in item:
+                overlap = item["overlappingTarget"]
+                element["overlappingTarget"] = {
+                    "selector": overlap.get("selector", ""),
+                    "snippet": overlap.get("snippet", "")[:200],
+                }
+
+            result["elements"].append(element)
+
+        return result
 
     def _trim_details(self, details: dict) -> dict:
         """Trim details while preserving ALL important diagnostic data for AI analysis."""

@@ -331,110 +331,64 @@ Format as JSON:
         return data
 
     def _extract_important_details(self, details: dict) -> dict:
-        """Extract important details from Lighthouse issue data - COMPREHENSIVE version."""
+        """Extract important details from Lighthouse issue data - COMPREHENSIVE version.
+
+        Handles the new structured detail types from enhanced PageSpeed/Lighthouse services.
+        """
         if not details:
             return {}
 
         extracted = {}
+        detail_type = details.get("type", "")
+        extracted["type"] = detail_type
 
-        # Extract type for context
-        if "type" in details:
-            extracted["type"] = details["type"]
+        # Handle specific detail types from enhanced services
+        if detail_type == "layout-shift":
+            return self._format_layout_shift_for_ai(details)
+        elif detail_type == "http-protocol":
+            return self._format_http_protocol_for_ai(details)
+        elif detail_type == "cache-lifetime":
+            return self._format_cache_for_ai(details)
+        elif detail_type == "unused-javascript":
+            return self._format_unused_js_for_ai(details)
+        elif detail_type == "unused-css":
+            return self._format_unused_css_for_ai(details)
+        elif detail_type == "mainthread-breakdown":
+            return self._format_mainthread_for_ai(details)
+        elif detail_type == "render-blocking":
+            return self._format_render_blocking_for_ai(details)
+        elif detail_type == "forced-reflow":
+            return self._format_forced_reflow_for_ai(details)
+        elif detail_type == "console-errors":
+            return self._format_console_errors_for_ai(details)
+        elif detail_type == "tap-targets":
+            return self._format_tap_targets_for_ai(details)
+        elif detail_type == "contrast":
+            return self._format_contrast_for_ai(details)
+        elif detail_type == "long-tasks":
+            return self._format_long_tasks_for_ai(details)
+        elif detail_type == "critical-chains":
+            return self._format_critical_chains_for_ai(details)
+        elif detail_type == "inp-breakdown":
+            return self._format_inp_for_ai(details)
 
+        # Default handling for other types or old format
         # Extract overall savings
         if "overallSavingsMs" in details:
             extracted["total_savings_ms"] = round(details["overallSavingsMs"], 1)
         if "overallSavingsBytes" in details:
             extracted["total_savings_kb"] = round(details["overallSavingsBytes"] / 1024, 1)
 
-        # Extract items/resources if present - KEEP ALL ITEMS for thorough analysis
+        # Extract items/resources if present
         if "items" in details:
-            items = details["items"]  # Keep ALL items, not just first 15
+            items = details["items"]
             extracted["affected_resources"] = []
 
-            for item in items[:25]:  # Increased limit for more context
-                resource = {}
-
-                # URL/Source - the most important field
-                if "url" in item:
-                    resource["file"] = item["url"]
-
-                # Size metrics
-                if "totalBytes" in item:
-                    resource["total_size"] = f"{round(item['totalBytes'] / 1024, 1)} KB"
-                if "wastedBytes" in item:
-                    resource["wasted"] = f"{round(item['wastedBytes'] / 1024, 1)} KB"
-                if "wastedMs" in item:
-                    resource["time_wasted"] = f"{round(item['wastedMs'])} ms"
-                if "transferSize" in item:
-                    resource["transfer_size"] = f"{round(item['transferSize'] / 1024, 1)} KB"
-
-                # Cache info - critical for cache issues
-                if "cacheLifetimeMs" in item:
-                    cache_ms = item["cacheLifetimeMs"]
-                    if cache_ms == 0:
-                        resource["cache_policy"] = "NO CACHE (must fix!)"
-                    elif cache_ms < 3600000:  # Less than 1 hour
-                        resource["cache_policy"] = f"{round(cache_ms / 60000)} minutes"
-                    elif cache_ms < 86400000:  # Less than 1 day
-                        resource["cache_policy"] = f"{round(cache_ms / 3600000, 1)} hours"
-                    else:
-                        resource["cache_policy"] = f"{round(cache_ms / 86400000)} days"
-
-                # DOM element info - critical for CLS/accessibility
-                if "node" in item:
-                    node = item["node"]
-                    if node.get("snippet"):
-                        resource["html_element"] = node["snippet"][:400]
-                    if node.get("selector"):
-                        resource["css_selector"] = node["selector"]
-                    if node.get("nodeLabel"):
-                        resource["element_label"] = node["nodeLabel"]
-                    if node.get("boundingRect"):
-                        rect = node["boundingRect"]
-                        resource["element_size"] = f"{rect.get('width', 0)}x{rect.get('height', 0)}px"
-
-                # CLS specific data
-                if "cumulativeLayoutShiftMainFrame" in item:
-                    resource["cls_contribution"] = round(item["cumulativeLayoutShiftMainFrame"], 4)
-                if "score" in item and isinstance(item["score"], (int, float)):
-                    resource["impact_score"] = round(item["score"] * 100)
-
-                # Label/description
-                if "label" in item:
-                    resource["description"] = item["label"]
-                if "groupLabel" in item:
-                    resource["group"] = item["groupLabel"]
-
-                # Source location for JS/CSS
-                if "source" in item:
-                    source = item["source"]
-                    if isinstance(source, dict):
-                        source_info = source.get("url", "")
-                        if source.get("line"):
-                            source_info += f" (line {source['line']})"
-                        resource["source_location"] = source_info
-                    else:
-                        resource["source_location"] = str(source)
-
-                # Sub-items (nested resources)
-                if "subItems" in item and item["subItems"].get("items"):
-                    sub_resources = []
-                    for sub in item["subItems"]["items"][:5]:
-                        sub_info = {}
-                        if "url" in sub:
-                            sub_info["file"] = sub["url"]
-                        if "transferSize" in sub:
-                            sub_info["size"] = f"{round(sub['transferSize'] / 1024, 1)} KB"
-                        if sub_info:
-                            sub_resources.append(sub_info)
-                    if sub_resources:
-                        resource["sub_resources"] = sub_resources
-
+            for item in items[:25]:
+                resource = self._extract_resource_from_item(item)
                 if resource:
                     extracted["affected_resources"].append(resource)
 
-            # Count info
             extracted["total_resources_affected"] = len(details["items"])
             if len(details["items"]) > 25:
                 extracted["note"] = f"Showing 25 of {len(details['items'])} affected resources"
@@ -447,15 +401,317 @@ Format as JSON:
         if "summary" in details:
             extracted["summary"] = details["summary"]
 
-        # Extract debugData if present (contains useful diagnostic info)
-        if "debugData" in details:
-            debug = details["debugData"]
-            if "type" in debug:
-                extracted["debug_type"] = debug["type"]
-            if "impact" in debug:
-                extracted["impact"] = debug["impact"]
-
         return extracted if extracted else None
+
+    def _extract_resource_from_item(self, item: dict) -> dict:
+        """Extract resource info from a detail item."""
+        resource = {}
+
+        if "url" in item:
+            resource["file"] = item["url"]
+
+        if "totalBytes" in item:
+            resource["total_size"] = f"{round(item['totalBytes'] / 1024, 1)} KB"
+        if "wastedBytes" in item:
+            resource["wasted"] = f"{round(item['wastedBytes'] / 1024, 1)} KB"
+        if "wastedMs" in item:
+            resource["time_wasted"] = f"{round(item['wastedMs'])} ms"
+        if "transferSize" in item:
+            resource["transfer_size"] = f"{round(item['transferSize'] / 1024, 1)} KB"
+
+        if "cacheLifetimeMs" in item:
+            cache_ms = item["cacheLifetimeMs"]
+            if cache_ms == 0:
+                resource["cache_policy"] = "NO CACHE"
+            elif cache_ms < 3600000:
+                resource["cache_policy"] = f"{round(cache_ms / 60000)} minutes"
+            elif cache_ms < 86400000:
+                resource["cache_policy"] = f"{round(cache_ms / 3600000, 1)} hours"
+            else:
+                resource["cache_policy"] = f"{round(cache_ms / 86400000)} days"
+
+        if "node" in item:
+            node = item["node"]
+            if node.get("snippet"):
+                resource["html_element"] = node["snippet"][:400]
+            if node.get("selector"):
+                resource["css_selector"] = node["selector"]
+            if node.get("nodeLabel"):
+                resource["element_label"] = node["nodeLabel"]
+
+        if "score" in item and isinstance(item["score"], (int, float)):
+            resource["impact_score"] = round(item["score"] * 100)
+
+        if "source" in item:
+            source = item["source"]
+            if isinstance(source, dict):
+                source_info = source.get("url", "")
+                if source.get("line"):
+                    source_info += f" (line {source['line']})"
+                resource["source_location"] = source_info
+
+        return resource
+
+    def _format_layout_shift_for_ai(self, details: dict) -> dict:
+        """Format layout shift details for AI analysis."""
+        result = {
+            "type": "layout-shift",
+            "total_shift_score": details.get("total_shift", 0),
+            "affected_elements": []
+        }
+
+        for elem in details.get("elements", [])[:10]:
+            element = {
+                "shift_score": elem.get("score"),
+                "contribution": elem.get("contribution"),
+            }
+            if elem.get("selector"):
+                element["css_selector"] = elem["selector"]
+            if elem.get("snippet"):
+                element["html_element"] = elem["snippet"][:300]
+            if elem.get("nodeLabel"):
+                element["element_label"] = elem["nodeLabel"]
+            if elem.get("cause"):
+                element["cause"] = elem["cause"]
+            result["affected_elements"].append(element)
+
+        return result
+
+    def _format_http_protocol_for_ai(self, details: dict) -> dict:
+        """Format HTTP protocol details for AI analysis."""
+        result = {
+            "type": "http-protocol",
+            "protocol_summary": details.get("protocol_summary", {}),
+            "requests_using_http1": []
+        }
+
+        for req in details.get("requests", [])[:15]:
+            if req.get("protocol") == "http/1.1":
+                result["requests_using_http1"].append(req.get("url", ""))
+
+        return result
+
+    def _format_cache_for_ai(self, details: dict) -> dict:
+        """Format cache lifetime details for AI analysis."""
+        result = {
+            "type": "cache-lifetime",
+            "total_cacheable_bytes": details.get("total_cacheable_bytes", 0),
+            "resources_without_cache": []
+        }
+
+        for res in details.get("resources", [])[:15]:
+            resource = {
+                "file": res.get("url", ""),
+                "cache_ttl": res.get("cacheTTL", "None"),
+                "size": f"{round(res.get('totalBytes', 0) / 1024, 1)} KB"
+            }
+            result["resources_without_cache"].append(resource)
+
+        return result
+
+    def _format_unused_js_for_ai(self, details: dict) -> dict:
+        """Format unused JavaScript details for AI analysis."""
+        result = {
+            "type": "unused-javascript",
+            "total_wasted_bytes": details.get("total_wasted_bytes", 0),
+            "total_wasted_ms": details.get("total_wasted_ms", 0),
+            "scripts": [],
+            "top_wasted_modules": []
+        }
+
+        for script in details.get("scripts", [])[:10]:
+            script_info = {
+                "file": script.get("url", ""),
+                "wasted": f"{round(script.get('wastedBytes', 0) / 1024, 1)} KB",
+            }
+            if script.get("modules"):
+                script_info["modules"] = [
+                    {"source": m.get("source", ""), "wasted": f"{round(m.get('sourceWastedBytes', 0) / 1024, 1)} KB"}
+                    for m in script["modules"][:5]
+                ]
+            result["scripts"].append(script_info)
+
+        for module in details.get("modules", [])[:10]:
+            result["top_wasted_modules"].append({
+                "source": module.get("source", ""),
+                "wasted": f"{round(module.get('sourceWastedBytes', 0) / 1024, 1)} KB"
+            })
+
+        return result
+
+    def _format_unused_css_for_ai(self, details: dict) -> dict:
+        """Format unused CSS details for AI analysis."""
+        result = {
+            "type": "unused-css",
+            "total_wasted_bytes": details.get("total_wasted_bytes", 0),
+            "stylesheets": []
+        }
+
+        for sheet in details.get("stylesheets", [])[:10]:
+            result["stylesheets"].append({
+                "file": sheet.get("url", ""),
+                "total_size": f"{round(sheet.get('totalBytes', 0) / 1024, 1)} KB",
+                "wasted": f"{round(sheet.get('wastedBytes', 0) / 1024, 1)} KB",
+            })
+
+        return result
+
+    def _format_mainthread_for_ai(self, details: dict) -> dict:
+        """Format main thread breakdown for AI analysis."""
+        return {
+            "type": "mainthread-breakdown",
+            "total_time_ms": details.get("total_time", 0),
+            "categories": details.get("categories", {})
+        }
+
+    def _format_render_blocking_for_ai(self, details: dict) -> dict:
+        """Format render-blocking resources for AI analysis."""
+        result = {
+            "type": "render-blocking",
+            "total_blocking_time_ms": details.get("total_blocking_time", 0),
+            "resources": []
+        }
+
+        for res in details.get("resources", [])[:10]:
+            result["resources"].append({
+                "file": res.get("url", ""),
+                "size": f"{round(res.get('totalBytes', 0) / 1024, 1)} KB",
+                "blocking_time_ms": res.get("wastedMs", 0)
+            })
+
+        return result
+
+    def _format_forced_reflow_for_ai(self, details: dict) -> dict:
+        """Format forced reflow details for AI analysis."""
+        result = {
+            "type": "forced-reflow",
+            "total_reflow_time_ms": details.get("total_reflow_time", 0),
+            "sources": []
+        }
+
+        for src in details.get("sources", [])[:10]:
+            source_info = {"time_ms": src.get("totalTime")}
+            if src.get("url"):
+                source_info["file"] = src["url"]
+                if src.get("line"):
+                    source_info["location"] = f"line {src['line']}"
+            if src.get("function"):
+                source_info["function"] = src["function"]
+            result["sources"].append(source_info)
+
+        return result
+
+    def _format_console_errors_for_ai(self, details: dict) -> dict:
+        """Format console errors for AI analysis."""
+        result = {
+            "type": "console-errors",
+            "errors": []
+        }
+
+        for err in details.get("errors", [])[:10]:
+            error_info = {
+                "description": err.get("description", ""),
+                "source": err.get("source", "")
+            }
+            if err.get("url"):
+                error_info["file"] = err["url"]
+                if err.get("line"):
+                    error_info["location"] = f"line {err['line']}"
+            result["errors"].append(error_info)
+
+        return result
+
+    def _format_tap_targets_for_ai(self, details: dict) -> dict:
+        """Format tap target issues for AI analysis."""
+        result = {
+            "type": "tap-targets",
+            "elements": []
+        }
+
+        for elem in details.get("elements", [])[:10]:
+            element = {"size": elem.get("size", "")}
+            if elem.get("selector"):
+                element["css_selector"] = elem["selector"]
+            if elem.get("snippet"):
+                element["html_element"] = elem["snippet"][:200]
+            result["elements"].append(element)
+
+        return result
+
+    def _format_contrast_for_ai(self, details: dict) -> dict:
+        """Format color contrast issues for AI analysis."""
+        result = {
+            "type": "contrast",
+            "elements": []
+        }
+
+        for elem in details.get("elements", [])[:10]:
+            element = {}
+            if elem.get("selector"):
+                element["css_selector"] = elem["selector"]
+            if elem.get("snippet"):
+                element["html_element"] = elem["snippet"][:200]
+            if elem.get("explanation"):
+                element["issue"] = elem["explanation"]
+            result["elements"].append(element)
+
+        return result
+
+    def _format_long_tasks_for_ai(self, details: dict) -> dict:
+        """Format long tasks for AI analysis."""
+        result = {
+            "type": "long-tasks",
+            "count": details.get("count", 0),
+            "tasks": []
+        }
+
+        for task in details.get("tasks", [])[:10]:
+            result["tasks"].append({
+                "file": task.get("url", ""),
+                "duration_ms": task.get("duration"),
+                "start_time": task.get("startTime")
+            })
+
+        return result
+
+    def _format_critical_chains_for_ai(self, details: dict) -> dict:
+        """Format critical request chains for AI analysis."""
+        result = {
+            "type": "critical-chains",
+            "longest_chain": details.get("longestChain", {}),
+            "chains": []
+        }
+
+        for chain in details.get("chains", [])[:10]:
+            result["chains"].append({
+                "depth": chain.get("depth"),
+                "url": chain.get("url", ""),
+                "size": chain.get("transferSize")
+            })
+
+        return result
+
+    def _format_inp_for_ai(self, details: dict) -> dict:
+        """Format INP breakdown for AI analysis."""
+        result = {
+            "type": "inp-breakdown",
+            "interactions": []
+        }
+
+        for interaction in details.get("interactions", [])[:5]:
+            int_info = {
+                "input_delay_ms": interaction.get("inputDelay"),
+                "processing_ms": interaction.get("processingDuration"),
+                "presentation_delay_ms": interaction.get("presentationDelay"),
+                "total_ms": interaction.get("totalDuration")
+            }
+            if interaction.get("element"):
+                elem = interaction["element"]
+                int_info["element_selector"] = elem.get("selector", "")
+                int_info["element_label"] = elem.get("nodeLabel", "")
+            result["interactions"].append(int_info)
+
+        return result
 
     @classmethod
     def generate_combined_analysis(cls, site_audits, save_to=None) -> dict:
