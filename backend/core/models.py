@@ -1033,26 +1033,59 @@ class BlogPost(TimestampedModel):
 
 
 class SEODataUpload(TimestampedModel):
-    SOURCE_UBERSUGGEST = "ubersuggest_keywords"
+    """Handles CSV uploads from Ubersuggest and other SEO tools."""
+
+    # Ubersuggest Export Types
+    SOURCE_UBERSUGGEST_KEYWORDS = "ubersuggest_keywords"
+    SOURCE_UBERSUGGEST_COMPETITORS = "ubersuggest_competitors"
+    SOURCE_UBERSUGGEST_COMPETITOR_KEYWORDS = "ubersuggest_competitor_keywords"
+    SOURCE_UBERSUGGEST_BACKLINKS = "ubersuggest_backlinks"
+    SOURCE_UBERSUGGEST_TOP_PAGES = "ubersuggest_top_pages"
+    SOURCE_UBERSUGGEST_CONTENT_IDEAS = "ubersuggest_content_ideas"
+    SOURCE_UBERSUGGEST_SITE_AUDIT = "ubersuggest_site_audit"
+    SOURCE_UBERSUGGEST_KEYWORD_GAPS = "ubersuggest_keyword_gaps"
+    SOURCE_UBERSUGGEST_RANKINGS = "ubersuggest_rankings"
+
     SOURCE_CHOICES = [
-        (SOURCE_UBERSUGGEST, "Ubersuggest Keyword Export"),
+        ("Ubersuggest Exports", (
+            (SOURCE_UBERSUGGEST_KEYWORDS, "Keywords Research"),
+            (SOURCE_UBERSUGGEST_COMPETITORS, "Competitors List"),
+            (SOURCE_UBERSUGGEST_COMPETITOR_KEYWORDS, "Competitor Keywords"),
+            (SOURCE_UBERSUGGEST_BACKLINKS, "Backlinks Export"),
+            (SOURCE_UBERSUGGEST_TOP_PAGES, "Top Pages by Traffic"),
+            (SOURCE_UBERSUGGEST_CONTENT_IDEAS, "Content Ideas"),
+            (SOURCE_UBERSUGGEST_SITE_AUDIT, "Site Audit Issues"),
+            (SOURCE_UBERSUGGEST_KEYWORD_GAPS, "Keyword Gap Analysis"),
+            (SOURCE_UBERSUGGEST_RANKINGS, "Rank Tracking Export"),
+        )),
     ]
 
     STATUS_PENDING = "pending"
+    STATUS_PROCESSING = "processing"
     STATUS_PROCESSED = "processed"
     STATUS_FAILED = "failed"
     STATUS_CHOICES = [
         (STATUS_PENDING, "Pending"),
+        (STATUS_PROCESSING, "Processing"),
         (STATUS_PROCESSED, "Processed"),
         (STATUS_FAILED, "Failed"),
     ]
 
+    project = models.ForeignKey(
+        "SEOProject",
+        related_name="data_uploads",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        help_text="Link this upload to a specific project/client"
+    )
     name = models.CharField(max_length=255)
-    source = models.CharField(max_length=64, choices=SOURCE_CHOICES, default=SOURCE_UBERSUGGEST)
+    source = models.CharField(max_length=64, choices=SOURCE_CHOICES, default=SOURCE_UBERSUGGEST_KEYWORDS)
     csv_file = models.FileField(upload_to="seo/uploads/")
     notes = models.TextField(blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
     row_count = models.PositiveIntegerField(default=0)
+    error_count = models.PositiveIntegerField(default=0, help_text="Rows that failed to import")
     processed_at = models.DateTimeField(blank=True, null=True)
     last_ai_run_at = models.DateTimeField(blank=True, null=True)
     insights = models.JSONField(default=dict, blank=True)
@@ -1973,3 +2006,334 @@ class SEOChatMessage(TimestampedModel):
 
     def __str__(self):
         return f"{self.role}: {self.content[:50]}..."
+
+
+# =============================================================================
+# UBERSUGGEST INTEGRATION & COMPETITOR TRACKING
+# =============================================================================
+
+class SEOProject(TimestampedModel):
+    """
+    Client/Project container for SEO tracking.
+    Each project tracks one domain with its competitors, keywords, and rankings.
+    """
+    STATUS_ACTIVE = "active"
+    STATUS_PAUSED = "paused"
+    STATUS_ARCHIVED = "archived"
+    STATUS_CHOICES = [
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_PAUSED, "Paused"),
+        (STATUS_ARCHIVED, "Archived"),
+    ]
+
+    name = models.CharField(max_length=200, help_text="Project/Client name")
+    domain = models.CharField(max_length=255, help_text="Main domain to track (e.g., codeteki.au)")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_ACTIVE)
+
+    # Tracking settings
+    target_country = models.CharField(max_length=10, default="AU", help_text="Target country code")
+    target_language = models.CharField(max_length=10, default="en", help_text="Target language")
+
+    # Ubersuggest metrics (updated from imports)
+    domain_score = models.IntegerField(null=True, blank=True, help_text="Domain Authority (0-100)")
+    organic_keywords = models.IntegerField(null=True, blank=True, help_text="Total organic keywords")
+    monthly_traffic = models.IntegerField(null=True, blank=True, help_text="Estimated monthly organic traffic")
+    backlinks_count = models.IntegerField(null=True, blank=True, help_text="Total backlinks")
+
+    # Goals
+    target_traffic = models.IntegerField(null=True, blank=True, help_text="Target monthly traffic goal")
+    target_keywords = models.IntegerField(null=True, blank=True, help_text="Target keyword rankings")
+
+    # Notes
+    notes = models.TextField(blank=True)
+
+    # Link to site audits
+    latest_audit = models.ForeignKey(
+        SiteAudit, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "SEO Project"
+
+    def __str__(self):
+        return f"{self.name} ({self.domain})"
+
+
+class SEOCompetitor(TimestampedModel):
+    """
+    Competitor tracking for a project.
+    Stores competitor domains and their metrics from Ubersuggest.
+    """
+    project = models.ForeignKey(
+        SEOProject, on_delete=models.CASCADE, related_name="competitors"
+    )
+    domain = models.CharField(max_length=255, help_text="Competitor domain")
+    name = models.CharField(max_length=200, blank=True, help_text="Competitor name/brand")
+
+    # Ubersuggest metrics
+    domain_score = models.IntegerField(null=True, blank=True)
+    organic_keywords = models.IntegerField(null=True, blank=True)
+    monthly_traffic = models.IntegerField(null=True, blank=True)
+    backlinks_count = models.IntegerField(null=True, blank=True)
+
+    # Tracking
+    is_primary = models.BooleanField(default=False, help_text="Primary competitor to watch closely")
+    notes = models.TextField(blank=True)
+
+    # Last updated from Ubersuggest
+    metrics_updated_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-is_primary", "domain"]
+        verbose_name = "SEO Competitor"
+        unique_together = ["project", "domain"]
+
+    def __str__(self):
+        return f"{self.domain} (vs {self.project.domain})"
+
+
+class SEOCompetitorKeyword(TimestampedModel):
+    """
+    Keywords that competitors rank for.
+    Used to find content gaps and opportunities.
+    """
+    competitor = models.ForeignKey(
+        SEOCompetitor, on_delete=models.CASCADE, related_name="keywords"
+    )
+    keyword = models.CharField(max_length=255)
+
+    # Competitor's ranking
+    position = models.IntegerField(null=True, blank=True, help_text="Competitor's ranking position")
+    traffic = models.IntegerField(null=True, blank=True, help_text="Traffic this keyword brings to competitor")
+
+    # Keyword metrics
+    search_volume = models.IntegerField(default=0)
+    seo_difficulty = models.IntegerField(null=True, blank=True)
+    cpc = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+
+    # Our ranking (if any)
+    our_position = models.IntegerField(null=True, blank=True, help_text="Our ranking for this keyword")
+    is_content_gap = models.BooleanField(default=False, help_text="We don't rank but competitor does")
+
+    # Opportunity score (calculated)
+    opportunity_score = models.DecimalField(
+        max_digits=6, decimal_places=2, default=0,
+        help_text="Higher = better opportunity (volume/difficulty ratio)"
+    )
+
+    class Meta:
+        ordering = ["-opportunity_score", "-search_volume"]
+        verbose_name = "Competitor Keyword"
+        unique_together = ["competitor", "keyword"]
+
+    def __str__(self):
+        return f"{self.keyword} (pos: {self.position})"
+
+    def save(self, *args, **kwargs):
+        # Calculate opportunity score
+        if self.search_volume and self.seo_difficulty:
+            self.opportunity_score = (self.search_volume / max(self.seo_difficulty, 1)) * (
+                1.5 if self.is_content_gap else 1.0
+            )
+        super().save(*args, **kwargs)
+
+
+class SEOBacklinkOpportunity(TimestampedModel):
+    """
+    Potential backlink sources discovered from competitor analysis.
+    """
+    STATUS_NEW = "new"
+    STATUS_CONTACTED = "contacted"
+    STATUS_IN_PROGRESS = "in_progress"
+    STATUS_ACQUIRED = "acquired"
+    STATUS_REJECTED = "rejected"
+    STATUS_CHOICES = [
+        (STATUS_NEW, "New"),
+        (STATUS_CONTACTED, "Contacted"),
+        (STATUS_IN_PROGRESS, "In Progress"),
+        (STATUS_ACQUIRED, "Acquired"),
+        (STATUS_REJECTED, "Rejected"),
+    ]
+
+    TYPE_GUEST_POST = "guest_post"
+    TYPE_RESOURCE = "resource"
+    TYPE_DIRECTORY = "directory"
+    TYPE_MENTION = "mention"
+    TYPE_BROKEN = "broken_link"
+    TYPE_COMPETITOR = "competitor_link"
+    TYPE_CHOICES = [
+        (TYPE_GUEST_POST, "Guest Post"),
+        (TYPE_RESOURCE, "Resource Page"),
+        (TYPE_DIRECTORY, "Directory"),
+        (TYPE_MENTION, "Brand Mention"),
+        (TYPE_BROKEN, "Broken Link"),
+        (TYPE_COMPETITOR, "Competitor Backlink"),
+    ]
+
+    project = models.ForeignKey(
+        SEOProject, on_delete=models.CASCADE, related_name="backlink_opportunities"
+    )
+
+    # Source info
+    source_domain = models.CharField(max_length=255)
+    source_url = models.URLField(max_length=500, blank=True)
+    source_title = models.CharField(max_length=300, blank=True)
+
+    # Metrics
+    domain_authority = models.IntegerField(null=True, blank=True)
+    page_authority = models.IntegerField(null=True, blank=True)
+
+    # Classification
+    opportunity_type = models.CharField(max_length=30, choices=TYPE_CHOICES, default=TYPE_COMPETITOR)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_NEW)
+
+    # Which competitors have this link
+    competitors_with_link = models.ManyToManyField(
+        SEOCompetitor, blank=True, related_name="backlink_sources"
+    )
+
+    # Outreach tracking
+    contact_email = models.EmailField(blank=True)
+    contact_name = models.CharField(max_length=200, blank=True)
+    outreach_date = models.DateField(null=True, blank=True)
+    follow_up_date = models.DateField(null=True, blank=True)
+
+    # Notes
+    notes = models.TextField(blank=True)
+
+    # Priority score
+    priority_score = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+
+    class Meta:
+        ordering = ["-priority_score", "-domain_authority"]
+        verbose_name = "Backlink Opportunity"
+        verbose_name_plural = "Backlink Opportunities"
+
+    def __str__(self):
+        return f"{self.source_domain} (DA: {self.domain_authority})"
+
+
+class SEOKeywordRank(TimestampedModel):
+    """
+    Historical keyword ranking data.
+    Track how rankings change over time.
+    """
+    project = models.ForeignKey(
+        SEOProject, on_delete=models.CASCADE, related_name="rank_history"
+    )
+    keyword = models.CharField(max_length=255)
+
+    # Ranking data
+    date = models.DateField(db_index=True)
+    position = models.IntegerField(null=True, blank=True, help_text="Ranking position (1-100+)")
+    previous_position = models.IntegerField(null=True, blank=True)
+
+    # URL ranking
+    ranking_url = models.URLField(max_length=500, blank=True)
+
+    # Keyword metrics (snapshot)
+    search_volume = models.IntegerField(default=0)
+
+    # Change tracking
+    position_change = models.IntegerField(default=0, help_text="Positive = improved")
+
+    class Meta:
+        ordering = ["-date", "position"]
+        verbose_name = "Keyword Rank History"
+        verbose_name_plural = "Keyword Rank History"
+        unique_together = ["project", "keyword", "date"]
+        indexes = [
+            models.Index(fields=["project", "keyword", "date"]),
+        ]
+
+    def __str__(self):
+        return f"{self.keyword}: #{self.position} on {self.date}"
+
+    def save(self, *args, **kwargs):
+        if self.position and self.previous_position:
+            self.position_change = self.previous_position - self.position
+        super().save(*args, **kwargs)
+
+
+class SEOContentGap(TimestampedModel):
+    """
+    Content gaps - keywords competitors rank for but we don't.
+    Prioritized opportunities for new content.
+    """
+    PRIORITY_HIGH = "high"
+    PRIORITY_MEDIUM = "medium"
+    PRIORITY_LOW = "low"
+    PRIORITY_CHOICES = [
+        (PRIORITY_HIGH, "High Priority"),
+        (PRIORITY_MEDIUM, "Medium Priority"),
+        (PRIORITY_LOW, "Low Priority"),
+    ]
+
+    STATUS_NEW = "new"
+    STATUS_PLANNED = "planned"
+    STATUS_IN_PROGRESS = "in_progress"
+    STATUS_PUBLISHED = "published"
+    STATUS_IGNORED = "ignored"
+    STATUS_CHOICES = [
+        (STATUS_NEW, "New"),
+        (STATUS_PLANNED, "Planned"),
+        (STATUS_IN_PROGRESS, "In Progress"),
+        (STATUS_PUBLISHED, "Published"),
+        (STATUS_IGNORED, "Ignored"),
+    ]
+
+    project = models.ForeignKey(
+        SEOProject, on_delete=models.CASCADE, related_name="content_gaps"
+    )
+    keyword = models.CharField(max_length=255)
+
+    # Keyword metrics
+    search_volume = models.IntegerField(default=0)
+    seo_difficulty = models.IntegerField(null=True, blank=True)
+    cpc = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+
+    # Competitor info
+    competitors_ranking = models.JSONField(
+        default=list, blank=True,
+        help_text='List of {"competitor": "domain", "position": 5}'
+    )
+    best_competitor_position = models.IntegerField(null=True, blank=True)
+
+    # Classification
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default=PRIORITY_MEDIUM)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_NEW)
+
+    # Content planning
+    suggested_content_type = models.CharField(
+        max_length=50, blank=True,
+        help_text="blog_post, service_page, landing_page, guide, etc."
+    )
+    content_brief = models.TextField(blank=True)
+    target_url = models.URLField(max_length=500, blank=True, help_text="URL once content is published")
+
+    # Opportunity score
+    opportunity_score = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+
+    class Meta:
+        ordering = ["-opportunity_score", "-search_volume"]
+        verbose_name = "Content Gap"
+        unique_together = ["project", "keyword"]
+
+    def __str__(self):
+        return f"Gap: {self.keyword} (vol: {self.search_volume})"
+
+    def save(self, *args, **kwargs):
+        # Calculate opportunity score
+        if self.search_volume:
+            difficulty_factor = (100 - (self.seo_difficulty or 50)) / 100
+            self.opportunity_score = self.search_volume * difficulty_factor
+
+            # Adjust priority based on score
+            if self.opportunity_score > 500:
+                self.priority = self.PRIORITY_HIGH
+            elif self.opportunity_score > 100:
+                self.priority = self.PRIORITY_MEDIUM
+            else:
+                self.priority = self.PRIORITY_LOW
+        super().save(*args, **kwargs)

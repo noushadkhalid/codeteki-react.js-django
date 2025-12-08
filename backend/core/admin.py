@@ -61,6 +61,9 @@ from .models import (
     # SEO
     PageSEO,
     SEODataUpload, SEOKeyword, SEOKeywordCluster, AISEORecommendation,
+    # Ubersuggest Integration
+    SEOProject, SEOCompetitor, SEOCompetitorKeyword,
+    SEOBacklinkOpportunity, SEOKeywordRank, SEOContentGap,
 
     # SEO Engine
     SiteAudit, PageAudit, AuditIssue, AIAnalysisReport,
@@ -607,19 +610,20 @@ class PageSEOAdmin(ModelAdmin):
 
 @admin.register(SEODataUpload)
 class SEODataUploadAdmin(ModelAdmin):
-    list_display = ('name', 'source', 'status', 'row_count', 'processed_at', 'last_ai_run_at')
-    list_filter = ('status', 'source')
-    readonly_fields = ('status', 'row_count', 'processed_at', 'last_ai_run_at', 'insights_pretty')
-    search_fields = ('name',)
-    actions = ['process_uploads', 'generate_ai_playbooks', 'generate_blog_drafts']
+    list_display = ('name', 'project', 'source', 'status', 'row_count', 'processed_at', 'last_ai_run_at')
+    list_filter = ('status', 'source', 'project')
+    readonly_fields = ('status', 'row_count', 'error_count', 'processed_at', 'last_ai_run_at', 'insights_pretty')
+    search_fields = ('name', 'project__name')
+    autocomplete_fields = ('project',)
+    actions = ['process_uploads', 'process_ubersuggest', 'generate_ai_playbooks', 'generate_blog_drafts']
     date_hierarchy = 'created_at'
 
     fieldsets = (
         ('📤 Upload Information', {
-            'fields': ('name', 'source', 'csv_file', 'notes')
+            'fields': ('project', 'name', 'source', 'csv_file', 'notes')
         }),
-        ('🤖 AI Automation', {
-            'fields': ('status', 'row_count', 'processed_at', 'last_ai_run_at', 'insights_pretty'),
+        ('🤖 Processing Results', {
+            'fields': ('status', 'row_count', 'error_count', 'processed_at', 'last_ai_run_at', 'insights_pretty'),
             'classes': ('collapse',)
         }),
     )
@@ -634,7 +638,7 @@ class SEODataUploadAdmin(ModelAdmin):
         )
     insights_pretty.short_description = "Insights JSON"
 
-    @action(description="✅ Process selected CSV uploads")
+    @action(description="✅ Process selected CSV uploads (Keywords)")
     def process_uploads(self, request, queryset):
         processed = 0
         for upload in queryset:
@@ -647,6 +651,29 @@ class SEODataUploadAdmin(ModelAdmin):
 
         if processed:
             self.message_user(request, f"✅ Successfully processed {processed} upload(s).", messages.SUCCESS)
+
+    @action(description="🔄 Process Ubersuggest Export (All Types)")
+    def process_ubersuggest(self, request, queryset):
+        """Process any Ubersuggest CSV export using the smart router."""
+        from .services.seo_importer import UbersuggestImportRouter
+
+        processed = 0
+        for upload in queryset:
+            try:
+                router = UbersuggestImportRouter(upload)
+                result = router.run()
+                processed += 1
+                self.message_user(
+                    request,
+                    f"✅ {upload.name}: {result.get('rows', 0)} rows imported",
+                    messages.SUCCESS
+                )
+            except Exception as exc:
+                upload.mark_failed(str(exc))
+                self.message_user(request, f"❌ {upload.name} failed: {exc}", messages.ERROR)
+
+        if processed:
+            self.message_user(request, f"✅ Successfully processed {processed} Ubersuggest upload(s).", messages.SUCCESS)
 
     @action(description="🤖 Generate AI playbooks (Top 3 clusters)")
     def generate_ai_playbooks(self, request, queryset):
@@ -2145,3 +2172,209 @@ class SEOChangeLogAdmin(ModelAdmin):
 
     class Meta:
         verbose_name_plural = "🔍 SEO Engine: Change Log"
+
+
+# =============================================================================
+# UBERSUGGEST INTEGRATION
+# =============================================================================
+
+class SEOCompetitorInline(TabularInline):
+    model = SEOCompetitor
+    extra = 0
+    fields = ('domain', 'domain_score', 'organic_keywords', 'monthly_traffic', 'is_primary')
+    readonly_fields = ('domain_score', 'organic_keywords', 'monthly_traffic')
+
+
+class SEODataUploadInline(TabularInline):
+    model = SEODataUpload
+    extra = 0
+    fields = ('name', 'source', 'status', 'row_count', 'processed_at')
+    readonly_fields = ('status', 'row_count', 'processed_at')
+
+
+@admin.register(SEOProject)
+class SEOProjectAdmin(ModelAdmin):
+    list_display = ('name', 'domain', 'status', 'domain_score', 'organic_keywords', 'monthly_traffic', 'updated_at')
+    list_filter = ('status', 'created_at')
+    search_fields = ('name', 'domain')
+    readonly_fields = ('domain_score', 'organic_keywords', 'monthly_traffic', 'backlinks_count', 'created_at', 'updated_at')
+    inlines = [SEOCompetitorInline, SEODataUploadInline]
+    date_hierarchy = 'created_at'
+
+    fieldsets = (
+        ('📁 Project Info', {
+            'fields': ('name', 'domain', 'status', 'target_country', 'target_language')
+        }),
+        ('📊 Domain Metrics (from Ubersuggest)', {
+            'fields': ('domain_score', 'organic_keywords', 'monthly_traffic', 'backlinks_count'),
+            'classes': ('collapse',)
+        }),
+        ('🎯 Goals', {
+            'fields': ('target_traffic', 'target_keywords'),
+            'classes': ('collapse',)
+        }),
+        ('📅 Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    class Meta:
+        verbose_name_plural = "🔍 Ubersuggest: Projects"
+
+
+class SEOCompetitorKeywordInline(TabularInline):
+    model = SEOCompetitorKeyword
+    extra = 0
+    fields = ('keyword', 'position', 'search_volume', 'is_content_gap', 'opportunity_score')
+    readonly_fields = ('keyword', 'position', 'search_volume', 'is_content_gap', 'opportunity_score')
+    ordering = ('-opportunity_score',)
+    max_num = 20
+
+
+@admin.register(SEOCompetitor)
+class SEOCompetitorAdmin(ModelAdmin):
+    list_display = ('domain', 'project', 'domain_score', 'organic_keywords', 'monthly_traffic', 'is_primary', 'updated_at')
+    list_filter = ('project', 'is_primary')
+    search_fields = ('domain', 'project__name')
+    readonly_fields = ('domain_score', 'organic_keywords', 'monthly_traffic', 'backlinks_count', 'metrics_updated_at', 'created_at', 'updated_at')
+    autocomplete_fields = ('project',)
+    inlines = [SEOCompetitorKeywordInline]
+    ordering = ('-domain_score',)
+
+    fieldsets = (
+        ('🏢 Competitor Info', {
+            'fields': ('project', 'domain', 'name', 'is_primary', 'notes')
+        }),
+        ('📊 Metrics', {
+            'fields': ('domain_score', 'organic_keywords', 'monthly_traffic', 'backlinks_count', 'metrics_updated_at')
+        }),
+        ('📅 Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    class Meta:
+        verbose_name_plural = "🔍 Ubersuggest: Competitors"
+
+
+@admin.register(SEOCompetitorKeyword)
+class SEOCompetitorKeywordAdmin(ModelAdmin):
+    list_display = ('keyword', 'competitor', 'position', 'search_volume', 'is_content_gap', 'opportunity_score')
+    list_filter = ('competitor__project', 'competitor', 'is_content_gap')
+    search_fields = ('keyword', 'competitor__domain')
+    readonly_fields = ('opportunity_score', 'created_at', 'updated_at')
+    autocomplete_fields = ('competitor',)
+    ordering = ('-opportunity_score', '-search_volume')
+
+    class Meta:
+        verbose_name_plural = "🔍 Ubersuggest: Competitor Keywords"
+
+
+@admin.register(SEOBacklinkOpportunity)
+class SEOBacklinkOpportunityAdmin(ModelAdmin):
+    list_display = ('source_domain', 'project', 'domain_authority', 'opportunity_type', 'status', 'priority_score', 'updated_at')
+    list_filter = ('project', 'opportunity_type', 'status')
+    search_fields = ('source_domain', 'source_url', 'source_title')
+    readonly_fields = ('priority_score', 'created_at', 'updated_at')
+    autocomplete_fields = ('project',)
+    ordering = ('-priority_score', '-domain_authority')
+
+    fieldsets = (
+        ('🔗 Link Info', {
+            'fields': ('project', 'source_domain', 'source_url', 'source_title', 'opportunity_type')
+        }),
+        ('📊 Quality Metrics', {
+            'fields': ('domain_authority', 'page_authority', 'priority_score')
+        }),
+        ('📋 Outreach', {
+            'fields': ('status', 'contact_email', 'contact_name', 'outreach_date', 'follow_up_date', 'notes')
+        }),
+        ('📅 Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    actions = ['mark_as_contacted', 'mark_as_acquired']
+
+    @action(description="✉️ Mark as Contacted")
+    def mark_as_contacted(self, request, queryset):
+        from django.utils import timezone
+        updated = queryset.update(status='contacted', outreach_date=timezone.now().date())
+        self.message_user(request, f'{updated} opportunities marked as contacted', messages.SUCCESS)
+
+    @action(description="✅ Mark as Acquired")
+    def mark_as_acquired(self, request, queryset):
+        updated = queryset.update(status='acquired')
+        self.message_user(request, f'{updated} backlinks marked as acquired', messages.SUCCESS)
+
+    class Meta:
+        verbose_name_plural = "🔍 Ubersuggest: Backlink Opportunities"
+
+
+@admin.register(SEOKeywordRank)
+class SEOKeywordRankAdmin(ModelAdmin):
+    list_display = ('keyword', 'project', 'position', 'previous_position', 'change_display', 'search_volume', 'date')
+    list_filter = ('project', 'date')
+    search_fields = ('keyword', 'project__name')
+    readonly_fields = ('created_at', 'updated_at')
+    autocomplete_fields = ('project',)
+    date_hierarchy = 'date'
+    ordering = ('-date', 'position')
+
+    def change_display(self, obj):
+        if obj.position_change is None or obj.position_change == 0:
+            return "—"
+        if obj.position_change > 0:  # Positive = improved (moved up)
+            return format_html('<span style="color: green;">▲ {}</span>', obj.position_change)
+        return format_html('<span style="color: red;">▼ {}</span>', abs(obj.position_change))
+    change_display.short_description = "Change"
+
+    class Meta:
+        verbose_name_plural = "🔍 Ubersuggest: Keyword Rankings"
+
+
+@admin.register(SEOContentGap)
+class SEOContentGapAdmin(ModelAdmin):
+    list_display = ('keyword', 'project', 'best_competitor_position', 'search_volume', 'opportunity_score', 'priority', 'status')
+    list_filter = ('project', 'priority', 'status')
+    search_fields = ('keyword', 'project__name')
+    readonly_fields = ('opportunity_score', 'competitors_ranking', 'created_at', 'updated_at')
+    autocomplete_fields = ('project',)
+    ordering = ('-opportunity_score', '-search_volume')
+
+    fieldsets = (
+        ('🎯 Gap Info', {
+            'fields': ('project', 'keyword', 'search_volume', 'seo_difficulty', 'cpc')
+        }),
+        ('📊 Competitor Positions', {
+            'fields': ('best_competitor_position', 'competitors_ranking')
+        }),
+        ('📝 Content Planning', {
+            'fields': ('suggested_content_type', 'content_brief', 'target_url')
+        }),
+        ('⭐ Priority', {
+            'fields': ('opportunity_score', 'priority', 'status')
+        }),
+        ('📅 Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    actions = ['mark_as_in_progress', 'mark_as_published']
+
+    @action(description="🔄 Mark as In Progress")
+    def mark_as_in_progress(self, request, queryset):
+        updated = queryset.update(status='in_progress')
+        self.message_user(request, f'{updated} content gaps marked as in progress', messages.SUCCESS)
+
+    @action(description="✅ Mark as Published")
+    def mark_as_published(self, request, queryset):
+        updated = queryset.update(status='published')
+        self.message_user(request, f'{updated} content gaps marked as published', messages.SUCCESS)
+
+    class Meta:
+        verbose_name_plural = "🔍 Ubersuggest: Content Gaps"
