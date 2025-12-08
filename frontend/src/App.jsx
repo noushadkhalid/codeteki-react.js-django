@@ -1,16 +1,16 @@
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "./components/ui/toaster";
-import { TooltipProvider } from "./components/ui/tooltip";
 import { HelmetProvider } from "react-helmet-async";
 import { useAnalytics } from "./hooks/use-analytics";
 import { useEffect, lazy, Suspense } from "react";
 import { initGA } from "./lib/analytics";
-
-// Critical components - load immediately
 import Header from "./components/Header";
 import Home from "./pages/Home";
+
+// Lazy load UI components that use heavy dependencies (radix-ui, floating-ui)
+const Toaster = lazy(() => import("./components/ui/toaster").then(m => ({ default: m.Toaster })));
+const TooltipProvider = lazy(() => import("./components/ui/tooltip").then(m => ({ default: m.TooltipProvider })));
 
 // Footer is below the fold - lazy load it
 const Footer = lazy(() => import("./components/Footer"));
@@ -89,13 +89,17 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <HelmetProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-          <Suspense fallback={null}>
-            <ChatWidget />
-          </Suspense>
-        </TooltipProvider>
+        <Suspense fallback={null}>
+          <TooltipProvider>
+            <Suspense fallback={null}>
+              <Toaster />
+            </Suspense>
+            <Router />
+            <Suspense fallback={null}>
+              <ChatWidget />
+            </Suspense>
+          </TooltipProvider>
+        </Suspense>
       </HelmetProvider>
     </QueryClientProvider>
   );
