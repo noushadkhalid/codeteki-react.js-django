@@ -3,17 +3,25 @@ import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useSiteSettings } from "../hooks/useSiteSettings";
 import { MapPin, Mail, Phone } from "lucide-react";
-import { FaFacebook, FaTwitter, FaLinkedinIn, FaInstagram, FaYoutube, FaGithub, FaTiktok } from "react-icons/fa";
+import { FaFacebook, FaTwitter, FaLinkedinIn, FaInstagram, FaYoutube, FaGithub, FaTiktok, FaWhatsapp, FaPinterest, FaSnapchatGhost, FaTelegram, FaDiscord, FaReddit } from "react-icons/fa";
+import { FaXTwitter } from "react-icons/fa6";
 
 // Map platform names to brand icons with official colors
 const socialIcons = {
   facebook: { icon: FaFacebook, color: "#1877F2" },
   twitter: { icon: FaTwitter, color: "#1DA1F2" },
+  x: { icon: FaXTwitter, color: "#ffffff" },
   linkedin: { icon: FaLinkedinIn, color: "#0A66C2" },
   instagram: { icon: FaInstagram, color: "#E4405F" },
   youtube: { icon: FaYoutube, color: "#FF0000" },
   github: { icon: FaGithub, color: "#ffffff" },
   tiktok: { icon: FaTiktok, color: "#ffffff" },
+  whatsapp: { icon: FaWhatsapp, color: "#25D366" },
+  pinterest: { icon: FaPinterest, color: "#E60023" },
+  snapchat: { icon: FaSnapchatGhost, color: "#FFFC00" },
+  telegram: { icon: FaTelegram, color: "#0088cc" },
+  discord: { icon: FaDiscord, color: "#5865F2" },
+  reddit: { icon: FaReddit, color: "#FF4500" },
 };
 
 export default function Footer() {
