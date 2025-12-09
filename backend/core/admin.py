@@ -618,10 +618,12 @@ class PageSEOAdmin(ModelAdmin):
         return obj.target_url
     target_url_display.short_description = "Target URL"
 
-    @action(description="🤖 Generate AI Meta Tags (ChatGPT)")
+    @action(description="🤖 Generate AI Meta Tags (Using Ubersuggest Keywords)")
     def generate_ai_meta(self, request, queryset):
-        """Generate optimized meta title and description using AI for selected pages."""
+        """Generate optimized meta tags using actual Ubersuggest keyword data."""
         from core.services.ai_client import AIContentEngine
+        from core.models import SEOKeyword, AISEORecommendation
+        import re
 
         ai = AIContentEngine()
         if not ai.enabled:
@@ -631,70 +633,135 @@ class PageSEOAdmin(ModelAdmin):
         generated = 0
         errors = []
 
+        # Get all keywords from Ubersuggest uploads, sorted by priority
+        all_keywords = list(SEOKeyword.objects.order_by('-priority_score', '-search_volume')[:100])
+
+        # Build keyword mapping by relevance to page types
+        keyword_page_map = {
+            'home': ['ai', 'business', 'automation', 'solutions', 'australia', 'melbourne'],
+            'services': ['services', 'solutions', 'development', 'automation', 'consulting'],
+            'ai-tools': ['ai tools', 'ai assistant', 'productivity', 'free tools'],
+            'demos': ['demo', 'showcase', 'examples', 'portfolio'],
+            'faq': ['faq', 'questions', 'help', 'support', 'how to'],
+            'contact': ['contact', 'consultation', 'book', 'enquiry', 'get in touch'],
+        }
+
         for page_seo in queryset:
             try:
-                # Build context about the page
                 page_name = str(page_seo)
                 page_url = page_seo.target_url
-                current_title = page_seo.meta_title or ""
-                current_desc = page_seo.meta_description or ""
 
-                # Get additional context from linked service or blog
-                extra_context = ""
+                # Find relevant keywords for this page
+                relevant_keywords = []
+                page_key = page_seo.page if page_seo.page != 'custom' else None
+
                 if page_seo.service:
-                    extra_context = f"""
-Service Title: {page_seo.service.title}
-Service Description: {page_seo.service.description or 'N/A'}
-Service Tagline: {getattr(page_seo.service, 'tagline', 'N/A')}
+                    # Match keywords to service
+                    service_terms = page_seo.service.title.lower().split()
+                    service_desc = (page_seo.service.description or "").lower()
+                    for kw in all_keywords:
+                        kw_lower = kw.keyword.lower()
+                        if any(term in kw_lower for term in service_terms) or any(term in service_desc for term in kw_lower.split()):
+                            relevant_keywords.append(kw)
+                        if len(relevant_keywords) >= 10:
+                            break
+                elif page_key and page_key in keyword_page_map:
+                    # Match keywords to static page
+                    page_terms = keyword_page_map[page_key]
+                    for kw in all_keywords:
+                        kw_lower = kw.keyword.lower()
+                        if any(term in kw_lower for term in page_terms):
+                            relevant_keywords.append(kw)
+                        if len(relevant_keywords) >= 10:
+                            break
+
+                # If no specific matches, use top keywords by priority
+                if not relevant_keywords:
+                    relevant_keywords = all_keywords[:5]
+
+                # Check for existing AI recommendations for these keywords
+                existing_recs = []
+                if relevant_keywords:
+                    keyword_ids = [k.id for k in relevant_keywords]
+                    existing_recs = list(AISEORecommendation.objects.filter(
+                        keyword_id__in=keyword_ids,
+                        category='metadata',
+                        status='generated'
+                    ).order_by('-created_at')[:3])
+
+                # Build context
+                keyword_context = ""
+                if relevant_keywords:
+                    keyword_context = "**Ubersuggest Keyword Data (use these actual keywords!):**\n"
+                    for kw in relevant_keywords[:8]:
+                        keyword_context += f"- {kw.keyword} (Vol: {kw.search_volume}, Diff: {kw.seo_difficulty or 'N/A'}, Intent: {kw.intent})\n"
+
+                existing_rec_context = ""
+                if existing_recs:
+                    existing_rec_context = "\n**Existing AI Recommendations for these keywords:**\n"
+                    for rec in existing_recs[:2]:
+                        # Extract key parts from existing recommendations
+                        existing_rec_context += f"- {rec.title}: {rec.response[:200]}...\n"
+
+                page_context = ""
+                if page_seo.service:
+                    page_context = f"""
+**Service Details:**
+- Title: {page_seo.service.title}
+- Description: {page_seo.service.description or 'N/A'}
+- Tagline: {getattr(page_seo.service, 'tagline', 'N/A')}
 """
                 elif page_seo.blog_post:
-                    extra_context = f"""
-Blog Title: {page_seo.blog_post.title}
-Blog Excerpt: {page_seo.blog_post.excerpt or 'N/A'}
+                    page_context = f"""
+**Blog Post:**
+- Title: {page_seo.blog_post.title}
+- Excerpt: {page_seo.blog_post.excerpt or 'N/A'}
 """
                 else:
-                    # Static page context
                     page_descriptions = {
-                        'home': 'Main landing page showcasing AI-powered business solutions, automation tools, and web development services for Australian businesses.',
-                        'services': 'Services overview page listing all offerings: AI Workforce, Business Automation, Custom Tools, Web Development, and SEO Engine.',
-                        'ai-tools': 'Page showcasing free AI tools and utilities for daily business productivity tasks.',
-                        'demos': 'Product demos and interactive showcases of our AI solutions and automation tools.',
-                        'faq': 'Frequently asked questions about our services, pricing, and how AI can help businesses.',
-                        'contact': 'Contact page with booking form, business hours, and ways to get in touch.',
+                        'home': 'Main landing page - AI-powered business solutions, automation, web development for Australian SMBs',
+                        'services': 'Services overview - AI Workforce, Automation, Custom Tools, Web Development, SEO Engine',
+                        'ai-tools': 'Free AI tools and utilities for daily business productivity',
+                        'demos': 'Product demos and interactive showcases of AI solutions',
+                        'faq': 'Frequently asked questions about services, pricing, AI capabilities',
+                        'contact': 'Contact page with booking form, business hours, consultation requests',
                     }
-                    extra_context = f"Page Purpose: {page_descriptions.get(page_seo.page, 'Business page for Codeteki')}"
+                    page_context = f"**Page:** {page_descriptions.get(page_seo.page, 'Business page')}"
 
-                prompt = f"""Generate SEO-optimized meta tags for this webpage.
+                prompt = f"""Generate SEO-optimized meta tags for this webpage using the ACTUAL keyword research data provided.
 
-**Page:** {page_name}
-**URL:** {page_url}
-**Current Title:** {current_title}
-**Current Description:** {current_desc}
-{extra_context}
+**Page URL:** {page_url}
+**Page Name:** {page_name}
+
+{page_context}
+
+{keyword_context}
+{existing_rec_context}
 
 **Business Context:**
 - Company: Codeteki
 - Location: Melbourne, Australia
-- Focus: AI-powered business solutions, automation, web development
-- Target audience: Australian small-medium businesses
+- Focus: AI-powered business solutions for Australian SMBs
+- Services: AI chatbots, automation, custom tools, web development, SEO
 
-**Requirements:**
-1. Meta Title: 50-60 characters, include primary keyword, brand name at end
-2. Meta Description: 150-160 characters, compelling, include call-to-action
-3. Target Keyword: 2-4 words, high search intent for Australian market
-4. Meta Keywords: 5-8 comma-separated relevant keywords
+**IMPORTANT Requirements:**
+1. **USE THE ACTUAL KEYWORDS** from the Ubersuggest data above - don't invent new ones!
+2. Meta Title: 50-60 chars, include the highest-volume relevant keyword naturally
+3. Meta Description: 150-160 chars, compelling CTA, include 1-2 keywords naturally
+4. Target Keyword: Pick the BEST keyword from the list (highest volume + relevance)
+5. Meta Keywords: Use 5-8 keywords from the Ubersuggest list above
 
-**Output Format (use exactly this format):**
-**Meta Title:** [your title here]
-**Meta Description:** [your description here]
-**Target Keyword:** [your keyword here]
-**Meta Keywords:** [keyword1, keyword2, keyword3, ...]
+**Output Format (exactly):**
+**Meta Title:** [title here]
+**Meta Description:** [description here]
+**Target Keyword:** [single best keyword from Ubersuggest data]
+**Meta Keywords:** [comma-separated keywords from Ubersuggest data]
 """
 
                 result = ai.generate(
                     prompt=prompt,
-                    system_prompt="You are an SEO expert specializing in Australian digital marketing. Generate concise, compelling meta tags that improve search rankings and click-through rates.",
-                    temperature=0.3
+                    system_prompt="You are an SEO expert. Use the ACTUAL keyword research data provided - do not make up keywords. Focus on the highest-value keywords from the Ubersuggest data.",
+                    temperature=0.2
                 )
 
                 if not result.get("success"):
@@ -704,7 +771,6 @@ Blog Excerpt: {page_seo.blog_post.excerpt or 'N/A'}
                 output = result.get("output", "")
 
                 # Parse the AI response
-                import re
                 title_match = re.search(r'\*\*Meta Title:\*\*\s*(.+?)(?:\n|$)', output)
                 desc_match = re.search(r'\*\*Meta Description:\*\*\s*(.+?)(?:\n|$)', output)
                 keyword_match = re.search(r'\*\*Target Keyword:\*\*\s*(.+?)(?:\n|$)', output)
@@ -719,7 +785,7 @@ Blog Excerpt: {page_seo.blog_post.excerpt or 'N/A'}
                 if keywords_match:
                     page_seo.meta_keywords = keywords_match.group(1).strip()
 
-                # Also set OG tags if empty
+                # Also set OG tags
                 if not page_seo.og_title:
                     page_seo.og_title = page_seo.meta_title
                 if not page_seo.og_description:
@@ -728,9 +794,10 @@ Blog Excerpt: {page_seo.blog_post.excerpt or 'N/A'}
                 page_seo.save()
                 generated += 1
 
+                kw_used = page_seo.target_keyword[:30] if page_seo.target_keyword else "N/A"
                 self.message_user(
                     request,
-                    f"✅ {page_name}: \"{page_seo.meta_title[:40]}...\"",
+                    f"✅ {page_name}: Keyword='{kw_used}' | Title='{page_seo.meta_title[:35]}...'",
                     messages.SUCCESS
                 )
 
@@ -738,11 +805,11 @@ Blog Excerpt: {page_seo.blog_post.excerpt or 'N/A'}
                 errors.append(f"{page_seo}: {str(e)}")
 
         if generated:
-            self.message_user(request, f"✅ Generated AI meta tags for {generated} page(s)!", messages.SUCCESS)
+            self.message_user(request, f"✅ Generated AI meta tags for {generated} page(s) using Ubersuggest data!", messages.SUCCESS)
+        elif not all_keywords:
+            self.message_user(request, "⚠️ No Ubersuggest keywords found. Upload keyword data first!", messages.WARNING)
         if errors:
             self.message_user(request, f"⚠️ Errors: {', '.join(errors[:3])}", messages.WARNING)
-        if not generated and not errors:
-            self.message_user(request, "⚠️ No pages were processed.", messages.WARNING)
 
     class Meta:
         verbose_name_plural = "🔍 SEO: Page SEO"
