@@ -1185,8 +1185,16 @@ class AISEORecommendationAdmin(ModelAdmin):
                             page_seo.meta_title = parsed['meta_title'][:160]
                         if parsed['meta_description']:
                             page_seo.meta_description = parsed['meta_description'][:320]
-                        if parsed['meta_keywords']:
-                            page_seo.meta_keywords = parsed['meta_keywords']
+
+                        # Get keywords - from AI response OR from Ubersuggest metadata
+                        meta_keywords = parsed['meta_keywords']
+                        if not meta_keywords and rec.metadata and 'keywords' in rec.metadata:
+                            # Extract keywords from Ubersuggest cluster data
+                            kw_list = rec.metadata['keywords']
+                            if kw_list:
+                                meta_keywords = ', '.join([k.get('keyword', '') for k in kw_list if k.get('keyword')])
+                        if meta_keywords:
+                            page_seo.meta_keywords = meta_keywords
 
                         # Set OG tags (use parsed or fall back to meta)
                         page_seo.og_title = parsed['og_title'] or parsed['meta_title'] or page_seo.og_title
@@ -1198,9 +1206,15 @@ class AISEORecommendationAdmin(ModelAdmin):
                         page_seo.save()
                         applied += 1
 
+                        fields_applied = ['title', 'desc']
+                        if meta_keywords:
+                            fields_applied.append('keywords')
+                        if page_seo.og_title:
+                            fields_applied.append('OG')
+
                         self.message_user(
                             request,
-                            f"✅ '{keyword}' → /services/{matched_service.slug} (title, desc, keywords, OG)",
+                            f"✅ '{keyword}' → /services/{matched_service.slug} ({', '.join(fields_applied)})",
                             messages.SUCCESS
                         )
                     else:
@@ -1302,8 +1316,16 @@ class AISEORecommendationAdmin(ModelAdmin):
                         page_seo.meta_title = parsed['meta_title'][:160]
                     if parsed['meta_description']:
                         page_seo.meta_description = parsed['meta_description'][:320]
-                    if parsed['meta_keywords']:
-                        page_seo.meta_keywords = parsed['meta_keywords']
+
+                    # Get keywords - from AI response OR from Ubersuggest metadata
+                    meta_keywords = parsed['meta_keywords']
+                    if not meta_keywords and rec.metadata and 'keywords' in rec.metadata:
+                        # Extract keywords from Ubersuggest cluster data
+                        kw_list = rec.metadata['keywords']
+                        if kw_list:
+                            meta_keywords = ', '.join([k.get('keyword', '') for k in kw_list if k.get('keyword')])
+                    if meta_keywords:
+                        page_seo.meta_keywords = meta_keywords
 
                     # Set OG tags
                     page_seo.og_title = parsed['og_title'] or parsed['meta_title'] or page_seo.og_title
@@ -1314,9 +1336,15 @@ class AISEORecommendationAdmin(ModelAdmin):
                     page_seo.save()
                     applied += 1
 
+                    fields_applied = ['title', 'desc']
+                    if meta_keywords:
+                        fields_applied.append('keywords')
+                    if page_seo.og_title:
+                        fields_applied.append('OG')
+
                     self.message_user(
                         request,
-                        f"✅ '{keyword}' → {best_match.title} (score: {best_score:.0%}, all fields)",
+                        f"✅ '{keyword}' → {best_match.title} (score: {best_score:.0%}, {', '.join(fields_applied)})",
                         messages.SUCCESS
                     )
                 elif best_match:
