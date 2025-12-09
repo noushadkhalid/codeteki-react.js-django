@@ -5,7 +5,8 @@ import { useSiteSettings } from "../hooks/useSiteSettings";
 
 export default function SEOHead({ title, description, keywords, page }) {
   const [location] = useLocation();
-  const canonicalUrl = `https://codeteki.au${location === "/" ? "" : location.replace(/\/$/, "")}`;
+  // Fallback canonical URL if not provided by API
+  const fallbackCanonicalUrl = `https://www.codeteki.au${location === "/" ? "" : location.replace(/\/$/, "")}`;
 
   const { settings } = useSiteSettings();
 
@@ -105,7 +106,10 @@ export default function SEOHead({ title, description, keywords, page }) {
     keywords ||
     "AI chatbot development Australia, voice assistant Melbourne, business automation, website development Melbourne";
 
-  const ogImage = pageSEO?.ogImage || settings?.logos?.main || "https://codeteki.au/favicon.png";
+  const ogImage = pageSEO?.ogImage || settings?.logos?.main || "https://www.codeteki.au/favicon.png";
+
+  // Use canonical URL from API, fallback to generated one
+  const canonicalUrl = pageSEO?.canonicalUrl || fallbackCanonicalUrl;
 
   const truncatedTitle = cleanTitle.length > 60 ? cleanTitle.substring(0, 57) + "..." : cleanTitle;
 
@@ -113,15 +117,19 @@ export default function SEOHead({ title, description, keywords, page }) {
   const finalDescription = cleanDescription;
   const finalKeywords = cleanKeywords;
 
+  // OG tags - use specific OG fields from API if available, otherwise fallback to meta
+  const finalOgTitle = pageSEO?.ogTitle || finalTitle;
+  const finalOgDescription = pageSEO?.ogDescription || finalDescription;
+
   return (
     <Helmet>
       <title>{finalTitle}</title>
       <meta name="description" content={finalDescription} />
       <meta name="keywords" content={finalKeywords} />
-      
+
       {/* Open Graph tags */}
-      <meta property="og:title" content={finalTitle} />
-      <meta property="og:description" content={finalDescription} />
+      <meta property="og:title" content={finalOgTitle} />
+      <meta property="og:description" content={finalOgDescription} />
       <meta property="og:type" content="website" />
       <meta property="og:url" content={canonicalUrl} />
       <meta property="og:image" content={ogImage} />
@@ -130,8 +138,8 @@ export default function SEOHead({ title, description, keywords, page }) {
       
       {/* Twitter Card tags */}
       <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:title" content={finalTitle} />
-      <meta name="twitter:description" content={finalDescription} />
+      <meta name="twitter:title" content={finalOgTitle} />
+      <meta name="twitter:description" content={finalOgDescription} />
       <meta name="twitter:image" content={ogImage} />
       
       {/* Additional SEO tags */}
