@@ -700,8 +700,6 @@ class PageSEO(TimestampedModel):
         ('demos', 'Demos Page'),
         ('faq', 'FAQ Page'),
         ('contact', 'Contact Page'),
-        ('about', 'About Page'),
-        ('pricing', 'Pricing Page'),
         ('custom', 'Custom URL'),
     ]
 

@@ -48,12 +48,13 @@ def dashboard_callback(request, context):
     Custom dashboard callback for Unfold.
     Returns stats cards instead of the default model list.
     """
+    from django.urls import reverse
     from .models import (
         ChatLead, ContactInquiry, SiteAudit, BlogPost,
         Service, HeroSection, Testimonial
     )
 
-    # Quick stats for dashboard
+    # Quick stats for dashboard - now with clickable URLs
     new_leads_count = ChatLead.objects.filter(status="new").count()
     context["cards"] = [
         {
@@ -61,31 +62,36 @@ def dashboard_callback(request, context):
             "value": new_leads_count,
             "icon": "person_add",
             "color": "success" if new_leads_count > 0 else "default",
+            "url": reverse('admin:core_chatlead_changelist') + '?status=new',
         },
         {
             "title": "Contact Inquiries",
             "value": ContactInquiry.objects.count(),
             "icon": "inbox",
             "color": "info",
+            "url": reverse('admin:core_contactinquiry_changelist'),
         },
         {
             "title": "Site Audits",
             "value": SiteAudit.objects.count(),
             "icon": "fact_check",
             "color": "primary",
+            "url": reverse('admin:core_siteaudit_changelist'),
         },
         {
             "title": "Blog Posts",
             "value": BlogPost.objects.filter(is_published=True).count(),
             "icon": "article",
             "color": "default",
+            "url": reverse('admin:core_blogpost_changelist'),
         },
     ]
 
-    # Recent activity - get conversation visitor name for leads
+    # Recent activity - get conversation visitor name for leads with IDs for linking
     recent_leads = []
     for lead in ChatLead.objects.select_related('conversation').order_by("-created_at")[:5]:
         recent_leads.append({
+            'id': lead.pk,
             'name': getattr(lead.conversation, 'visitor_name', None) or lead.conversation.visitor_email or 'Anonymous',
             'status': lead.status,
             'created_at': lead.created_at,

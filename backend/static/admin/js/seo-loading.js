@@ -15,9 +15,14 @@
         'regenerate_ai_analysis',
         'run_sync',
         'process_uploads',
+        'process_ubersuggest',
         'generate_ai_playbooks',
         'generate_blog_drafts',
-        'generate_fix_recommendation'
+        'generate_fix_recommendation',
+        'apply_meta_to_page',
+        'apply_to_matching_service',
+        'approve_recommendations',
+        'apply_recommendations'
     ];
 
     // Actions that return file downloads (don't show loading, they're instant)
@@ -35,9 +40,14 @@
         'regenerate_ai_analysis': 'Regenerating AI Analysis...',
         'run_sync': 'Syncing Search Console Data...',
         'process_uploads': 'Processing CSV Upload...',
+        'process_ubersuggest': 'Processing Ubersuggest Export... Parsing keywords, competitors, and backlinks.',
         'generate_ai_playbooks': 'Generating AI Recommendations...',
         'generate_blog_drafts': 'Creating Blog Drafts with AI...',
-        'generate_fix_recommendation': 'Generating Fix Recommendations...'
+        'generate_fix_recommendation': 'Generating Fix Recommendations...',
+        'apply_meta_to_page': 'Applying Meta Kit to matching pages... Updating SEO settings.',
+        'apply_to_matching_service': 'Smart matching keywords to services... Applying SEO recommendations.',
+        'approve_recommendations': 'Approving selected recommendations...',
+        'apply_recommendations': 'Applying SEO recommendations to pages...'
     };
 
     let isLoading = false;

@@ -13,7 +13,7 @@ class Command(BaseCommand):
         created = 0
         updated = 0
 
-        # Static pages
+        # Static pages - only pages that actually exist in frontend routes
         static_pages = [
             ('home', 'Home', 'Codeteki - AI-Powered Business Solutions'),
             ('services', 'Services', 'Our Services - AI, Automation & Web Development'),
@@ -21,8 +21,7 @@ class Command(BaseCommand):
             ('demos', 'Demos', 'Product Demos & Showcases'),
             ('faq', 'FAQ', 'Frequently Asked Questions'),
             ('contact', 'Contact', 'Contact Us - Get in Touch'),
-            ('about', 'About', 'About Codeteki'),
-            ('pricing', 'Pricing', 'Pricing Plans'),
+            # Note: 'about' and 'pricing' removed - these pages don't exist in frontend
         ]
 
         for page_key, page_name, default_title in static_pages:

@@ -15,35 +15,51 @@
         </p>
     </div>
 
-    <!-- Quick Stats Cards -->
+    <!-- Quick Stats Cards - Now Clickable -->
     {% if cards %}
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px;">
         {% for card in cards %}
-        <div style="background: white; border-radius: 12px; padding: 20px; border: 1px solid #e5e7eb;">
-            <p style="font-size: 14px; color: #6b7280; margin-bottom: 4px;">{{ card.title }}</p>
-            <p style="font-size: 32px; font-weight: 700; color: #111827;">{{ card.value }}</p>
-        </div>
+        <a href="{{ card.url }}" style="text-decoration: none; display: block; transition: transform 0.15s, box-shadow 0.15s;">
+            <div style="background: white; border-radius: 12px; padding: 20px; border: 1px solid #e5e7eb; cursor: pointer; transition: all 0.15s;"
+                 onmouseover="this.style.borderColor='#f9cb07'; this.style.boxShadow='0 4px 12px rgba(249,203,7,0.15)';"
+                 onmouseout="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none';">
+                <p style="font-size: 14px; color: #6b7280; margin-bottom: 4px;">{{ card.title }}</p>
+                <p style="font-size: 32px; font-weight: 700; color: #111827;">{{ card.value }}</p>
+            </div>
+        </a>
         {% endfor %}
     </div>
     {% endif %}
 
-    <!-- Content Overview -->
+    <!-- Content Overview - Now Clickable -->
     {% if content_stats %}
     <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 24px; border: 1px solid #e5e7eb;">
         <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #111827;">Content Overview</h2>
         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; text-align: center;">
-            <div style="padding: 16px; background: #f9fafb; border-radius: 8px;">
-                <p style="font-size: 24px; font-weight: 700; color: #f9cb07;">{{ content_stats.services }}</p>
-                <p style="font-size: 14px; color: #6b7280;">Services</p>
-            </div>
-            <div style="padding: 16px; background: #f9fafb; border-radius: 8px;">
-                <p style="font-size: 24px; font-weight: 700; color: #f9cb07;">{{ content_stats.hero_sections }}</p>
-                <p style="font-size: 14px; color: #6b7280;">Active Hero Sections</p>
-            </div>
-            <div style="padding: 16px; background: #f9fafb; border-radius: 8px;">
-                <p style="font-size: 24px; font-weight: 700; color: #f9cb07;">{{ content_stats.testimonials }}</p>
-                <p style="font-size: 14px; color: #6b7280;">Testimonials</p>
-            </div>
+            <a href="{% url 'admin:core_service_changelist' %}" style="text-decoration: none;">
+                <div style="padding: 16px; background: #f9fafb; border-radius: 8px; cursor: pointer; transition: all 0.15s; border: 2px solid transparent;"
+                     onmouseover="this.style.borderColor='#f9cb07'; this.style.background='#fffbeb';"
+                     onmouseout="this.style.borderColor='transparent'; this.style.background='#f9fafb';">
+                    <p style="font-size: 24px; font-weight: 700; color: #f9cb07;">{{ content_stats.services }}</p>
+                    <p style="font-size: 14px; color: #6b7280;">Services</p>
+                </div>
+            </a>
+            <a href="{% url 'admin:core_herosection_changelist' %}" style="text-decoration: none;">
+                <div style="padding: 16px; background: #f9fafb; border-radius: 8px; cursor: pointer; transition: all 0.15s; border: 2px solid transparent;"
+                     onmouseover="this.style.borderColor='#f9cb07'; this.style.background='#fffbeb';"
+                     onmouseout="this.style.borderColor='transparent'; this.style.background='#f9fafb';">
+                    <p style="font-size: 24px; font-weight: 700; color: #f9cb07;">{{ content_stats.hero_sections }}</p>
+                    <p style="font-size: 14px; color: #6b7280;">Active Hero Sections</p>
+                </div>
+            </a>
+            <a href="{% url 'admin:core_testimonial_changelist' %}" style="text-decoration: none;">
+                <div style="padding: 16px; background: #f9fafb; border-radius: 8px; cursor: pointer; transition: all 0.15s; border: 2px solid transparent;"
+                     onmouseover="this.style.borderColor='#f9cb07'; this.style.background='#fffbeb';"
+                     onmouseout="this.style.borderColor='transparent'; this.style.background='#f9fafb';">
+                    <p style="font-size: 24px; font-weight: 700; color: #f9cb07;">{{ content_stats.testimonials }}</p>
+                    <p style="font-size: 14px; color: #6b7280;">Testimonials</p>
+                </div>
+            </a>
         </div>
     </div>
     {% endif %}
@@ -53,59 +69,81 @@
         <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #111827;">Quick Actions</h2>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
             <a href="{% url 'admin:core_sitesettings_changelist' %}"
-               style="display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 8px; background: #f9fafb; text-decoration: none; color: #374151; font-size: 14px; font-weight: 500;">
+               style="display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 8px; background: #f9fafb; text-decoration: none; color: #374151; font-size: 14px; font-weight: 500; transition: all 0.15s; border: 2px solid transparent;"
+               onmouseover="this.style.borderColor='#f9cb07'; this.style.background='#fffbeb';"
+               onmouseout="this.style.borderColor='transparent'; this.style.background='#f9fafb';">
                 ⚙️ Site Settings
             </a>
             <a href="{% url 'admin:core_herosection_changelist' %}"
-               style="display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 8px; background: #f9fafb; text-decoration: none; color: #374151; font-size: 14px; font-weight: 500;">
+               style="display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 8px; background: #f9fafb; text-decoration: none; color: #374151; font-size: 14px; font-weight: 500; transition: all 0.15s; border: 2px solid transparent;"
+               onmouseover="this.style.borderColor='#f9cb07'; this.style.background='#fffbeb';"
+               onmouseout="this.style.borderColor='transparent'; this.style.background='#f9fafb';">
                 🎯 Hero Sections
             </a>
             <a href="{% url 'admin:core_service_changelist' %}"
-               style="display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 8px; background: #f9fafb; text-decoration: none; color: #374151; font-size: 14px; font-weight: 500;">
+               style="display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 8px; background: #f9fafb; text-decoration: none; color: #374151; font-size: 14px; font-weight: 500; transition: all 0.15s; border: 2px solid transparent;"
+               onmouseover="this.style.borderColor='#f9cb07'; this.style.background='#fffbeb';"
+               onmouseout="this.style.borderColor='transparent'; this.style.background='#f9fafb';">
                 🔧 Services
             </a>
             <a href="{% url 'admin:core_siteaudit_changelist' %}"
-               style="display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 8px; background: #f9fafb; text-decoration: none; color: #374151; font-size: 14px; font-weight: 500;">
+               style="display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 8px; background: #f9fafb; text-decoration: none; color: #374151; font-size: 14px; font-weight: 500; transition: all 0.15s; border: 2px solid transparent;"
+               onmouseover="this.style.borderColor='#f9cb07'; this.style.background='#fffbeb';"
+               onmouseout="this.style.borderColor='transparent'; this.style.background='#f9fafb';">
                 📊 SEO Audits
             </a>
         </div>
     </div>
 
-    <!-- Recent Activity -->
+    <!-- Recent Activity - Now Clickable -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
         <div style="background: white; border-radius: 12px; padding: 24px; border: 1px solid #e5e7eb;">
-            <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #111827;">Recent Leads</h2>
-            {% for lead in recent_leads %}
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f9fafb; border-radius: 8px; margin-bottom: 8px;">
-                <div>
-                    <p style="font-weight: 500; color: #111827;">{{ lead.name }}</p>
-                    <p style="font-size: 12px; color: #6b7280;">{{ lead.created_at|timesince }} ago</p>
-                </div>
-                <span style="padding: 4px 8px; font-size: 12px; font-weight: 500; border-radius: 9999px;
-                    {% if lead.status == 'new' %}background: #dcfce7; color: #166534;{% else %}background: #f3f4f6; color: #374151;{% endif %}">
-                    {{ lead.status }}
-                </span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 style="font-size: 18px; font-weight: 600; color: #111827;">Recent Leads</h2>
+                <a href="{% url 'admin:core_chatlead_changelist' %}" style="font-size: 13px; color: #f9cb07; text-decoration: none; font-weight: 500;">View All →</a>
             </div>
+            {% for lead in recent_leads %}
+            <a href="{% url 'admin:core_chatlead_change' lead.id %}" style="text-decoration: none; display: block;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f9fafb; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: all 0.15s; border: 2px solid transparent;"
+                     onmouseover="this.style.borderColor='#f9cb07';"
+                     onmouseout="this.style.borderColor='transparent';">
+                    <div>
+                        <p style="font-weight: 500; color: #111827;">{{ lead.name }}</p>
+                        <p style="font-size: 12px; color: #6b7280;">{{ lead.created_at|timesince }} ago</p>
+                    </div>
+                    <span style="padding: 4px 8px; font-size: 12px; font-weight: 500; border-radius: 9999px;
+                        {% if lead.status == 'new' %}background: #dcfce7; color: #166534;{% else %}background: #f3f4f6; color: #374151;{% endif %}">
+                        {{ lead.status }}
+                    </span>
+                </div>
+            </a>
             {% empty %}
             <p style="color: #6b7280; font-size: 14px;">No recent leads</p>
             {% endfor %}
         </div>
 
         <div style="background: white; border-radius: 12px; padding: 24px; border: 1px solid #e5e7eb;">
-            <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #111827;">Recent Audits</h2>
-            {% for audit in recent_audits %}
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f9fafb; border-radius: 8px; margin-bottom: 8px;">
-                <div style="overflow: hidden;">
-                    <p style="font-weight: 500; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px;">{{ audit.url }}</p>
-                    <p style="font-size: 12px; color: #6b7280;">{{ audit.created_at|timesince }} ago</p>
-                </div>
-                <span style="padding: 4px 8px; font-size: 12px; font-weight: 500; border-radius: 9999px;
-                    {% if audit.status == 'completed' %}background: #dcfce7; color: #166534;
-                    {% elif audit.status == 'running' %}background: #dbeafe; color: #1e40af;
-                    {% else %}background: #f3f4f6; color: #374151;{% endif %}">
-                    {{ audit.status }}
-                </span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h2 style="font-size: 18px; font-weight: 600; color: #111827;">Recent Audits</h2>
+                <a href="{% url 'admin:core_siteaudit_changelist' %}" style="font-size: 13px; color: #f9cb07; text-decoration: none; font-weight: 500;">View All →</a>
             </div>
+            {% for audit in recent_audits %}
+            <a href="{% url 'admin:core_siteaudit_change' audit.pk %}" style="text-decoration: none; display: block;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f9fafb; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: all 0.15s; border: 2px solid transparent;"
+                     onmouseover="this.style.borderColor='#f9cb07';"
+                     onmouseout="this.style.borderColor='transparent';">
+                    <div style="overflow: hidden;">
+                        <p style="font-weight: 500; color: #111827; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px;">{{ audit.url }}</p>
+                        <p style="font-size: 12px; color: #6b7280;">{{ audit.created_at|timesince }} ago</p>
+                    </div>
+                    <span style="padding: 4px 8px; font-size: 12px; font-weight: 500; border-radius: 9999px;
+                        {% if audit.status == 'completed' %}background: #dcfce7; color: #166534;
+                        {% elif audit.status == 'running' %}background: #dbeafe; color: #1e40af;
+                        {% else %}background: #f3f4f6; color: #374151;{% endif %}">
+                        {{ audit.status }}
+                    </span>
+                </div>
+            </a>
             {% empty %}
             <p style="color: #6b7280; font-size: 14px;">No recent audits</p>
             {% endfor %}
