@@ -587,11 +587,12 @@ class ContactInquiryAdmin(ModelAdmin):
 
 @admin.register(PageSEO)
 class PageSEOAdmin(ModelAdmin):
-    list_display = ('__str__', 'target_keyword', 'meta_title', 'target_url_display', 'updated_at')
+    list_display = ('__str__', 'target_keyword', 'meta_title', 'target_url_display', 'has_all_fields', 'updated_at')
     list_filter = ('page', 'service', 'blog_post')
     search_fields = ('meta_title', 'meta_description', 'target_keyword', 'custom_url')
     autocomplete_fields = ('service', 'blog_post', 'source_recommendation')
     actions = ['generate_ai_meta']
+    readonly_fields = ('view_ai_recommendations',)
 
     fieldsets = (
         ('📄 Page Selection', {
@@ -603,7 +604,7 @@ class PageSEOAdmin(ModelAdmin):
             'description': 'Link to a service or blog post for automatic URL'
         }),
         ('🎯 Target Keyword', {
-            'fields': ('target_keyword', 'source_recommendation'),
+            'fields': ('target_keyword', 'source_recommendation', 'view_ai_recommendations'),
         }),
         ('🔍 Meta Tags', {
             'fields': ('meta_title', 'meta_description', 'meta_keywords', 'canonical_url')
@@ -617,6 +618,46 @@ class PageSEOAdmin(ModelAdmin):
     def target_url_display(self, obj):
         return obj.target_url
     target_url_display.short_description = "Target URL"
+
+    def has_all_fields(self, obj):
+        """Check if all important SEO fields are filled."""
+        has_title = bool(obj.meta_title and len(obj.meta_title) > 10)
+        has_desc = bool(obj.meta_description and len(obj.meta_description) > 20)
+        has_keyword = bool(obj.target_keyword)
+        has_keywords = bool(obj.meta_keywords)
+
+        if has_title and has_desc and has_keyword and has_keywords:
+            return format_html('<span style="color: #10b981;">✅ Complete</span>')
+        elif has_title and has_desc:
+            return format_html('<span style="color: #f59e0b;">⚠️ Missing keywords</span>')
+        else:
+            return format_html('<span style="color: #ef4444;">❌ Incomplete</span>')
+    has_all_fields.short_description = "Status"
+
+    def view_ai_recommendations(self, obj):
+        """Show link to view AI recommendations for this page's keyword."""
+        from django.urls import reverse
+
+        links = []
+
+        # Link to source recommendation if exists
+        if obj.source_recommendation:
+            url = reverse('admin:core_aiseorecommendation_change', args=[obj.source_recommendation.id])
+            links.append(f'<a href="{url}" target="_blank" style="color: #3b82f6;">📄 View Source Recommendation</a>')
+
+        # Link to all Meta Kit recommendations
+        rec_url = reverse('admin:core_aiseorecommendation_changelist') + '?category=metadata'
+        links.append(f'<a href="{rec_url}" target="_blank" style="color: #8b5cf6;">🔍 Browse All Meta Kits</a>')
+
+        # Link to SEO Keywords
+        kw_url = reverse('admin:core_seokeyword_changelist')
+        links.append(f'<a href="{kw_url}" target="_blank" style="color: #06b6d4;">📊 View Ubersuggest Keywords</a>')
+
+        if not links:
+            return "No recommendations linked"
+
+        return format_html('<br>'.join(links))
+    view_ai_recommendations.short_description = "AI Recommendations"
 
     @action(description="🤖 Generate AI Meta Tags (Using Ubersuggest Keywords)")
     def generate_ai_meta(self, request, queryset):
@@ -981,10 +1022,87 @@ class AISEORecommendationAdmin(ModelAdmin):
         return format_html("<pre style='white-space: pre-wrap; background: #f5f5f5; padding: 10px; border-radius: 4px;'>{}</pre>", formatted)
     metadata_pretty.short_description = "Metadata"
 
+    def _parse_meta_kit_response(self, response):
+        """Parse AI Meta Kit response and extract all fields."""
+        import re
+
+        data = {
+            'meta_title': None,
+            'meta_description': None,
+            'meta_keywords': None,
+            'og_title': None,
+            'og_description': None,
+        }
+
+        # Try multiple patterns for title
+        title_patterns = [
+            r'\*\*Page Title:\*\*\s*(.+?)(?:\n|$)',
+            r'\*\*Meta Title:\*\*\s*(.+?)(?:\n|$)',
+            r'\*\*Title:\*\*\s*(.+?)(?:\n|$)',
+            r'Page Title:\s*(.+?)(?:\n|$)',
+            r'Meta Title:\s*(.+?)(?:\n|$)',
+        ]
+        for pattern in title_patterns:
+            match = re.search(pattern, response, re.IGNORECASE)
+            if match:
+                data['meta_title'] = match.group(1).strip().strip('"\'')
+                break
+
+        # Try multiple patterns for description
+        desc_patterns = [
+            r'\*\*Meta Description:\*\*\s*(.+?)(?:\n|$)',
+            r'\*\*Description:\*\*\s*(.+?)(?:\n|$)',
+            r'Meta Description:\s*(.+?)(?:\n|$)',
+        ]
+        for pattern in desc_patterns:
+            match = re.search(pattern, response, re.IGNORECASE)
+            if match:
+                data['meta_description'] = match.group(1).strip().strip('"\'')
+                break
+
+        # Try to extract keywords
+        keyword_patterns = [
+            r'\*\*Meta Keywords:\*\*\s*(.+?)(?:\n|$)',
+            r'\*\*Keywords:\*\*\s*(.+?)(?:\n|$)',
+            r'\*\*Target Keywords:\*\*\s*(.+?)(?:\n|$)',
+            r'Meta Keywords:\s*(.+?)(?:\n|$)',
+            r'Keywords:\s*(.+?)(?:\n|$)',
+        ]
+        for pattern in keyword_patterns:
+            match = re.search(pattern, response, re.IGNORECASE)
+            if match:
+                data['meta_keywords'] = match.group(1).strip().strip('"\'')
+                break
+
+        # Try to extract OG title
+        og_title_patterns = [
+            r'\*\*OG Title:\*\*\s*(.+?)(?:\n|$)',
+            r'\*\*Open Graph Title:\*\*\s*(.+?)(?:\n|$)',
+            r'OG Title:\s*(.+?)(?:\n|$)',
+        ]
+        for pattern in og_title_patterns:
+            match = re.search(pattern, response, re.IGNORECASE)
+            if match:
+                data['og_title'] = match.group(1).strip().strip('"\'')
+                break
+
+        # Try to extract OG description
+        og_desc_patterns = [
+            r'\*\*OG Description:\*\*\s*(.+?)(?:\n|$)',
+            r'\*\*Open Graph Description:\*\*\s*(.+?)(?:\n|$)',
+            r'OG Description:\s*(.+?)(?:\n|$)',
+        ]
+        for pattern in og_desc_patterns:
+            match = re.search(pattern, response, re.IGNORECASE)
+            if match:
+                data['og_description'] = match.group(1).strip().strip('"\'')
+                break
+
+        return data
+
     @action(description="🚀 Auto-Apply Meta Kit to Best Matching Page")
     def apply_meta_to_page(self, request, queryset):
-        """Parse Meta Kit responses and apply to best matching PageSEO entry."""
-        import re
+        """Parse Meta Kit responses and apply ALL fields to best matching PageSEO entry."""
 
         # Keyword to service mapping
         KEYWORD_SERVICE_MAP = {
@@ -1028,24 +1146,24 @@ class AISEORecommendationAdmin(ModelAdmin):
             try:
                 response = rec.response or ""
 
-                # Parse the AI response for meta data
-                title_match = re.search(r'\*\*Page Title:\*\*\s*(.+?)(?:\n|$)', response)
-                desc_match = re.search(r'\*\*Meta Description:\*\*\s*(.+?)(?:\n|$)', response)
+                # Parse ALL fields from AI response
+                parsed = self._parse_meta_kit_response(response)
 
-                if not title_match or not desc_match:
+                if not parsed['meta_title'] and not parsed['meta_description']:
+                    skipped.append(f"Rec #{rec.id} (no title/desc found in response)")
                     continue
 
-                meta_title = title_match.group(1).strip()
-                meta_desc = desc_match.group(1).strip()
-
-                # Get keyword from metadata
+                # Get keyword from metadata or rec.keyword
                 keyword = ""
-                if rec.metadata and 'keywords' in rec.metadata:
+                if rec.keyword:
+                    keyword = rec.keyword.keyword
+                elif rec.metadata and 'keywords' in rec.metadata:
                     keywords = rec.metadata['keywords']
                     if keywords and len(keywords) > 0:
                         keyword = keywords[0].get('keyword', '')
 
                 if not keyword:
+                    skipped.append(f"Rec #{rec.id} (no keyword)")
                     continue
 
                 # Find matching service by keyword
@@ -1062,15 +1180,27 @@ class AISEORecommendationAdmin(ModelAdmin):
                     # Update existing PageSEO for this service
                     page_seo = PageSEO.objects.filter(service=matched_service).first()
                     if page_seo:
-                        page_seo.meta_title = meta_title[:160]
-                        page_seo.meta_description = meta_desc[:320]
+                        # Apply ALL parsed fields
+                        if parsed['meta_title']:
+                            page_seo.meta_title = parsed['meta_title'][:160]
+                        if parsed['meta_description']:
+                            page_seo.meta_description = parsed['meta_description'][:320]
+                        if parsed['meta_keywords']:
+                            page_seo.meta_keywords = parsed['meta_keywords']
+
+                        # Set OG tags (use parsed or fall back to meta)
+                        page_seo.og_title = parsed['og_title'] or parsed['meta_title'] or page_seo.og_title
+                        page_seo.og_description = parsed['og_description'] or parsed['meta_description'] or page_seo.og_description
+
+                        # Set target keyword and link to recommendation
                         page_seo.target_keyword = keyword
                         page_seo.source_recommendation = rec
                         page_seo.save()
                         applied += 1
+
                         self.message_user(
                             request,
-                            f"✅ '{keyword}' → /services/{matched_service.slug}",
+                            f"✅ '{keyword}' → /services/{matched_service.slug} (title, desc, keywords, OG)",
                             messages.SUCCESS
                         )
                     else:
@@ -1082,7 +1212,7 @@ class AISEORecommendationAdmin(ModelAdmin):
                 self.message_user(request, f"❌ Error: {e}", messages.ERROR)
 
         if applied:
-            self.message_user(request, f"✅ Applied {applied} Meta Kit(s) to Page SEO!", messages.SUCCESS)
+            self.message_user(request, f"✅ Applied {applied} Meta Kit(s) with ALL fields!", messages.SUCCESS)
         elif skipped:
             self.message_user(request, f"⚠️ Could not apply. Skipped: {', '.join(skipped[:5])}", messages.WARNING)
         else:
@@ -1094,7 +1224,6 @@ class AISEORecommendationAdmin(ModelAdmin):
     @action(description="🔗 Apply to ALL Matching Services (Smart Match)")
     def apply_to_matching_service(self, request, queryset):
         """Smart match keywords to services using multiple strategies."""
-        import re
         from difflib import SequenceMatcher
 
         applied = 0
@@ -1113,24 +1242,24 @@ class AISEORecommendationAdmin(ModelAdmin):
             try:
                 response = rec.response or ""
 
-                # Parse the AI response
-                title_match = re.search(r'\*\*Page Title:\*\*\s*(.+?)(?:\n|$)', response)
-                desc_match = re.search(r'\*\*Meta Description:\*\*\s*(.+?)(?:\n|$)', response)
+                # Parse ALL fields from AI response using shared parser
+                parsed = self._parse_meta_kit_response(response)
 
-                if not title_match or not desc_match:
+                if not parsed['meta_title'] and not parsed['meta_description']:
+                    skipped.append(f"Rec #{rec.id} (no title/desc)")
                     continue
-
-                meta_title = title_match.group(1).strip()
-                meta_desc = desc_match.group(1).strip()
 
                 # Get keyword
                 keyword = ""
-                if rec.metadata and 'keywords' in rec.metadata:
+                if rec.keyword:
+                    keyword = rec.keyword.keyword
+                elif rec.metadata and 'keywords' in rec.metadata:
                     keywords = rec.metadata['keywords']
                     if keywords:
                         keyword = keywords[0].get('keyword', '')
 
                 if not keyword:
+                    skipped.append(f"Rec #{rec.id} (no keyword)")
                     continue
 
                 # Find best matching service using multiple strategies
@@ -1167,15 +1296,27 @@ class AISEORecommendationAdmin(ModelAdmin):
 
                 if best_match and best_match.id in page_seos:
                     page_seo = page_seos[best_match.id]
-                    page_seo.meta_title = meta_title[:160]
-                    page_seo.meta_description = meta_desc[:320]
+
+                    # Apply ALL parsed fields
+                    if parsed['meta_title']:
+                        page_seo.meta_title = parsed['meta_title'][:160]
+                    if parsed['meta_description']:
+                        page_seo.meta_description = parsed['meta_description'][:320]
+                    if parsed['meta_keywords']:
+                        page_seo.meta_keywords = parsed['meta_keywords']
+
+                    # Set OG tags
+                    page_seo.og_title = parsed['og_title'] or parsed['meta_title'] or page_seo.og_title
+                    page_seo.og_description = parsed['og_description'] or parsed['meta_description'] or page_seo.og_description
+
                     page_seo.target_keyword = keyword
                     page_seo.source_recommendation = rec
                     page_seo.save()
                     applied += 1
+
                     self.message_user(
                         request,
-                        f"✅ '{keyword}' → {best_match.title} (score: {best_score:.0%})",
+                        f"✅ '{keyword}' → {best_match.title} (score: {best_score:.0%}, all fields)",
                         messages.SUCCESS
                     )
                 elif best_match:
@@ -1188,7 +1329,7 @@ class AISEORecommendationAdmin(ModelAdmin):
                 skipped.append(f"Error: {str(e)[:30]}")
 
         if applied:
-            self.message_user(request, f"✅ Auto-applied {applied} SEO settings to services!", messages.SUCCESS)
+            self.message_user(request, f"✅ Auto-applied {applied} SEO settings with ALL fields!", messages.SUCCESS)
         elif skipped:
             self.message_user(request, f"⚠️ No matching services found. Skipped: {', '.join(skipped[:3])}", messages.WARNING)
         else:
