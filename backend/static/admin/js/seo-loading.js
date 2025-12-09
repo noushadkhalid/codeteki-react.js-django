@@ -89,7 +89,7 @@
                 width: 3.5rem;
                 height: 3.5rem;
                 border: 3px solid rgba(255, 255, 255, 0.2);
-                border-top-color: #3b82f6;
+                border-top-color: #f9cb07;
                 border-radius: 50%;
                 animation: seo-spin 0.8s linear infinite;
                 margin: 0 auto 1.5rem;
@@ -124,9 +124,12 @@
             }
             body.seo-loading-active {
                 overflow: hidden !important;
+            }
+            body.seo-loading-active * {
                 pointer-events: none !important;
             }
-            body.seo-loading-active #seo-loading-overlay {
+            body.seo-loading-active #seo-loading-overlay,
+            body.seo-loading-active #seo-loading-overlay * {
                 pointer-events: auto !important;
             }
 
@@ -351,23 +354,60 @@
         console.log('[SEO Loading] Hiding loading');
     }
 
-    // Get selected action from form
+    // Get selected action from form - check multiple possible selectors
     function getSelectedAction() {
-        const actionSelect = document.querySelector('select[name="action"]');
-        return actionSelect ? actionSelect.value : null;
+        // Try different selectors that Unfold might use
+        const selectors = [
+            'select[name="action"]',
+            '#changelist-form select[name="action"]',
+            '.actions select[name="action"]',
+            '[data-action-select]'
+        ];
+
+        for (const selector of selectors) {
+            const actionSelect = document.querySelector(selector);
+            if (actionSelect && actionSelect.value) {
+                console.log('[SEO Loading] Found action:', actionSelect.value, 'via', selector);
+                return actionSelect.value;
+            }
+        }
+
+        return null;
     }
 
-    // Check if items are selected
+    // Check if items are selected - check multiple possible selectors
     function hasSelectedItems() {
-        const checkboxes = document.querySelectorAll('input[name="_selected_action"]:checked');
-        return checkboxes.length > 0;
+        const selectors = [
+            'input[name="_selected_action"]:checked',
+            'input[type="checkbox"][name="_selected_action"]:checked',
+            '.action-select:checked',
+            'tr.selected input[type="checkbox"]:checked'
+        ];
+
+        for (const selector of selectors) {
+            const checkboxes = document.querySelectorAll(selector);
+            if (checkboxes.length > 0) {
+                console.log('[SEO Loading] Found', checkboxes.length, 'selected items via', selector);
+                return true;
+            }
+        }
+
+        return false;
     }
 
-    // Handle form submission (for both regular and HTMX)
+    // Check if action should show loading
+    function shouldShowLoading(action) {
+        const shouldShow = LOADING_ACTIONS.includes(action);
+        console.log('[SEO Loading] Action', action, 'should show loading:', shouldShow);
+        return shouldShow;
+    }
+
+    // Handle form submission
     function handleFormSubmit(e) {
         const action = getSelectedAction();
+        console.log('[SEO Loading] Form submit detected, action:', action);
 
-        if (LOADING_ACTIONS.includes(action) && hasSelectedItems()) {
+        if (action && shouldShowLoading(action) && hasSelectedItems()) {
             showLoading(action);
         }
     }
@@ -380,14 +420,27 @@
         // Only process once per page load
         if (messagesProcessed) return;
 
-        // Only look for actual Django message lists - be specific
-        const messageList = document.querySelector('ul.messagelist');
+        // Look for Unfold's message containers as well
+        const messageSelectors = [
+            'ul.messagelist',
+            '.messagelist',
+            '[data-messages]',
+            '.messages'
+        ];
+
+        let messageList = null;
+        for (const selector of messageSelectors) {
+            messageList = document.querySelector(selector);
+            if (messageList) break;
+        }
+
         if (!messageList) return;
 
-        const messages = messageList.querySelectorAll('li');
+        const messages = messageList.querySelectorAll('li, .message');
         if (messages.length === 0) return;
 
         messagesProcessed = true;
+        console.log('[SEO Loading] Found', messages.length, 'messages to convert to toasts');
 
         messages.forEach(msg => {
             let type = 'info';
@@ -412,7 +465,7 @@
             if (text.includes('⚠️')) type = 'warning';
 
             // Clean up emoji prefixes
-            const cleanText = text.replace(/^[✅❌⚠️ℹ️]\s*/, '');
+            const cleanText = text.replace(/^[✅❌⚠️ℹ️🚀🔗]\s*/, '');
 
             // Extract title and message
             let title = type.charAt(0).toUpperCase() + type.slice(1);
@@ -433,7 +486,7 @@
 
     // Initialize
     function init() {
-        console.log('[SEO Loading] Initializing...');
+        console.log('[SEO Loading] Initializing v2...');
 
         injectStyles();
         createOverlay();
@@ -447,34 +500,55 @@
             }
         }, true);
 
-        // Handle button clicks (Go button)
+        // Handle button clicks (Go button) - more aggressive capturing
         document.addEventListener('click', function(e) {
-            const button = e.target.closest('button[type="submit"], input[type="submit"]');
+            const button = e.target.closest('button[type="submit"], input[type="submit"], button.action-btn, [data-action-btn]');
             if (button) {
                 const form = button.closest('form');
-                if (form && (form.id === 'changelist-form' || form.querySelector('select[name="action"]'))) {
+                if (form) {
                     const action = getSelectedAction();
-                    if (LOADING_ACTIONS.includes(action) && hasSelectedItems()) {
+                    if (action && shouldShowLoading(action) && hasSelectedItems()) {
+                        console.log('[SEO Loading] Button click triggered loading for:', action);
                         showLoading(action);
                     }
                 }
             }
         }, true);
 
+        // Handle action select change - show toast preview
+        document.addEventListener('change', function(e) {
+            if (e.target.name === 'action') {
+                const action = e.target.value;
+                if (shouldShowLoading(action)) {
+                    console.log('[SEO Loading] Action selected:', action, '- will show loading on submit');
+                }
+            }
+        });
+
         // HTMX event handlers (Unfold uses HTMX)
         document.body.addEventListener('htmx:beforeRequest', function(e) {
-            const form = e.detail.elt.closest('form');
+            console.log('[SEO Loading] HTMX beforeRequest:', e.detail);
+            const form = e.detail.elt.closest ? e.detail.elt.closest('form') : null;
             if (form) {
                 const action = getSelectedAction();
-                if (LOADING_ACTIONS.includes(action) && hasSelectedItems()) {
+                if (action && shouldShowLoading(action) && hasSelectedItems()) {
                     showLoading(action);
                 }
             }
         });
 
         document.body.addEventListener('htmx:afterRequest', function(e) {
-            // Hide loading after HTMX request completes
+            console.log('[SEO Loading] HTMX afterRequest');
             setTimeout(hideLoading, 100);
+        });
+
+        document.body.addEventListener('htmx:afterSwap', function(e) {
+            console.log('[SEO Loading] HTMX afterSwap');
+            setTimeout(function() {
+                hideLoading();
+                messagesProcessed = false; // Allow re-processing after swap
+                parseAndShowMessages();
+            }, 100);
         });
 
         document.body.addEventListener('htmx:responseError', function(e) {
@@ -485,14 +559,14 @@
         // Parse messages on load
         setTimeout(parseAndShowMessages, 300);
 
-        // Also handle page navigation
+        // Handle page navigation
         window.addEventListener('beforeunload', function() {
             if (isLoading) {
                 // Keep loading visible during navigation
             }
         });
 
-        console.log('[SEO Loading] Initialized successfully');
+        console.log('[SEO Loading] Initialized successfully. Registered actions:', LOADING_ACTIONS);
     }
 
     // Run on DOM ready
@@ -510,11 +584,14 @@
         }, 200);
     });
 
-    // Expose globally
+    // Expose globally for debugging and manual use
     window.SEOLoading = {
         show: showLoading,
         hide: hideLoading,
-        toast: showToast
+        toast: showToast,
+        getAction: getSelectedAction,
+        hasSelected: hasSelectedItems,
+        actions: LOADING_ACTIONS
     };
 
 })();
