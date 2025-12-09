@@ -591,6 +591,7 @@ class PageSEOAdmin(ModelAdmin):
     list_filter = ('page', 'service', 'blog_post')
     search_fields = ('meta_title', 'meta_description', 'target_keyword', 'custom_url')
     autocomplete_fields = ('service', 'blog_post', 'source_recommendation')
+    actions = ['generate_ai_meta']
 
     fieldsets = (
         ('📄 Page Selection', {
@@ -616,6 +617,132 @@ class PageSEOAdmin(ModelAdmin):
     def target_url_display(self, obj):
         return obj.target_url
     target_url_display.short_description = "Target URL"
+
+    @action(description="🤖 Generate AI Meta Tags (ChatGPT)")
+    def generate_ai_meta(self, request, queryset):
+        """Generate optimized meta title and description using AI for selected pages."""
+        from core.services.ai_client import AIContentEngine
+
+        ai = AIContentEngine()
+        if not ai.enabled:
+            self.message_user(request, "❌ OpenAI API key not configured.", messages.ERROR)
+            return
+
+        generated = 0
+        errors = []
+
+        for page_seo in queryset:
+            try:
+                # Build context about the page
+                page_name = str(page_seo)
+                page_url = page_seo.target_url
+                current_title = page_seo.meta_title or ""
+                current_desc = page_seo.meta_description or ""
+
+                # Get additional context from linked service or blog
+                extra_context = ""
+                if page_seo.service:
+                    extra_context = f"""
+Service Title: {page_seo.service.title}
+Service Description: {page_seo.service.description or 'N/A'}
+Service Tagline: {getattr(page_seo.service, 'tagline', 'N/A')}
+"""
+                elif page_seo.blog_post:
+                    extra_context = f"""
+Blog Title: {page_seo.blog_post.title}
+Blog Excerpt: {page_seo.blog_post.excerpt or 'N/A'}
+"""
+                else:
+                    # Static page context
+                    page_descriptions = {
+                        'home': 'Main landing page showcasing AI-powered business solutions, automation tools, and web development services for Australian businesses.',
+                        'services': 'Services overview page listing all offerings: AI Workforce, Business Automation, Custom Tools, Web Development, and SEO Engine.',
+                        'ai-tools': 'Page showcasing free AI tools and utilities for daily business productivity tasks.',
+                        'demos': 'Product demos and interactive showcases of our AI solutions and automation tools.',
+                        'faq': 'Frequently asked questions about our services, pricing, and how AI can help businesses.',
+                        'contact': 'Contact page with booking form, business hours, and ways to get in touch.',
+                    }
+                    extra_context = f"Page Purpose: {page_descriptions.get(page_seo.page, 'Business page for Codeteki')}"
+
+                prompt = f"""Generate SEO-optimized meta tags for this webpage.
+
+**Page:** {page_name}
+**URL:** {page_url}
+**Current Title:** {current_title}
+**Current Description:** {current_desc}
+{extra_context}
+
+**Business Context:**
+- Company: Codeteki
+- Location: Melbourne, Australia
+- Focus: AI-powered business solutions, automation, web development
+- Target audience: Australian small-medium businesses
+
+**Requirements:**
+1. Meta Title: 50-60 characters, include primary keyword, brand name at end
+2. Meta Description: 150-160 characters, compelling, include call-to-action
+3. Target Keyword: 2-4 words, high search intent for Australian market
+4. Meta Keywords: 5-8 comma-separated relevant keywords
+
+**Output Format (use exactly this format):**
+**Meta Title:** [your title here]
+**Meta Description:** [your description here]
+**Target Keyword:** [your keyword here]
+**Meta Keywords:** [keyword1, keyword2, keyword3, ...]
+"""
+
+                result = ai.generate(
+                    prompt=prompt,
+                    system_prompt="You are an SEO expert specializing in Australian digital marketing. Generate concise, compelling meta tags that improve search rankings and click-through rates.",
+                    temperature=0.3
+                )
+
+                if not result.get("success"):
+                    errors.append(f"{page_name}: {result.get('error', 'Unknown error')}")
+                    continue
+
+                output = result.get("output", "")
+
+                # Parse the AI response
+                import re
+                title_match = re.search(r'\*\*Meta Title:\*\*\s*(.+?)(?:\n|$)', output)
+                desc_match = re.search(r'\*\*Meta Description:\*\*\s*(.+?)(?:\n|$)', output)
+                keyword_match = re.search(r'\*\*Target Keyword:\*\*\s*(.+?)(?:\n|$)', output)
+                keywords_match = re.search(r'\*\*Meta Keywords:\*\*\s*(.+?)(?:\n|$)', output)
+
+                if title_match:
+                    page_seo.meta_title = title_match.group(1).strip()[:160]
+                if desc_match:
+                    page_seo.meta_description = desc_match.group(1).strip()[:320]
+                if keyword_match:
+                    page_seo.target_keyword = keyword_match.group(1).strip()[:255]
+                if keywords_match:
+                    page_seo.meta_keywords = keywords_match.group(1).strip()
+
+                # Also set OG tags if empty
+                if not page_seo.og_title:
+                    page_seo.og_title = page_seo.meta_title
+                if not page_seo.og_description:
+                    page_seo.og_description = page_seo.meta_description
+
+                page_seo.save()
+                generated += 1
+
+                self.message_user(
+                    request,
+                    f"✅ {page_name}: \"{page_seo.meta_title[:40]}...\"",
+                    messages.SUCCESS
+                )
+
+            except Exception as e:
+                errors.append(f"{page_seo}: {str(e)}")
+
+        if generated:
+            self.message_user(request, f"✅ Generated AI meta tags for {generated} page(s)!", messages.SUCCESS)
+        if errors:
+            self.message_user(request, f"⚠️ Errors: {', '.join(errors[:3])}", messages.WARNING)
+        if not generated and not errors:
+            self.message_user(request, "⚠️ No pages were processed.", messages.WARNING)
 
     class Meta:
         verbose_name_plural = "🔍 SEO: Page SEO"

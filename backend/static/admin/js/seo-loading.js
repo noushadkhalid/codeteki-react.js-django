@@ -22,7 +22,8 @@
         'apply_meta_to_page',
         'apply_to_matching_service',
         'approve_recommendations',
-        'apply_recommendations'
+        'apply_recommendations',
+        'generate_ai_meta'
     ];
 
     // Actions that return file downloads (don't show loading, they're instant)
@@ -47,7 +48,8 @@
         'apply_meta_to_page': 'Applying Meta Kit to matching pages... Updating SEO settings.',
         'apply_to_matching_service': 'Smart matching keywords to services... Applying SEO recommendations.',
         'approve_recommendations': 'Approving selected recommendations...',
-        'apply_recommendations': 'Applying SEO recommendations to pages...'
+        'apply_recommendations': 'Applying SEO recommendations to pages...',
+        'generate_ai_meta': 'Generating AI Meta Tags with ChatGPT... This may take a few seconds per page.'
     };
 
     let isLoading = false;
