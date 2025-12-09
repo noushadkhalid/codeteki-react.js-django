@@ -857,6 +857,127 @@ class PageSEOAdmin(ModelAdmin):
         if errors:
             self.message_user(request, f"⚠️ Errors: {', '.join(errors[:3])}", messages.WARNING)
 
+    @action(description="⚡ Quick AI Meta Tags (No Ubersuggest needed)")
+    def generate_quick_meta(self, request, queryset):
+        """Generate AI meta tags directly without requiring Ubersuggest data."""
+        from core.services.ai_client import AIContentEngine
+        from django.conf import settings
+        import re
+
+        ai = AIContentEngine()
+        if not ai.enabled:
+            self.message_user(request, "❌ OpenAI API key not configured.", messages.ERROR)
+            return
+
+        generated = 0
+        errors = []
+
+        for page_seo in queryset:
+            try:
+                page_name = str(page_seo)
+                page_url = page_seo.target_url
+
+                # Build context based on page type
+                if page_seo.service:
+                    context = f"""
+Service: {page_seo.service.title}
+Description: {page_seo.service.description or 'AI-powered business solution'}
+Tagline: {getattr(page_seo.service, 'tagline', '')}
+URL: /services/{page_seo.service.slug}
+"""
+                elif page_seo.blog_post:
+                    context = f"""
+Blog Post: {page_seo.blog_post.title}
+Excerpt: {page_seo.blog_post.excerpt or ''}
+URL: /blog/{page_seo.blog_post.slug}
+"""
+                else:
+                    page_contexts = {
+                        'home': 'Homepage - AI-powered business solutions for Australian SMBs. Automation, chatbots, web development.',
+                        'services': 'Services overview - AI Workforce, Automation, Custom Tools, Web Development, SEO Engine.',
+                        'ai-tools': 'Free AI tools and utilities for business productivity.',
+                        'demos': 'Product demos and interactive showcases of AI solutions.',
+                        'faq': 'Frequently asked questions about AI services and pricing.',
+                        'contact': 'Contact page - book consultations, get in touch.',
+                    }
+                    context = f"Page: {page_contexts.get(page_seo.page, page_name)}\nURL: {page_url}"
+
+                prompt = f"""Generate SEO-optimized meta tags for this webpage.
+
+{context}
+
+**Business Context:**
+- Company: Codeteki
+- Location: Melbourne, Australia
+- Focus: AI-powered business automation for Australian SMBs
+- Services: AI chatbots, workflow automation, custom tools, web development
+
+**Requirements:**
+1. Meta Title: 50-60 chars, include primary topic, end with "| Codeteki"
+2. Meta Description: 150-160 chars, compelling CTA, value proposition
+3. Meta Keywords: 5-8 relevant keywords, comma-separated
+4. OG Title: Same as meta title or slightly shorter
+5. OG Description: Same as meta description or more engaging
+
+**Output Format (exactly):**
+**Meta Title:** [title here]
+**Meta Description:** [description here]
+**Meta Keywords:** [keywords here]
+**OG Title:** [og title here]
+**OG Description:** [og description here]
+"""
+
+                result = ai.generate(
+                    prompt=prompt,
+                    system_prompt="You are an SEO expert. Generate compelling, accurate meta tags optimized for search and social sharing.",
+                    temperature=0.3
+                )
+
+                if not result.get("success"):
+                    errors.append(f"{page_name}: {result.get('error', 'Unknown error')}")
+                    continue
+
+                output = result.get("output", "")
+
+                # Parse response
+                title_match = re.search(r'\*\*Meta Title:\*\*\s*(.+?)(?:\n|$)', output)
+                desc_match = re.search(r'\*\*Meta Description:\*\*\s*(.+?)(?:\n|$)', output)
+                keywords_match = re.search(r'\*\*Meta Keywords:\*\*\s*(.+?)(?:\n|$)', output)
+                og_title_match = re.search(r'\*\*OG Title:\*\*\s*(.+?)(?:\n|$)', output)
+                og_desc_match = re.search(r'\*\*OG Description:\*\*\s*(.+?)(?:\n|$)', output)
+
+                if title_match:
+                    page_seo.meta_title = title_match.group(1).strip()[:160]
+                if desc_match:
+                    page_seo.meta_description = desc_match.group(1).strip()[:320]
+                if keywords_match:
+                    page_seo.meta_keywords = keywords_match.group(1).strip()
+                if og_title_match:
+                    page_seo.og_title = og_title_match.group(1).strip()[:160]
+                if og_desc_match:
+                    page_seo.og_description = og_desc_match.group(1).strip()[:320]
+
+                # Set canonical URL
+                site_url = getattr(settings, 'SITE_URL', 'https://www.codeteki.au').rstrip('/')
+                page_seo.canonical_url = f"{site_url}{page_seo.target_url}"
+
+                page_seo.save()
+                generated += 1
+
+                self.message_user(
+                    request,
+                    f"✅ {page_name}: title, desc, keywords, OG, canonical",
+                    messages.SUCCESS
+                )
+
+            except Exception as e:
+                errors.append(f"{page_seo}: {str(e)}")
+
+        if generated:
+            self.message_user(request, f"✅ Generated AI meta tags for {generated} page(s)!", messages.SUCCESS)
+        if errors:
+            self.message_user(request, f"⚠️ Errors: {', '.join(errors[:3])}", messages.WARNING)
+
     class Meta:
         verbose_name_plural = "🔍 SEO: Page SEO"
 
