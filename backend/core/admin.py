@@ -832,6 +832,11 @@ class PageSEOAdmin(ModelAdmin):
                 if not page_seo.og_description:
                     page_seo.og_description = page_seo.meta_description
 
+                # Set canonical URL
+                from django.conf import settings
+                site_url = getattr(settings, 'SITE_URL', 'https://www.codeteki.au').rstrip('/')
+                page_seo.canonical_url = f"{site_url}{page_seo.target_url}"
+
                 page_seo.save()
                 generated += 1
 
@@ -1200,6 +1205,11 @@ class AISEORecommendationAdmin(ModelAdmin):
                         page_seo.og_title = parsed['og_title'] or parsed['meta_title'] or page_seo.og_title
                         page_seo.og_description = parsed['og_description'] or parsed['meta_description'] or page_seo.og_description
 
+                        # Set canonical URL from SITE_URL + target_url
+                        from django.conf import settings
+                        site_url = getattr(settings, 'SITE_URL', 'https://www.codeteki.au').rstrip('/')
+                        page_seo.canonical_url = f"{site_url}{page_seo.target_url}"
+
                         # Set target keyword and link to recommendation
                         page_seo.target_keyword = keyword
                         page_seo.source_recommendation = rec
@@ -1211,6 +1221,7 @@ class AISEORecommendationAdmin(ModelAdmin):
                             fields_applied.append('keywords')
                         if page_seo.og_title:
                             fields_applied.append('OG')
+                        fields_applied.append('canonical')
 
                         self.message_user(
                             request,
@@ -1331,6 +1342,11 @@ class AISEORecommendationAdmin(ModelAdmin):
                     page_seo.og_title = parsed['og_title'] or parsed['meta_title'] or page_seo.og_title
                     page_seo.og_description = parsed['og_description'] or parsed['meta_description'] or page_seo.og_description
 
+                    # Set canonical URL from SITE_URL + target_url
+                    from django.conf import settings
+                    site_url = getattr(settings, 'SITE_URL', 'https://www.codeteki.au').rstrip('/')
+                    page_seo.canonical_url = f"{site_url}{page_seo.target_url}"
+
                     page_seo.target_keyword = keyword
                     page_seo.source_recommendation = rec
                     page_seo.save()
@@ -1341,6 +1357,7 @@ class AISEORecommendationAdmin(ModelAdmin):
                         fields_applied.append('keywords')
                     if page_seo.og_title:
                         fields_applied.append('OG')
+                    fields_applied.append('canonical')
 
                     self.message_user(
                         request,
