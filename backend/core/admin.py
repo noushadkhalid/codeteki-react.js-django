@@ -823,7 +823,14 @@ class AISEORecommendationAdmin(ModelAdmin):
         applied = 0
         skipped = []
 
-        for rec in queryset.filter(category='meta_tags'):
+        # Filter for metadata category (Meta Tags)
+        meta_recs = queryset.filter(category='metadata')
+
+        if not meta_recs.exists():
+            self.message_user(request, "⚠️ Select Meta Kit (Meta Tags) recommendations only.", messages.WARNING)
+            return
+
+        for rec in meta_recs:
             try:
                 response = rec.response or ""
 
@@ -881,9 +888,14 @@ class AISEORecommendationAdmin(ModelAdmin):
                 self.message_user(request, f"❌ Error: {e}", messages.ERROR)
 
         if applied:
-            self.message_user(request, f"✅ Applied {applied} Meta Kit(s)!", messages.SUCCESS)
-        if skipped:
-            self.message_user(request, f"⚠️ Skipped: {', '.join(skipped[:5])}", messages.WARNING)
+            self.message_user(request, f"✅ Applied {applied} Meta Kit(s) to Page SEO!", messages.SUCCESS)
+        elif skipped:
+            self.message_user(request, f"⚠️ Could not apply. Skipped: {', '.join(skipped[:5])}", messages.WARNING)
+        else:
+            self.message_user(request, "⚠️ No valid Meta Kit data found in selected recommendations.", messages.WARNING)
+
+        if skipped and applied:
+            self.message_user(request, f"ℹ️ Skipped {len(skipped)}: {', '.join(skipped[:3])}...", messages.INFO)
 
     @action(description="🔗 Apply to ALL Matching Services (Smart Match)")
     def apply_to_matching_service(self, request, queryset):
@@ -892,10 +904,18 @@ class AISEORecommendationAdmin(ModelAdmin):
         from difflib import SequenceMatcher
 
         applied = 0
+        skipped = []
         services = list(Service.objects.all())
         page_seos = {ps.service_id: ps for ps in PageSEO.objects.filter(service__isnull=False)}
 
-        for rec in queryset.filter(category='meta_tags'):
+        # Filter for metadata category (Meta Tags)
+        meta_recs = queryset.filter(category='metadata')
+
+        if not meta_recs.exists():
+            self.message_user(request, "⚠️ Select Meta Kit (Meta Tags) recommendations only.", messages.WARNING)
+            return
+
+        for rec in meta_recs:
             try:
                 response = rec.response or ""
 
@@ -964,16 +984,21 @@ class AISEORecommendationAdmin(ModelAdmin):
                         f"✅ '{keyword}' → {best_match.title} (score: {best_score:.0%})",
                         messages.SUCCESS
                     )
+                elif best_match:
+                    skipped.append(f"{keyword} (no PageSEO for {best_match.title})")
+                else:
+                    skipped.append(f"{keyword} (no matching service)")
 
             except Exception as e:
                 self.message_user(request, f"❌ Error: {e}", messages.ERROR)
+                skipped.append(f"Error: {str(e)[:30]}")
 
         if applied:
             self.message_user(request, f"✅ Auto-applied {applied} SEO settings to services!", messages.SUCCESS)
-        elif queryset.filter(category='meta_tags').exists():
-            self.message_user(request, "⚠️ No matching services found for these keywords.", messages.WARNING)
+        elif skipped:
+            self.message_user(request, f"⚠️ No matching services found. Skipped: {', '.join(skipped[:3])}", messages.WARNING)
         else:
-            self.message_user(request, "⚠️ Select Meta Kit recommendations only.", messages.WARNING)
+            self.message_user(request, "⚠️ No valid Meta Kit data found in selected recommendations.", messages.WARNING)
 
     class Meta:
         verbose_name_plural = "🔍 SEO: AI Recommendations"
