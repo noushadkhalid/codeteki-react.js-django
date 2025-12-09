@@ -64,14 +64,18 @@ def _serialize_page_seo(page: str) -> dict:
     seo = PageSEO.objects.filter(page=page).first()
     if not seo:
         return {}
+
+    # Use effective properties that fall back to defaults
+    og_image = seo.effective_og_image
     return {
         "metaTitle": seo.meta_title,
         "metaDescription": seo.meta_description,
         "metaKeywords": seo.meta_keywords,
-        "ogTitle": seo.og_title,
-        "ogDescription": seo.og_description,
-        "ogImage": seo.og_image.url if seo.og_image else None,
+        "ogTitle": seo.effective_og_title,
+        "ogDescription": seo.effective_og_description,
+        "ogImage": og_image.url if og_image else None,
         "canonicalUrl": seo.canonical_url,
+        "targetKeyword": seo.target_keyword,
     }
 
 

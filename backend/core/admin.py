@@ -1295,7 +1295,8 @@ class SiteSettingsAdmin(ModelAdmin):
             'fields': ('site_name', 'site_tagline', 'site_description')
         }),
         ('🎨 Logos & Branding', {
-            'fields': ('logo', 'logo_dark', 'favicon')
+            'fields': ('logo', 'logo_dark', 'favicon', 'default_og_image'),
+            'description': 'Default OG Image is used for social sharing when pages don\'t have their own image.'
         }),
         ('📞 Contact Information', {
             'fields': (

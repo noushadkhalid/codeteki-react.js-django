@@ -604,6 +604,15 @@ class SiteSettings(TimestampedModel):
     google_analytics_id = models.CharField(max_length=50, blank=True)
     facebook_pixel_id = models.CharField(max_length=50, blank=True)
 
+    # Default SEO / Social Sharing
+    default_og_image = OptimizedImageField(
+        upload_to='site/',
+        blank=True,
+        null=True,
+        webp_max_size=(1200, 630),
+        help_text="Default image for social sharing (1200x630). Used when pages don't have their own OG image."
+    )
+
     class Meta:
         verbose_name = "Site Settings"
         verbose_name_plural = "Site Settings"
@@ -763,6 +772,30 @@ class PageSEO(TimestampedModel):
         if self.custom_url:
             return self.custom_url
         return f"/{self.page}" if self.page != 'home' else "/"
+
+    @property
+    def effective_og_image(self):
+        """Get OG image - falls back to site default if not set."""
+        if self.og_image:
+            return self.og_image
+        # Fall back to site default
+        try:
+            site_settings = SiteSettings.objects.first()
+            if site_settings and site_settings.default_og_image:
+                return site_settings.default_og_image
+        except Exception:
+            pass
+        return None
+
+    @property
+    def effective_og_title(self):
+        """Get OG title - falls back to meta title if not set."""
+        return self.og_title or self.meta_title
+
+    @property
+    def effective_og_description(self):
+        """Get OG description - falls back to meta description if not set."""
+        return self.og_description or self.meta_description
 
 
 # Testimonials
