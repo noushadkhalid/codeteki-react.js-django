@@ -587,13 +587,22 @@ class ContactInquiryAdmin(ModelAdmin):
 
 @admin.register(PageSEO)
 class PageSEOAdmin(ModelAdmin):
-    list_display = ('page', 'meta_title', 'canonical_url', 'updated_at')
-    list_filter = ('page',)
-    search_fields = ('meta_title', 'meta_description', 'meta_keywords')
+    list_display = ('__str__', 'target_keyword', 'meta_title', 'target_url_display', 'updated_at')
+    list_filter = ('page', 'service', 'blog_post')
+    search_fields = ('meta_title', 'meta_description', 'target_keyword', 'custom_url')
+    autocomplete_fields = ('service', 'blog_post', 'source_recommendation')
 
     fieldsets = (
         ('📄 Page Selection', {
-            'fields': ('page',)
+            'fields': ('page', 'custom_url'),
+            'description': 'Select a preset page OR enter a custom URL'
+        }),
+        ('🔗 Link to Content (Optional)', {
+            'fields': ('service', 'blog_post'),
+            'description': 'Link to a service or blog post for automatic URL'
+        }),
+        ('🎯 Target Keyword', {
+            'fields': ('target_keyword', 'source_recommendation'),
         }),
         ('🔍 Meta Tags', {
             'fields': ('meta_title', 'meta_description', 'meta_keywords', 'canonical_url')
@@ -603,6 +612,10 @@ class PageSEOAdmin(ModelAdmin):
             'description': 'Controls how your page appears when shared on Facebook, LinkedIn, etc.'
         }),
     )
+
+    def target_url_display(self, obj):
+        return obj.target_url
+    target_url_display.short_description = "Target URL"
 
     class Meta:
         verbose_name_plural = "🔍 SEO: Page SEO"
@@ -748,6 +761,7 @@ class AISEORecommendationAdmin(ModelAdmin):
     search_fields = ('title', 'response')
     autocomplete_fields = ('upload', 'cluster', 'keyword')
     readonly_fields = ('prompt', 'response', 'ai_model', 'prompt_tokens', 'completion_tokens', 'metadata_pretty', 'status', 'error_message', 'created_at', 'updated_at')
+    actions = ['apply_meta_to_page', 'apply_to_matching_service']
 
     fieldsets = (
         ('📋 Recommendation Info', {
@@ -772,6 +786,194 @@ class AISEORecommendationAdmin(ModelAdmin):
         formatted = json.dumps(obj.metadata, indent=2, ensure_ascii=False)
         return format_html("<pre style='white-space: pre-wrap; background: #f5f5f5; padding: 10px; border-radius: 4px;'>{}</pre>", formatted)
     metadata_pretty.short_description = "Metadata"
+
+    @action(description="🚀 Auto-Apply Meta Kit to Best Matching Page")
+    def apply_meta_to_page(self, request, queryset):
+        """Parse Meta Kit responses and apply to best matching PageSEO entry."""
+        import re
+
+        # Keyword to service mapping
+        KEYWORD_SERVICE_MAP = {
+            'web development': 'web-dev',
+            'website development': 'web-dev',
+            'website developer': 'web-dev',
+            'ecommerce': 'web-dev',
+            'automation': 'automation',
+            'business automation': 'automation',
+            'workflow automation': 'automation',
+            'task automation': 'automation',
+            'crm automation': 'automation',
+            'ai chatbot': 'ai-workforce',
+            'ai workforce': 'ai-workforce',
+            'chatbot': 'ai-workforce',
+            'voice agent': 'ai-workforce',
+            'ai phone': 'ai-workforce',
+            'customer service': 'ai-workforce',
+            'custom tool': 'custom-tools',
+            'api integration': 'custom-tools',
+            'software integration': 'custom-tools',
+            'zapier': 'custom-tools',
+            'ai tool': 'daily-ai',
+            'daily ai': 'daily-ai',
+            'ai assistant': 'daily-ai',
+            'seo': 'seo-engine',
+            'mcp': 'mcp-integration',
+        }
+
+        applied = 0
+        skipped = []
+
+        for rec in queryset.filter(category='meta_tags'):
+            try:
+                response = rec.response or ""
+
+                # Parse the AI response for meta data
+                title_match = re.search(r'\*\*Page Title:\*\*\s*(.+?)(?:\n|$)', response)
+                desc_match = re.search(r'\*\*Meta Description:\*\*\s*(.+?)(?:\n|$)', response)
+
+                if not title_match or not desc_match:
+                    continue
+
+                meta_title = title_match.group(1).strip()
+                meta_desc = desc_match.group(1).strip()
+
+                # Get keyword from metadata
+                keyword = ""
+                if rec.metadata and 'keywords' in rec.metadata:
+                    keywords = rec.metadata['keywords']
+                    if keywords and len(keywords) > 0:
+                        keyword = keywords[0].get('keyword', '')
+
+                if not keyword:
+                    continue
+
+                # Find matching service by keyword
+                matched_service = None
+                keyword_lower = keyword.lower()
+
+                for kw_pattern, service_slug in KEYWORD_SERVICE_MAP.items():
+                    if kw_pattern in keyword_lower:
+                        matched_service = Service.objects.filter(slug=service_slug).first()
+                        if matched_service:
+                            break
+
+                if matched_service:
+                    # Update existing PageSEO for this service
+                    page_seo = PageSEO.objects.filter(service=matched_service).first()
+                    if page_seo:
+                        page_seo.meta_title = meta_title[:160]
+                        page_seo.meta_description = meta_desc[:320]
+                        page_seo.target_keyword = keyword
+                        page_seo.source_recommendation = rec
+                        page_seo.save()
+                        applied += 1
+                        self.message_user(
+                            request,
+                            f"✅ '{keyword}' → /services/{matched_service.slug}",
+                            messages.SUCCESS
+                        )
+                    else:
+                        skipped.append(f"{keyword} (no PageSEO for {matched_service.slug})")
+                else:
+                    skipped.append(f"{keyword} (no matching service)")
+
+            except Exception as e:
+                self.message_user(request, f"❌ Error: {e}", messages.ERROR)
+
+        if applied:
+            self.message_user(request, f"✅ Applied {applied} Meta Kit(s)!", messages.SUCCESS)
+        if skipped:
+            self.message_user(request, f"⚠️ Skipped: {', '.join(skipped[:5])}", messages.WARNING)
+
+    @action(description="🔗 Apply to ALL Matching Services (Smart Match)")
+    def apply_to_matching_service(self, request, queryset):
+        """Smart match keywords to services using multiple strategies."""
+        import re
+        from difflib import SequenceMatcher
+
+        applied = 0
+        services = list(Service.objects.all())
+        page_seos = {ps.service_id: ps for ps in PageSEO.objects.filter(service__isnull=False)}
+
+        for rec in queryset.filter(category='meta_tags'):
+            try:
+                response = rec.response or ""
+
+                # Parse the AI response
+                title_match = re.search(r'\*\*Page Title:\*\*\s*(.+?)(?:\n|$)', response)
+                desc_match = re.search(r'\*\*Meta Description:\*\*\s*(.+?)(?:\n|$)', response)
+
+                if not title_match or not desc_match:
+                    continue
+
+                meta_title = title_match.group(1).strip()
+                meta_desc = desc_match.group(1).strip()
+
+                # Get keyword
+                keyword = ""
+                if rec.metadata and 'keywords' in rec.metadata:
+                    keywords = rec.metadata['keywords']
+                    if keywords:
+                        keyword = keywords[0].get('keyword', '')
+
+                if not keyword:
+                    continue
+
+                # Find best matching service using multiple strategies
+                best_match = None
+                best_score = 0
+                keyword_lower = keyword.lower()
+                keyword_words = set(keyword_lower.split())
+
+                for service in services:
+                    score = 0
+                    service_title_lower = service.title.lower()
+                    service_desc_lower = (service.description or "").lower()
+
+                    # Strategy 1: Exact substring match (highest priority)
+                    if keyword_lower in service_title_lower:
+                        score = max(score, 0.9)
+                    if keyword_lower in service_desc_lower:
+                        score = max(score, 0.8)
+
+                    # Strategy 2: Word overlap
+                    title_words = set(service_title_lower.split())
+                    desc_words = set(service_desc_lower.split())
+                    title_overlap = len(keyword_words & title_words) / max(len(keyword_words), 1)
+                    desc_overlap = len(keyword_words & desc_words) / max(len(keyword_words), 1)
+                    score = max(score, title_overlap * 0.7, desc_overlap * 0.6)
+
+                    # Strategy 3: Fuzzy match
+                    fuzzy_title = SequenceMatcher(None, keyword_lower, service_title_lower).ratio()
+                    score = max(score, fuzzy_title * 0.5)
+
+                    if score > best_score and score > 0.3:
+                        best_score = score
+                        best_match = service
+
+                if best_match and best_match.id in page_seos:
+                    page_seo = page_seos[best_match.id]
+                    page_seo.meta_title = meta_title[:160]
+                    page_seo.meta_description = meta_desc[:320]
+                    page_seo.target_keyword = keyword
+                    page_seo.source_recommendation = rec
+                    page_seo.save()
+                    applied += 1
+                    self.message_user(
+                        request,
+                        f"✅ '{keyword}' → {best_match.title} (score: {best_score:.0%})",
+                        messages.SUCCESS
+                    )
+
+            except Exception as e:
+                self.message_user(request, f"❌ Error: {e}", messages.ERROR)
+
+        if applied:
+            self.message_user(request, f"✅ Auto-applied {applied} SEO settings to services!", messages.SUCCESS)
+        elif queryset.filter(category='meta_tags').exists():
+            self.message_user(request, "⚠️ No matching services found for these keywords.", messages.WARNING)
+        else:
+            self.message_user(request, "⚠️ Select Meta Kit recommendations only.", messages.WARNING)
 
     class Meta:
         verbose_name_plural = "🔍 SEO: AI Recommendations"

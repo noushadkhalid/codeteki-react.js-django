@@ -690,6 +690,9 @@ class BusinessHours(models.Model):
 
 # SEO Meta for different pages
 class PageSEO(TimestampedModel):
+    """
+    SEO settings for any page - static pages or dynamic (service details, blog posts).
+    """
     PAGE_CHOICES = [
         ('home', 'Home Page'),
         ('services', 'Services Page'),
@@ -699,23 +702,69 @@ class PageSEO(TimestampedModel):
         ('contact', 'Contact Page'),
         ('about', 'About Page'),
         ('pricing', 'Pricing Page'),
+        ('custom', 'Custom URL'),
     ]
 
-    page = models.CharField(max_length=50, choices=PAGE_CHOICES, unique=True)
+    # Page identification - either preset or custom URL
+    page = models.CharField(max_length=50, choices=PAGE_CHOICES, default='custom')
+    custom_url = models.CharField(
+        max_length=255, blank=True,
+        help_text="For dynamic pages like /services/ai-chatbots or /blog/my-post"
+    )
+
+    # Link to specific content (optional)
+    service = models.OneToOneField(
+        'Service', on_delete=models.CASCADE, null=True, blank=True,
+        related_name='seo_settings',
+        help_text="Link to a service for auto-URL"
+    )
+    blog_post = models.OneToOneField(
+        'BlogPost', on_delete=models.CASCADE, null=True, blank=True,
+        related_name='seo_settings',
+        help_text="Link to a blog post for auto-URL"
+    )
+
+    # Core SEO fields
     meta_title = models.CharField(max_length=160)
     meta_description = models.TextField(max_length=320)
     meta_keywords = models.TextField(blank=True, help_text="Comma separated keywords")
+    canonical_url = models.URLField(blank=True)
+
+    # Open Graph
     og_title = models.CharField(max_length=160, blank=True, verbose_name="Open Graph Title")
     og_description = models.TextField(max_length=320, blank=True)
     og_image = OptimizedImageField(upload_to='seo/', blank=True, null=True, webp_max_size=(1200, 630))
-    canonical_url = models.URLField(blank=True)
+
+    # Track which AI recommendation this came from
+    source_recommendation = models.ForeignKey(
+        'AISEORecommendation', on_delete=models.SET_NULL, null=True, blank=True,
+        help_text="AI recommendation that generated this SEO"
+    )
+    target_keyword = models.CharField(max_length=255, blank=True, help_text="Primary keyword being targeted")
 
     class Meta:
         verbose_name = "Page SEO"
         verbose_name_plural = "Page SEO Settings"
 
     def __str__(self):
+        if self.service:
+            return f"SEO - Service: {self.service.title}"
+        if self.blog_post:
+            return f"SEO - Blog: {self.blog_post.title}"
+        if self.custom_url:
+            return f"SEO - {self.custom_url}"
         return f"SEO - {self.get_page_display()}"
+
+    @property
+    def target_url(self):
+        """Get the URL this SEO applies to."""
+        if self.service:
+            return f"/services/{self.service.slug}"
+        if self.blog_post:
+            return f"/blog/{self.blog_post.slug}"
+        if self.custom_url:
+            return self.custom_url
+        return f"/{self.page}" if self.page != 'home' else "/"
 
 
 # Testimonials
