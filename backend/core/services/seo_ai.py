@@ -81,8 +81,21 @@ class SEOAutomationEngine:
         )
         metadata_prompt = (
             base_prompt
-            + "Suggest an SEO metadata kit: page title (<60 chars), meta description (<155 chars), "
-            "URL slug, and three FAQ schema questions we can add to the page."
+            + """Generate a complete SEO metadata kit with the following format (use exactly these labels):
+
+**Page Title:** [50-60 chars, include primary keyword, brand at end]
+**Meta Description:** [150-155 chars, compelling with CTA]
+**Meta Keywords:** [5-8 comma-separated keywords from the cluster data above]
+**OG Title:** [Same as page title or slightly shorter for social]
+**OG Description:** [Same as meta description or more engaging for social]
+**URL Slug:** [lowercase-with-dashes]
+
+**FAQ Schema Questions:**
+1. [Question about this topic]
+2. [Question about this topic]
+3. [Question about this topic]
+
+Use the actual keywords from the data provided - don't make up new ones."""
         )
 
         recommendations = [
