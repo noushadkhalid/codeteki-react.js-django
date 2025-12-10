@@ -17,19 +17,32 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.contrib.sitemaps.views import sitemap
+from django.contrib.sitemaps.views import sitemap as django_sitemap
 from django.urls import include, path, re_path
 from django.views.static import serve
 
 from core.views import ReactAppView
 from core.sitemaps import sitemaps
 
+
+def sitemap_view(request, sitemaps, **kwargs):
+    """Custom sitemap view that removes the X-Robots-Tag header.
+
+    Django adds 'X-Robots-Tag: noindex' by default which can cause
+    Google Search Console to fail fetching the sitemap.
+    """
+    response = django_sitemap(request, sitemaps=sitemaps, **kwargs)
+    # Remove the noindex header so Google can properly index our sitemap
+    if 'X-Robots-Tag' in response.headers:
+        del response.headers['X-Robots-Tag']
+    return response
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('core.urls')),
 
-    # Sitemap for SEO - dynamically updates with new content
-    path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
+    # Sitemap for SEO - dynamically updates with new content (custom view removes X-Robots-Tag)
+    path('sitemap.xml', sitemap_view, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
 
     # Serve static files from build root (images, manifest, etc.)
     re_path(
