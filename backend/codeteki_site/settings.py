@@ -220,7 +220,7 @@ GOOGLE_SERVICE_ACCOUNT_FILE = os.getenv(
 GOOGLE_SEARCH_CONSOLE_PROPERTY = os.getenv("GOOGLE_SEARCH_CONSOLE_PROPERTY", "https://www.codeteki.au/")
 
 # Site URL for SEO audits
-SITE_URL = os.getenv("SITE_URL", "https://www.codeteki.au")
+SITE_URL = os.getenv("SITE_URL", "https://codeteki.au")
 
 # Django Unfold Configuration
 from django.templatetags.static import static

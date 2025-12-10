@@ -6,7 +6,7 @@ import { useSiteSettings } from "../hooks/useSiteSettings";
 export default function SEOHead({ title, description, keywords, page }) {
   const [location] = useLocation();
   // Fallback canonical URL if not provided by API
-  const fallbackCanonicalUrl = `https://www.codeteki.au${location === "/" ? "" : location.replace(/\/$/, "")}`;
+  const fallbackCanonicalUrl = `https://codeteki.au${location === "/" ? "" : location.replace(/\/$/, "")}`;
 
   const { settings } = useSiteSettings();
 

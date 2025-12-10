@@ -17,11 +17,26 @@ from .models import (
 )
 
 
-class StaticViewSitemap(Sitemap):
+class CodetekiSitemap(Sitemap):
+    """Base sitemap class that uses codeteki.au domain."""
+    protocol = 'https'
+
+    def get_urls(self, page=1, site=None, protocol=None):
+        """Override to use codeteki.au domain instead of request domain."""
+        from django.contrib.sites.requests import RequestSite
+
+        # Create a fake site object with our domain
+        class FakeSite:
+            domain = 'codeteki.au'
+            name = 'Codeteki'
+
+        return super().get_urls(page=page, site=FakeSite(), protocol=self.protocol)
+
+
+class StaticViewSitemap(CodetekiSitemap):
     """Sitemap for static pages."""
     priority = 0.8
     changefreq = 'weekly'
-    protocol = 'https'
 
     def items(self):
         return [
@@ -42,11 +57,10 @@ class StaticViewSitemap(Sitemap):
         return f'/{item}/'
 
 
-class BlogSitemap(Sitemap):
+class BlogSitemap(CodetekiSitemap):
     """Sitemap for blog posts."""
     changefreq = 'weekly'
     priority = 0.7
-    protocol = 'https'
 
     def items(self):
         return BlogPost.objects.filter(
@@ -60,11 +74,10 @@ class BlogSitemap(Sitemap):
         return obj.get_absolute_url()
 
 
-class BlogCategorySitemap(Sitemap):
+class BlogCategorySitemap(CodetekiSitemap):
     """Sitemap for blog categories."""
     changefreq = 'weekly'
     priority = 0.5
-    protocol = 'https'
 
     def items(self):
         return BlogCategory.objects.filter(is_active=True)
@@ -76,11 +89,10 @@ class BlogCategorySitemap(Sitemap):
         return obj.get_absolute_url()
 
 
-class ServiceSitemap(Sitemap):
+class ServiceSitemap(CodetekiSitemap):
     """Sitemap for services."""
     changefreq = 'monthly'
     priority = 0.8
-    protocol = 'https'
 
     def items(self):
         return Service.objects.all()
@@ -92,11 +104,10 @@ class ServiceSitemap(Sitemap):
         return f'/services/{obj.slug}/'
 
 
-class DemoSitemap(Sitemap):
+class DemoSitemap(CodetekiSitemap):
     """Sitemap for demo showcases."""
     changefreq = 'monthly'
     priority = 0.6
-    protocol = 'https'
 
     def items(self):
         return DemoShowcase.objects.filter(is_active=True)
@@ -108,11 +119,10 @@ class DemoSitemap(Sitemap):
         return f'/demos/{obj.slug}/'
 
 
-class AIToolSitemap(Sitemap):
+class AIToolSitemap(CodetekiSitemap):
     """Sitemap for AI tools."""
     changefreq = 'weekly'
     priority = 0.7
-    protocol = 'https'
 
     def items(self):
         return AITool.objects.filter(is_active=True)
