@@ -1304,6 +1304,9 @@ class ReactAppView(TemplateView):
     """
     Serves the compiled React SPA (frontend/dist/index.html).
 
+    Injects SEO meta tags server-side so Google sees them immediately,
+    before JavaScript loads.
+
     If the build is missing we show a helpful reminder template instead.
     """
 
@@ -1318,4 +1321,85 @@ class ReactAppView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["brand"] = BRAND_TOKENS
+
+        # Inject SEO from database
+        path = self.request.path
+        seo = self._get_seo_for_path(path)
+        context["seo"] = seo
+
         return context
+
+    def _get_seo_for_path(self, path):
+        """Get SEO data for the current URL path."""
+        from .models import PageSEO, Service, BlogPost
+
+        site_url = getattr(settings, 'SITE_URL', 'https://codeteki.au').rstrip('/')
+
+        # Default SEO
+        default_seo = {
+            'title': 'Codeteki - AI Business Solutions Melbourne',
+            'description': 'Transform your business with AI-powered chatbots, voice assistants, and custom automation. Melbourne-based AI development team.',
+            'keywords': 'AI business solutions, chatbot development, voice AI, business automation, Melbourne',
+            'canonical': f'{site_url}{path.rstrip("/")}' if path != '/' else site_url,
+            'og_title': 'Codeteki - AI Business Solutions',
+            'og_description': 'Transform your business with AI-powered solutions.',
+            'og_image': f'{site_url}/favicon.png',
+        }
+
+        # Map URL paths to page types
+        path_clean = path.rstrip('/')
+
+        # Check for service detail pages: /services/slug
+        if path_clean.startswith('/services/') and path_clean.count('/') == 2:
+            slug = path_clean.split('/')[-1]
+            service = Service.objects.filter(slug=slug).first()
+            if service:
+                seo = PageSEO.objects.filter(service=service).first()
+                if seo:
+                    return self._seo_to_dict(seo, site_url, path)
+
+        # Check for blog pages: /blog/slug
+        if path_clean.startswith('/blog/') and path_clean.count('/') == 2:
+            slug = path_clean.split('/')[-1]
+            post = BlogPost.objects.filter(slug=slug).first()
+            if post:
+                seo = PageSEO.objects.filter(blog_post=post).first()
+                if seo:
+                    return self._seo_to_dict(seo, site_url, path)
+
+        # Map static pages
+        page_map = {
+            '/': 'home',
+            '': 'home',
+            '/services': 'services',
+            '/ai-tools': 'ai-tools',
+            '/demos': 'demos',
+            '/faq': 'faq',
+            '/contact': 'contact',
+            '/blog': 'blog',
+        }
+
+        page_type = page_map.get(path_clean)
+        if page_type:
+            seo = PageSEO.objects.filter(page=page_type).first()
+            if seo:
+                return self._seo_to_dict(seo, site_url, path)
+
+        # Try custom URL match
+        seo = PageSEO.objects.filter(custom_url=path_clean).first()
+        if seo:
+            return self._seo_to_dict(seo, site_url, path)
+
+        return default_seo
+
+    def _seo_to_dict(self, seo, site_url, path):
+        """Convert PageSEO model to template context dict."""
+        return {
+            'title': seo.meta_title or 'Codeteki',
+            'description': seo.meta_description or '',
+            'keywords': seo.meta_keywords or '',
+            'canonical': seo.canonical_url or f'{site_url}{path.rstrip("/")}',
+            'og_title': seo.effective_og_title or seo.meta_title,
+            'og_description': seo.effective_og_description or seo.meta_description,
+            'og_image': seo.effective_og_image.url if seo.effective_og_image else f'{site_url}/favicon.png',
+        }

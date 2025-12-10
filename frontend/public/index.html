@@ -4,11 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
     <link rel="icon" type="image/png" href="/favicon.png" />
+
+    <!-- SEO Meta Tags - Injected by Django from PageSEO database -->
+    {% if seo %}
+    <title>{{ seo.title }}</title>
+    <meta name="description" content="{{ seo.description }}" />
+    <meta name="keywords" content="{{ seo.keywords }}" />
+    <link rel="canonical" href="{{ seo.canonical }}" />
+    {% else %}
     <title>Codeteki - AI Business Solutions Melbourne | Voice AI Development</title>
-    
-    <!-- Essential SEO Meta Tags -->
     <meta name="description" content="Transform your business with AI-powered chatbots, voice assistants, and custom automation. One-time setup from $499 (website development). Melbourne-based AI development team." />
     <meta name="keywords" content="AI business solutions Melbourne, chatbot development Australia, voice AI assistant, business automation, website development Melbourne, no monthly fees, AI solutions" />
+    {% endif %}
     <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
     <meta name="author" content="Codeteki" />
     <meta name="language" content="en-AU" />
@@ -38,19 +45,33 @@
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
+    {% if seo %}
+    <meta property="og:url" content="{{ seo.canonical }}" />
+    <meta property="og:title" content="{{ seo.og_title }}" />
+    <meta property="og:description" content="{{ seo.og_description }}" />
+    <meta property="og:image" content="{{ seo.og_image }}" />
+    {% else %}
     <meta property="og:url" content="https://codeteki.au/" />
     <meta property="og:title" content="Codeteki - AI Business Solutions Melbourne | Voice AI & Chatbot Development" />
     <meta property="og:description" content="Transform your business with AI-powered chatbots, voice assistants, and custom automation. One-time setup from $499 (website development). Melbourne-based AI development team." />
     <meta property="og:image" content="https://codeteki.au/favicon.png" />
+    {% endif %}
     <meta property="og:site_name" content="Codeteki" />
     <meta property="og:locale" content="en_AU" />
-    
+
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
+    {% if seo %}
+    <meta property="twitter:url" content="{{ seo.canonical }}" />
+    <meta property="twitter:title" content="{{ seo.og_title }}" />
+    <meta property="twitter:description" content="{{ seo.og_description }}" />
+    <meta property="twitter:image" content="{{ seo.og_image }}" />
+    {% else %}
     <meta property="twitter:url" content="https://codeteki.au/" />
     <meta property="twitter:title" content="Codeteki - AI Business Solutions Melbourne | Voice AI & Chatbot Development" />
     <meta property="twitter:description" content="Transform your business with AI-powered chatbots, voice assistants, and custom automation. One-time setup from $499 (website development). Melbourne-based AI development team." />
     <meta property="twitter:image" content="https://codeteki.au/favicon.png" />
+    {% endif %}
     
     <!-- Geographic Tags -->
     <meta name="geo.region" content="AU-VIC" />
