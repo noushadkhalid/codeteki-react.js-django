@@ -85,16 +85,8 @@ export default function NotFound() {
                 >
                   Services
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setLocation('/pricing')}
-                  className="text-[#f9cb07] hover:text-[#e6b800]"
-                >
-                  Pricing
-                </Button>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   size="sm"
                   onClick={() => setLocation('/demos')}
                   className="text-[#f9cb07] hover:text-[#e6b800]"

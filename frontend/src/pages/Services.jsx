@@ -24,7 +24,7 @@ const fallbackServices = [
     description:
       "Deploy intelligent chatbots and voice agents that work 24/7 to engage customers, qualify leads, and handle routine inquiries with human-like conversations.",
     icon: "bot",
-    badge: "from $699 setup",
+    badge: "AI Workforce",
     outcomes: [
       "24/7 automated customer engagement",
       "Intelligent lead qualification",
@@ -38,7 +38,7 @@ const fallbackServices = [
     description:
       "Modern, responsive websites built with the latest technologies, optimized for mobile devices and search engines to showcase your business.",
     icon: "globe",
-    badge: "from $499",
+    badge: "Web Development",
     outcomes: [
       "Mobile-responsive design",
       "Search engine optimization",
@@ -113,8 +113,8 @@ const servicesHeroFallback = {
   badge: "Our Core Services",
   title: "From AI workforce to custom tools and MCP integration",
   description:
-    "Comprehensive solutions tailored for your business with Melbourne-based delivery, transparent pricing, and fully managed operations after launch.",
-  subheading: "Melbourne-based delivery, transparent pricing, and fully managed operations.",
+    "Comprehensive solutions tailored for your business with Melbourne-based delivery and fully managed operations after launch.",
+  subheading: "Melbourne-based delivery and fully managed operations.",
   metrics: fallbackStats,
 };
 

@@ -6,7 +6,6 @@ Disallow: /private/
 # Allow essential public API endpoints for content rendering
 Allow: /api/services
 Allow: /api/ai-tools
-Allow: /api/pricing-plans
 Allow: /api/site-settings
 Allow: /api/demo-sites
 
@@ -53,7 +52,6 @@ Disallow: /
 # Important pages for SEO
 # Homepage: https://codeteki.au/
 # Services: https://codeteki.au/services
-# Pricing: https://codeteki.au/pricing
 # Contact: https://codeteki.au/contact
 # AI Tools: https://codeteki.au/ai-tools
 # Demos: https://codeteki.au/demos

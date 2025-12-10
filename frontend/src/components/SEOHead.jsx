@@ -54,38 +54,36 @@ export default function SEOHead({ title, description, keywords, page }) {
         "longitude": "144.9631",
       },
       "openingHours": ["Mo-Fr 09:00-17:00"],
-      "priceRange": "$499-$999",
       "areaServed": {
         "@type": "Country",
         "name": "Australia",
       },
-      "hasOfferCatalog": {
-        "@type": "OfferCatalog",
-        "name": "AI Business Solutions",
-        "itemListElement": [
-          {
-            "@type": "Offer",
-            "name": "AI Chatbots",
-            "price": "999",
-            "priceCurrency": "AUD",
-            "description": "Custom AI chatbot development and integration"
-          },
-          {
-            "@type": "Offer", 
-            "name": "Voice AI Assistants",
-            "price": "899",
-            "priceCurrency": "AUD",
-            "description": "Intelligent voice assistant systems"
-          },
-          {
-            "@type": "Offer",
-            "name": "Website Development",
-            "price": "499", 
-            "priceCurrency": "AUD",
-            "description": "Professional website development services"
+      "makesOffer": [
+        {
+          "@type": "Offer",
+          "itemOffered": {
+            "@type": "Service",
+            "name": "AI Workforce Solutions",
+            "description": "Intelligent AI chatbots and voice agents for customer service automation"
           }
-        ],
-      },
+        },
+        {
+          "@type": "Offer",
+          "itemOffered": {
+            "@type": "Service",
+            "name": "Web Development",
+            "description": "Custom-built, mobile-optimized websites with AI integration"
+          }
+        },
+        {
+          "@type": "Offer",
+          "itemOffered": {
+            "@type": "Service",
+            "name": "Business Automation",
+            "description": "Custom automation solutions and workflow integrations"
+          }
+        }
+      ],
     };
   }
 

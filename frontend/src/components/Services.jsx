@@ -122,7 +122,7 @@ export default function Services({ featuredOnly = false }) {
             AI Solutions That Drive Real Business Results
           </h2>
           <p className="text-lg text-[#52525b] mb-8">
-            From intelligent automation to custom development, we deliver end-to-end AI solutions with Melbourne-based support, transparent pricing, and fully managed operations.
+            From intelligent automation to custom development, we deliver end-to-end AI solutions with Melbourne-based support and fully managed operations.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button asChild size="lg" className="px-8 py-6 text-lg bg-[#f9cb07] text-black font-semibold hover:bg-[#e6b800]">
