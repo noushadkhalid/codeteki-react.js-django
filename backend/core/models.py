@@ -1157,12 +1157,26 @@ class SEODataUpload(TimestampedModel):
         on_delete=models.CASCADE,
         null=True,
         blank=True,
-        help_text="Link this upload to a specific project/client"
+        help_text="Optional: Link to a project (e.g., 'Desifirms' or 'Client ABC'). Leave blank if just testing."
     )
-    name = models.CharField(max_length=255)
-    source = models.CharField(max_length=64, choices=SOURCE_CHOICES, default=SOURCE_UBERSUGGEST_KEYWORDS)
-    csv_file = models.FileField(upload_to="seo/uploads/")
-    notes = models.TextField(blank=True)
+    name = models.CharField(
+        max_length=255,
+        help_text="Descriptive name. Example: 'Desifirms Keywords Dec 2025' or 'Codeteki Competitor Analysis'"
+    )
+    source = models.CharField(
+        max_length=64,
+        choices=SOURCE_CHOICES,
+        default=SOURCE_UBERSUGGEST_KEYWORDS,
+        help_text="What type of Ubersuggest export is this? 'Keywords Research' is most common."
+    )
+    csv_file = models.FileField(
+        upload_to="seo/uploads/",
+        help_text="Upload the CSV file exported from Ubersuggest → Keywords → Export"
+    )
+    notes = models.TextField(
+        blank=True,
+        help_text="Optional notes. Example: 'Focus on accounting keywords' or 'Competitor: XYZ Accounting'"
+    )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
     row_count = models.PositiveIntegerField(default=0)
     error_count = models.PositiveIntegerField(default=0, help_text="Rows that failed to import")
@@ -2096,6 +2110,11 @@ class SEOProject(TimestampedModel):
     """
     Client/Project container for SEO tracking.
     Each project tracks one domain with its competitors, keywords, and rankings.
+
+    Example Projects:
+    - "Codeteki" → codeteki.au (your own site)
+    - "Desifirms" → desifirms.com.au (your other site)
+    - "Client ABC Accounting" → abcaccounting.com.au (client site)
     """
     STATUS_ACTIVE = "active"
     STATUS_PAUSED = "paused"
@@ -2106,26 +2125,61 @@ class SEOProject(TimestampedModel):
         (STATUS_ARCHIVED, "Archived"),
     ]
 
-    name = models.CharField(max_length=200, help_text="Project/Client name")
-    domain = models.CharField(max_length=255, help_text="Main domain to track (e.g., codeteki.au)")
+    name = models.CharField(
+        max_length=200,
+        help_text="Client or project name. Examples: 'Codeteki', 'Desifirms', 'Client ABC'"
+    )
+    domain = models.CharField(
+        max_length=255,
+        help_text="Website domain WITHOUT https://. Examples: 'codeteki.au', 'desifirms.com.au'"
+    )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_ACTIVE)
 
     # Tracking settings
-    target_country = models.CharField(max_length=10, default="AU", help_text="Target country code")
-    target_language = models.CharField(max_length=10, default="en", help_text="Target language")
+    target_country = models.CharField(
+        max_length=10,
+        default="AU",
+        help_text="2-letter country code. AU=Australia, US=USA, UK=United Kingdom"
+    )
+    target_language = models.CharField(
+        max_length=10,
+        default="en",
+        help_text="2-letter language code. en=English, es=Spanish"
+    )
 
     # Ubersuggest metrics (updated from imports)
-    domain_score = models.IntegerField(null=True, blank=True, help_text="Domain Authority (0-100)")
-    organic_keywords = models.IntegerField(null=True, blank=True, help_text="Total organic keywords")
-    monthly_traffic = models.IntegerField(null=True, blank=True, help_text="Estimated monthly organic traffic")
-    backlinks_count = models.IntegerField(null=True, blank=True, help_text="Total backlinks")
+    domain_score = models.IntegerField(
+        null=True, blank=True,
+        help_text="Domain Authority from Ubersuggest (0-100). Higher = stronger domain."
+    )
+    organic_keywords = models.IntegerField(
+        null=True, blank=True,
+        help_text="Total keywords this domain ranks for in Google"
+    )
+    monthly_traffic = models.IntegerField(
+        null=True, blank=True,
+        help_text="Estimated monthly visitors from organic search"
+    )
+    backlinks_count = models.IntegerField(
+        null=True, blank=True,
+        help_text="Total links from other websites pointing to this domain"
+    )
 
     # Goals
-    target_traffic = models.IntegerField(null=True, blank=True, help_text="Target monthly traffic goal")
-    target_keywords = models.IntegerField(null=True, blank=True, help_text="Target keyword rankings")
+    target_traffic = models.IntegerField(
+        null=True, blank=True,
+        help_text="Your goal for monthly traffic. Example: 10000"
+    )
+    target_keywords = models.IntegerField(
+        null=True, blank=True,
+        help_text="Target number of keywords to rank for. Example: 500"
+    )
 
     # Notes
-    notes = models.TextField(blank=True)
+    notes = models.TextField(
+        blank=True,
+        help_text="Any notes about this project. Example: 'Focus on accounting services keywords'"
+    )
 
     # Link to site audits
     latest_audit = models.ForeignKey(
@@ -2144,22 +2198,51 @@ class SEOCompetitor(TimestampedModel):
     """
     Competitor tracking for a project.
     Stores competitor domains and their metrics from Ubersuggest.
+
+    Example: If your project is "Desifirms", competitors might be:
+    - hrblock.com.au (H&R Block)
+    - taxreturn.com.au
+    - itp.com.au
     """
     project = models.ForeignKey(
         SEOProject, on_delete=models.CASCADE, related_name="competitors"
     )
-    domain = models.CharField(max_length=255, help_text="Competitor domain")
-    name = models.CharField(max_length=200, blank=True, help_text="Competitor name/brand")
+    domain = models.CharField(
+        max_length=255,
+        help_text="Competitor's domain WITHOUT https://. Example: 'hrblock.com.au'"
+    )
+    name = models.CharField(
+        max_length=200, blank=True,
+        help_text="Competitor's business name. Example: 'H&R Block Australia'"
+    )
 
     # Ubersuggest metrics
-    domain_score = models.IntegerField(null=True, blank=True)
-    organic_keywords = models.IntegerField(null=True, blank=True)
-    monthly_traffic = models.IntegerField(null=True, blank=True)
-    backlinks_count = models.IntegerField(null=True, blank=True)
+    domain_score = models.IntegerField(
+        null=True, blank=True,
+        help_text="Their Domain Authority (0-100)"
+    )
+    organic_keywords = models.IntegerField(
+        null=True, blank=True,
+        help_text="How many keywords they rank for"
+    )
+    monthly_traffic = models.IntegerField(
+        null=True, blank=True,
+        help_text="Their estimated monthly traffic"
+    )
+    backlinks_count = models.IntegerField(
+        null=True, blank=True,
+        help_text="How many backlinks they have"
+    )
 
     # Tracking
-    is_primary = models.BooleanField(default=False, help_text="Primary competitor to watch closely")
-    notes = models.TextField(blank=True)
+    is_primary = models.BooleanField(
+        default=False,
+        help_text="Check this for your main competitor. You'll see them highlighted in reports."
+    )
+    notes = models.TextField(
+        blank=True,
+        help_text="Notes about this competitor. Example: 'They rank #1 for accounting melbourne'"
+    )
 
     # Last updated from Ubersuggest
     metrics_updated_at = models.DateTimeField(null=True, blank=True)
