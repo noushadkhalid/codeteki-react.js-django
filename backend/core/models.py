@@ -1573,6 +1573,10 @@ class SiteAudit(TimestampedModel):
     started_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
 
+    # Celery task tracking
+    celery_task_id = models.CharField(max_length=255, blank=True, null=True,
+                                       help_text="Celery task ID for background audit")
+
     # Notes
     notes = models.TextField(blank=True)
 

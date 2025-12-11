@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sitemaps',  # Dynamic sitemap generation
     'ckeditor',  # Rich text editor
+    'django_celery_results',  # Store Celery task results in database
     'core',
 ]
 
@@ -221,6 +222,17 @@ GOOGLE_SEARCH_CONSOLE_PROPERTY = os.getenv("GOOGLE_SEARCH_CONSOLE_PROPERTY", "ht
 
 # Site URL for SEO audits
 SITE_URL = os.getenv("SITE_URL", "https://codeteki.au")
+
+# Celery Configuration
+# Redis as message broker (install Redis on server: apt install redis-server)
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = "django-db"  # Store results in Django database
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes max per task
 
 # Django Unfold Configuration
 from django.templatetags.static import static

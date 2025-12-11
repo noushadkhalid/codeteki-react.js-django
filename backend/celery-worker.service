@@ -1,0 +1,43 @@
+# Celery Worker Systemd Service File
+# Copy this file to /etc/systemd/system/celery-worker.service on your server
+#
+# Then run:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable celery-worker
+#   sudo systemctl start celery-worker
+
+[Unit]
+Description=Celery Worker for Codeteki SEO Audits
+After=network.target redis.service
+
+[Service]
+Type=forking
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/codeteki/backend
+
+# Adjust paths to match your server setup
+Environment="PATH=/var/www/codeteki/.venv/bin"
+Environment="DJANGO_SETTINGS_MODULE=codeteki_site.settings"
+Environment="CELERY_BROKER_URL=redis://localhost:6379/0"
+
+ExecStart=/var/www/codeteki/.venv/bin/celery -A codeteki_site worker \
+    --loglevel=info \
+    --concurrency=2 \
+    --logfile=/var/log/celery/worker.log \
+    --pidfile=/var/run/celery/worker.pid \
+    --detach
+
+ExecStop=/bin/kill -TERM $MAINPID
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Restart on failure
+Restart=on-failure
+RestartSec=10
+
+# Create necessary directories
+RuntimeDirectory=celery
+LogsDirectory=celery
+
+[Install]
+WantedBy=multi-user.target

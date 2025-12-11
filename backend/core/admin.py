@@ -2009,7 +2009,7 @@ class SiteAuditAdmin(ModelAdmin):
     search_fields = ('name', 'domain')
     readonly_fields = ('status', 'avg_performance', 'avg_seo', 'avg_accessibility', 'avg_best_practices',
                        'total_pages', 'total_issues', 'critical_issues', 'warning_issues',
-                       'started_at', 'completed_at', 'ai_analysis', 'created_at', 'updated_at')
+                       'started_at', 'completed_at', 'ai_analysis', 'celery_task_id', 'created_at', 'updated_at')
     inlines = [PageAuditInline]
     date_hierarchy = 'created_at'
     actions = ['run_lighthouse_audit', 'run_pagespeed_analysis', 'generate_ai_analysis', 'generate_combined_ai_analysis', 'preview_ai_data']
@@ -2035,165 +2035,59 @@ class SiteAuditAdmin(ModelAdmin):
             'fields': ('ai_analysis',),
             'description': 'Run "Generate AI analysis" action to get ChatGPT recommendations.'
         }),
-        ('⏰ Timing', {
-            'fields': ('status', 'started_at', 'completed_at', 'created_at', 'updated_at'),
+        ('⏰ Status & Timing', {
+            'fields': ('status', 'celery_task_id', 'started_at', 'completed_at', 'created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
 
-    @action(description="🔍 Run Lighthouse audit")
+    @action(description="🔍 Run Lighthouse audit (Background)")
     def run_lighthouse_audit(self, request, queryset):
-        from .services.lighthouse import LighthouseService
-        import logging
-        logger = logging.getLogger(__name__)
+        """Queue Lighthouse audit to run in background via Celery."""
+        from .tasks import run_lighthouse_audit_task
 
         for audit in queryset:
-            try:
-                # First check if Lighthouse is installed
-                service = LighthouseService(audit)
-                if not service.check_lighthouse_installed():
-                    self.message_user(
-                        request,
-                        f"❌ Lighthouse CLI not installed. Run: sudo npm install -g lighthouse",
-                        messages.ERROR
-                    )
-                    return
-
-                logger.info(f"Starting Lighthouse audit for {audit.name}")
-                result = audit.run_audit()
-                logger.info(f"Lighthouse result: {result}")
-
-                if result.get('success'):
-                    pages_done = result.get('pages_audited', 0)
-                    issues = result.get('total_issues', 0)
-
-                    if pages_done > 0:
-                        self.message_user(
-                            request,
-                            f"✅ Lighthouse '{audit.name}': {pages_done} pages analyzed, {issues} issues found. "
-                            f"Scroll down to see Page Audits results.",
-                            messages.SUCCESS
-                        )
-                    else:
-                        self.message_user(
-                            request,
-                            f"⚠️ Lighthouse completed but no pages were audited. Check if URLs are accessible.",
-                            messages.WARNING
-                        )
-
-                    # Log any errors from individual pages
-                    for error in result.get('errors', []):
-                        self.message_user(
-                            request,
-                            f"⚠️ {error.get('url')}: {error.get('error')}",
-                            messages.WARNING
-                        )
-                else:
-                    error_msg = result.get('error', 'Unknown error')
-                    logger.error(f"Lighthouse audit failed: {error_msg}")
-                    self.message_user(request, f"❌ Lighthouse failed: {error_msg}", messages.ERROR)
-
-            except Exception as e:
-                logger.exception(f"Error running Lighthouse: {e}")
-                self.message_user(request, f"❌ Error: {str(e)}", messages.ERROR)
-
-    @action(description="⚡ Run PageSpeed analysis")
-    def run_pagespeed_analysis(self, request, queryset):
-        """Run PageSpeed and save results to PageAudit (shows inline below)."""
-        from django.utils import timezone
-        from .services.pagespeed import PageSpeedService
-        from .models import PageAudit, AuditIssue
-
-        service = PageSpeedService()
-
-        for audit in queryset:
+            # Update status to pending/queued
             audit.status = 'running'
-            audit.started_at = timezone.now()
-            audit.save(update_fields=['status', 'started_at'])
+            audit.save(update_fields=['status'])
 
-            urls = audit.target_urls or [f"https://{audit.domain}/"]
-            pages_done = 0
+            # Queue the task
+            task = run_lighthouse_audit_task.delay(audit.id)
 
-            for url in urls[:10]:  # Limit to 10 URLs
-                try:
-                    # Get PageSpeed data
-                    data = service.analyze_url(url, audit.strategy)
-                    if not data or not data.get('success'):
-                        continue
+            # Store task ID for tracking
+            audit.celery_task_id = task.id
+            audit.save(update_fields=['celery_task_id'])
 
-                    # Save to PageAudit (shows inline in Site Audits)
-                    page_audit, created = PageAudit.objects.update_or_create(
-                        site_audit=audit,
-                        url=url,
-                        defaults={
-                            'strategy': audit.strategy,
-                            'performance_score': data.get('lab_performance_score'),
-                            'seo_score': data.get('seo_score'),
-                            'accessibility_score': data.get('accessibility_score'),
-                            'best_practices_score': data.get('best_practices_score'),
-                            'lcp': data.get('lab_lcp'),
-                            'cls': data.get('lab_cls'),
-                            'fcp': data.get('lab_fcp'),
-                            'tbt': data.get('lab_tbt'),
-                            'si': data.get('lab_si'),
-                            'ttfb': data.get('field_ttfb'),
-                            'status': 'completed',
-                            'raw_data': data.get('raw_data', {})
-                        }
-                    )
-
-                    # Save issues to AuditIssue model (for AI analysis)
-                    if data.get('issues'):
-                        # Clear existing issues for this page audit
-                        AuditIssue.objects.filter(page_audit=page_audit).delete()
-
-                        for issue_data in data['issues']:
-                            AuditIssue.objects.create(
-                                page_audit=page_audit,
-                                audit_id=issue_data.get('id', ''),
-                                title=issue_data.get('title', ''),
-                                description=issue_data.get('description', ''),
-                                category=issue_data.get('category', ''),
-                                severity=issue_data.get('severity', 'info'),
-                                score=issue_data.get('score'),
-                                display_value=issue_data.get('display_value', ''),
-                                savings_ms=issue_data.get('savings_ms', 0),
-                                savings_bytes=issue_data.get('savings_bytes', 0),
-                                details=issue_data.get('details', {}),
-                            )
-
-                    pages_done += 1
-                except Exception as e:
-                    self.message_user(request, f"❌ {url}: {str(e)}", messages.ERROR)
-
-            # Update audit totals
-            page_audits = audit.page_audits.all()
-            if page_audits.exists():
-                # Calculate averages only from non-null values
-                perf_scores = [p.performance_score for p in page_audits if p.performance_score is not None]
-                seo_scores = [p.seo_score for p in page_audits if p.seo_score is not None]
-                acc_scores = [p.accessibility_score for p in page_audits if p.accessibility_score is not None]
-                bp_scores = [p.best_practices_score for p in page_audits if p.best_practices_score is not None]
-
-                audit.avg_performance = sum(perf_scores) / len(perf_scores) if perf_scores else None
-                audit.avg_seo = sum(seo_scores) / len(seo_scores) if seo_scores else None
-                audit.avg_accessibility = sum(acc_scores) / len(acc_scores) if acc_scores else None
-                audit.avg_best_practices = sum(bp_scores) / len(bp_scores) if bp_scores else None
-                audit.total_pages = page_audits.count()
-
-            # Update issue counts from AuditIssue
-            all_issues = AuditIssue.objects.filter(page_audit__site_audit=audit)
-            audit.total_issues = all_issues.count()
-            audit.critical_issues = all_issues.filter(severity='error').count()
-            audit.warning_issues = all_issues.filter(severity='warning').count()
-
-            audit.status = 'completed'
-            audit.completed_at = timezone.now()
-            audit.save()
-
+            url_count = len(audit.target_urls) if audit.target_urls else 1
             self.message_user(
                 request,
-                f"✅ '{audit.name}': {pages_done} pages analyzed. Results shown below in Page Audits.",
+                f"🚀 Lighthouse audit '{audit.name}' queued for {url_count} URLs. "
+                f"Task ID: {task.id}. Refresh page to see progress.",
+                messages.SUCCESS
+            )
+
+    @action(description="⚡ Run PageSpeed analysis (Background)")
+    def run_pagespeed_analysis(self, request, queryset):
+        """Queue PageSpeed analysis to run in background via Celery."""
+        from .tasks import run_pagespeed_audit_task
+
+        for audit in queryset:
+            # Update status
+            audit.status = 'running'
+            audit.save(update_fields=['status'])
+
+            # Queue the task
+            task = run_pagespeed_audit_task.delay(audit.id)
+
+            # Store task ID for tracking
+            audit.celery_task_id = task.id
+            audit.save(update_fields=['celery_task_id'])
+
+            url_count = len(audit.target_urls) if audit.target_urls else 1
+            self.message_user(
+                request,
+                f"🚀 PageSpeed analysis '{audit.name}' queued for {url_count} URLs. "
+                f"Task ID: {task.id}. Refresh page to see progress.",
                 messages.SUCCESS
             )
 
