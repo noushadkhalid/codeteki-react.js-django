@@ -2186,13 +2186,16 @@ class SiteAuditAdmin(ModelAdmin):
         """Generate a professional PDF report for the selected audit."""
         from django.http import HttpResponse
         from .services.seo_report_pdf import generate_seo_audit_pdf
+        import traceback
+        import logging
+        logger = logging.getLogger(__name__)
 
         audit = queryset.first()
         if not audit:
             self.message_user(request, "❌ No audit selected", messages.ERROR)
             return
 
-        if audit.total_pages == 0:
+        if not audit.total_pages or audit.total_pages == 0:
             self.message_user(
                 request,
                 "❌ No page audits found. Run a Lighthouse or PageSpeed audit first.",
@@ -2217,6 +2220,10 @@ class SiteAuditAdmin(ModelAdmin):
             return response
 
         except Exception as e:
+            # Log full traceback to console/logs
+            tb = traceback.format_exc()
+            logger.error(f"PDF generation error:\n{tb}")
+            print(f"PDF generation error:\n{tb}")  # Also print to console
             self.message_user(request, f"❌ Error generating PDF: {str(e)}", messages.ERROR)
 
     class Meta:
@@ -2338,6 +2345,9 @@ class AIAnalysisReportAdmin(ModelAdmin):
         """Generate a professional PDF report for the selected audit."""
         from django.http import HttpResponse
         from .services.seo_report_pdf import generate_seo_audit_pdf
+        import traceback
+        import logging
+        logger = logging.getLogger(__name__)
 
         audit = queryset.first()
         if not audit:
@@ -2355,6 +2365,10 @@ class AIAnalysisReportAdmin(ModelAdmin):
             return response
 
         except Exception as e:
+            # Log full traceback to console/logs
+            tb = traceback.format_exc()
+            logger.error(f"PDF generation error:\n{tb}")
+            print(f"PDF generation error:\n{tb}")  # Also print to console
             self.message_user(request, f"❌ Error generating PDF: {str(e)}", messages.ERROR)
 
     class Meta:
