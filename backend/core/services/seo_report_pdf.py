@@ -179,7 +179,7 @@ class SEOReportPDFGenerator:
 
         # Body text
         styles.add(ParagraphStyle(
-            name='BodyText',
+            name='ReportBody',
             parent=styles['Normal'],
             fontSize=10,
             textColor=CODETEKI_BRAND['dark'],
@@ -460,8 +460,8 @@ class SEOReportPDFGenerator:
 
         # Health status box
         health_data = [[
-            Paragraph(f"<font size='14'><b>Overall Health:</b></font>", self.styles['BodyText']),
-            Paragraph(f"<font size='16' color='{health_color.hexval()}'><b>{health_status}</b></font>", self.styles['BodyText']),
+            Paragraph(f"<font size='14'><b>Overall Health:</b></font>", self.styles['ReportBody']),
+            Paragraph(f"<font size='16' color='{health_color.hexval()}'><b>{health_status}</b></font>", self.styles['ReportBody']),
         ]]
         health_table = Table(health_data, colWidths=[2*inch, 4*inch])
         health_table.setStyle(TableStyle([
@@ -476,7 +476,7 @@ class SEOReportPDFGenerator:
         elements.append(health_table)
         elements.append(Spacer(1, 0.15*inch))
 
-        elements.append(Paragraph(health_text, self.styles['BodyText']))
+        elements.append(Paragraph(health_text, self.styles['ReportBody']))
         elements.append(Spacer(1, 0.3*inch))
 
         # Key metrics summary
@@ -511,7 +511,7 @@ class SEOReportPDFGenerator:
             findings.append(f"<b>Warnings:</b> {self.site_audit.warning_issues} warnings should be reviewed.")
 
         for finding in findings:
-            elements.append(Paragraph(f"  {finding}", self.styles['BodyText']))
+            elements.append(Paragraph(f"  {finding}", self.styles['ReportBody']))
 
         return elements
 
@@ -537,9 +537,9 @@ class SEOReportPDFGenerator:
             score_text = self._format_score(score)
 
             row = [
-                Paragraph(f"<font size='12'><b>{name}</b></font>", self.styles['BodyText']),
-                Paragraph(f"<font size='20' color='{color.hexval()}'><b>{score_text}</b></font>", self.styles['BodyText']),
-                Paragraph(f"<font size='9' color='{CODETEKI_BRAND['gray'].hexval()}'>{description}</font>", self.styles['BodyText']),
+                Paragraph(f"<font size='12'><b>{name}</b></font>", self.styles['ReportBody']),
+                Paragraph(f"<font size='20' color='{color.hexval()}'><b>{score_text}</b></font>", self.styles['ReportBody']),
+                Paragraph(f"<font size='9' color='{CODETEKI_BRAND['gray'].hexval()}'>{description}</font>", self.styles['ReportBody']),
             ]
             score_rows.append(row)
 
@@ -559,9 +559,9 @@ class SEOReportPDFGenerator:
         elements.append(Paragraph("Score Interpretation", self.styles['SubsectionHeader']))
 
         guide_data = [
-            [Paragraph(f"<font color='{CODETEKI_BRAND['success'].hexval()}'>90-100</font>", self.styles['BodyText']), 'Good - No action needed'],
-            [Paragraph(f"<font color='{CODETEKI_BRAND['warning'].hexval()}'>50-89</font>", self.styles['BodyText']), 'Needs Improvement - Should be addressed'],
-            [Paragraph(f"<font color='{CODETEKI_BRAND['danger'].hexval()}'>0-49</font>", self.styles['BodyText']), 'Poor - Requires immediate attention'],
+            [Paragraph(f"<font color='{CODETEKI_BRAND['success'].hexval()}'>90-100</font>", self.styles['ReportBody']), 'Good - No action needed'],
+            [Paragraph(f"<font color='{CODETEKI_BRAND['warning'].hexval()}'>50-89</font>", self.styles['ReportBody']), 'Needs Improvement - Should be addressed'],
+            [Paragraph(f"<font color='{CODETEKI_BRAND['danger'].hexval()}'>0-49</font>", self.styles['ReportBody']), 'Poor - Requires immediate attention'],
         ]
 
         guide_table = Table(guide_data, colWidths=[1*inch, 5*inch])
@@ -587,7 +587,7 @@ class SEOReportPDFGenerator:
 
         elements.append(Paragraph(
             "Core Web Vitals are Google's essential metrics for user experience. These directly impact your search rankings.",
-            self.styles['BodyText']
+            self.styles['ReportBody']
         ))
         elements.append(Spacer(1, 0.2*inch))
 
@@ -595,7 +595,7 @@ class SEOReportPDFGenerator:
         page_audits = self.site_audit.page_audits.all()[:10]
 
         if not page_audits:
-            elements.append(Paragraph("No page audits available.", self.styles['BodyText']))
+            elements.append(Paragraph("No page audits available.", self.styles['ReportBody']))
             return elements
 
         # Calculate averages
@@ -650,10 +650,10 @@ class SEOReportPDFGenerator:
                 status = 'Good' if color == CODETEKI_BRAND['success'] else ('Needs Work' if color == CODETEKI_BRAND['warning'] else 'Poor')
 
                 cwv_rows.append([
-                    Paragraph(f"<b>{abbr}</b><br/><font size='8'>{name}</font>", self.styles['BodyText']),
-                    Paragraph(f"<font size='14' color='{color.hexval()}'><b>{value_str}</b></font>", self.styles['BodyText']),
-                    Paragraph(f"<font color='{color.hexval()}'>{status}</font>", self.styles['BodyText']),
-                    Paragraph(f"<font size='8'>{desc}</font>", self.styles['BodyText']),
+                    Paragraph(f"<b>{abbr}</b><br/><font size='8'>{name}</font>", self.styles['ReportBody']),
+                    Paragraph(f"<font size='14' color='{color.hexval()}'><b>{value_str}</b></font>", self.styles['ReportBody']),
+                    Paragraph(f"<font color='{color.hexval()}'>{status}</font>", self.styles['ReportBody']),
+                    Paragraph(f"<font size='8'>{desc}</font>", self.styles['ReportBody']),
                 ])
 
         cwv_table = Table(cwv_rows, colWidths=[1.5*inch, 1*inch, 0.8*inch, 2.7*inch])
@@ -707,13 +707,13 @@ class SEOReportPDFGenerator:
         elements.append(Paragraph("Issues by Severity", self.styles['SubsectionHeader']))
 
         severity_data = [[
-            Paragraph(f"<font color='{CODETEKI_BRAND['danger'].hexval()}'><b>Errors</b></font>", self.styles['BodyText']),
-            Paragraph(f"<font color='{CODETEKI_BRAND['warning'].hexval()}'><b>Warnings</b></font>", self.styles['BodyText']),
-            Paragraph(f"<font color='{CODETEKI_BRAND['info'].hexval()}'><b>Info</b></font>", self.styles['BodyText']),
+            Paragraph(f"<font color='{CODETEKI_BRAND['danger'].hexval()}'><b>Errors</b></font>", self.styles['ReportBody']),
+            Paragraph(f"<font color='{CODETEKI_BRAND['warning'].hexval()}'><b>Warnings</b></font>", self.styles['ReportBody']),
+            Paragraph(f"<font color='{CODETEKI_BRAND['info'].hexval()}'><b>Info</b></font>", self.styles['ReportBody']),
         ], [
-            Paragraph(f"<font size='18' color='{CODETEKI_BRAND['danger'].hexval()}'><b>{severity_counts['error']}</b></font>", self.styles['BodyText']),
-            Paragraph(f"<font size='18' color='{CODETEKI_BRAND['warning'].hexval()}'><b>{severity_counts['warning']}</b></font>", self.styles['BodyText']),
-            Paragraph(f"<font size='18' color='{CODETEKI_BRAND['info'].hexval()}'><b>{severity_counts['info']}</b></font>", self.styles['BodyText']),
+            Paragraph(f"<font size='18' color='{CODETEKI_BRAND['danger'].hexval()}'><b>{severity_counts['error']}</b></font>", self.styles['ReportBody']),
+            Paragraph(f"<font size='18' color='{CODETEKI_BRAND['warning'].hexval()}'><b>{severity_counts['warning']}</b></font>", self.styles['ReportBody']),
+            Paragraph(f"<font size='18' color='{CODETEKI_BRAND['info'].hexval()}'><b>{severity_counts['info']}</b></font>", self.styles['ReportBody']),
         ]]
 
         severity_table = Table(severity_data, colWidths=[2*inch, 2*inch, 2*inch])
@@ -793,7 +793,7 @@ class SEOReportPDFGenerator:
             score_text = f"Performance: {page.performance_score or 'N/A'} | SEO: {page.seo_score or 'N/A'} | Accessibility: {page.accessibility_score or 'N/A'}"
             elements.append(Paragraph(
                 f"<font size='9' color='{CODETEKI_BRAND['gray'].hexval()}'>{score_text}</font>",
-                self.styles['BodyText']
+                self.styles['ReportBody']
             ))
             elements.append(Spacer(1, 0.1*inch))
 
@@ -817,8 +817,8 @@ class SEOReportPDFGenerator:
                     savings = f"{issue.savings_bytes // 1024}KB"
 
                 issue_rows.append([
-                    Paragraph(f"<font color='{severity_color.hexval()}'><b>{issue.severity.upper()}</b></font>", self.styles['BodyText']),
-                    Paragraph(f"<font size='9'>{issue.title[:50]}{'...' if len(issue.title) > 50 else ''}</font>", self.styles['BodyText']),
+                    Paragraph(f"<font color='{severity_color.hexval()}'><b>{issue.severity.upper()}</b></font>", self.styles['ReportBody']),
+                    Paragraph(f"<font size='9'>{issue.title[:50]}{'...' if len(issue.title) > 50 else ''}</font>", self.styles['ReportBody']),
                     savings or '-',
                     issue_date,
                 ])
@@ -851,7 +851,7 @@ class SEOReportPDFGenerator:
 
         elements.append(Paragraph(
             "The following analysis was generated by AI based on your audit results:",
-            self.styles['BodyText']
+            self.styles['ReportBody']
         ))
         elements.append(Spacer(1, 0.15*inch))
 
@@ -875,7 +875,7 @@ class SEOReportPDFGenerator:
             elif line.startswith('# '):
                 elements.append(Paragraph(line[2:], self.styles['SectionHeader']))
             elif line.startswith('- ') or line.startswith('* '):
-                elements.append(Paragraph(f"  {line}", self.styles['BodyText']))
+                elements.append(Paragraph(f"  {line}", self.styles['ReportBody']))
             elif line.startswith('```'):
                 # Skip code block markers
                 continue
@@ -884,7 +884,7 @@ class SEOReportPDFGenerator:
                 import re
                 line = re.sub(r'\*\*([^*]+)\*\*', r'<b>\1</b>', line)
                 line = re.sub(r'\*([^*]+)\*', r'<i>\1</i>', line)
-                elements.append(Paragraph(line, self.styles['BodyText']))
+                elements.append(Paragraph(line, self.styles['ReportBody']))
 
         return elements
 
