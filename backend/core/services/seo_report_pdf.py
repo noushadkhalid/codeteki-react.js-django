@@ -227,6 +227,9 @@ class SEOReportPDFGenerator:
         """Create a donut chart showing the score."""
         d = Drawing(size, size)
 
+        # Handle None score
+        score = score if score is not None else 0
+
         # Background circle (gray)
         d.add(Wedge(size/2, size/2, size/2 - 5, 0, 360,
                     fillColor=CODETEKI_BRAND['border'], strokeColor=None))
@@ -256,6 +259,9 @@ class SEOReportPDFGenerator:
                              color: colors.Color = None) -> Drawing:
         """Create a progress bar."""
         d = Drawing(width, height)
+
+        # Handle None percentage
+        percentage = percentage if percentage is not None else 0
 
         # Background
         d.add(Rect(0, 0, width, height, fillColor=CODETEKI_BRAND['border'],
@@ -444,12 +450,17 @@ class SEOReportPDFGenerator:
 
         elements.append(Spacer(1, 0.2*inch))
 
-        # Quick stats
+        # Quick stats (with None guards)
+        total_pages = self.site_audit.total_pages or 0
+        total_issues = self.site_audit.total_issues or 0
+        critical_issues = self.site_audit.critical_issues or 0
+        warning_issues = self.site_audit.warning_issues or 0
+
         stats_data = [[
-            Paragraph(f"<font size='16'><b>{self.site_audit.total_pages}</b></font><br/><font size='8' color='{CODETEKI_BRAND['gray'].hexval()}'>Pages Audited</font>", self.styles['ReportBody']),
-            Paragraph(f"<font size='16'><b>{self.site_audit.total_issues}</b></font><br/><font size='8' color='{CODETEKI_BRAND['gray'].hexval()}'>Total Issues</font>", self.styles['ReportBody']),
-            Paragraph(f"<font size='16' color='{CODETEKI_BRAND['danger'].hexval()}'><b>{self.site_audit.critical_issues}</b></font><br/><font size='8' color='{CODETEKI_BRAND['gray'].hexval()}'>Critical</font>", self.styles['ReportBody']),
-            Paragraph(f"<font size='16' color='{CODETEKI_BRAND['warning'].hexval()}'><b>{self.site_audit.warning_issues}</b></font><br/><font size='8' color='{CODETEKI_BRAND['gray'].hexval()}'>Warnings</font>", self.styles['ReportBody']),
+            Paragraph(f"<font size='16'><b>{total_pages}</b></font><br/><font size='8' color='{CODETEKI_BRAND['gray'].hexval()}'>Pages Audited</font>", self.styles['ReportBody']),
+            Paragraph(f"<font size='16'><b>{total_issues}</b></font><br/><font size='8' color='{CODETEKI_BRAND['gray'].hexval()}'>Total Issues</font>", self.styles['ReportBody']),
+            Paragraph(f"<font size='16' color='{CODETEKI_BRAND['danger'].hexval()}'><b>{critical_issues}</b></font><br/><font size='8' color='{CODETEKI_BRAND['gray'].hexval()}'>Critical</font>", self.styles['ReportBody']),
+            Paragraph(f"<font size='16' color='{CODETEKI_BRAND['warning'].hexval()}'><b>{warning_issues}</b></font><br/><font size='8' color='{CODETEKI_BRAND['gray'].hexval()}'>Warnings</font>", self.styles['ReportBody']),
         ]]
 
         stats_table = Table(stats_data, colWidths=[1.5*inch, 1.5*inch, 1.5*inch, 1.5*inch])
@@ -501,13 +512,18 @@ class SEOReportPDFGenerator:
                 priority = Paragraph(f"<font color='{CODETEKI_BRAND['info'].hexval()}'>●</font>", self.styles['ReportBody'])
 
             # Truncate title if needed
-            title = issue.title[:40] + '...' if len(issue.title) > 40 else issue.title
+            title = issue.title or 'Unknown Issue'
+            title = title[:40] + '...' if len(title) > 40 else title
 
             # Create recommendation text
-            desc = issue.description[:150] + '...' if len(issue.description) > 150 else issue.description
+            desc = issue.description or ''
+            desc = desc[:150] + '...' if len(desc) > 150 else desc
+
+            # Handle None category
+            category = (issue.category or 'general').title()
 
             rows.append([
-                Paragraph(f"<font size='8'>{issue.category.title()}</font>", self.styles['ReportBody']),
+                Paragraph(f"<font size='8'>{category}</font>", self.styles['ReportBody']),
                 Paragraph(f"<font size='9'><b>{title}</b></font>", self.styles['ReportBody']),
                 priority,
                 Paragraph(f"<font size='8'>{desc}</font>", self.styles['SmallText']),
@@ -652,7 +668,7 @@ class SEOReportPDFGenerator:
 
         elements.append(Paragraph("Audited Pages", self.styles['SectionHeader']))
         elements.append(Paragraph(
-            f"This section lists all {self.site_audit.total_pages} pages that were audited, "
+            f"This section lists all {self.site_audit.total_pages or 0} pages that were audited, "
             "showing individual performance scores for each URL.",
             self.styles['SectionDesc']
         ))
@@ -668,8 +684,8 @@ class SEOReportPDFGenerator:
         rows = [header]
 
         for page in page_audits:
-            # Truncate URL
-            url = page.url
+            # Truncate URL (with None guard)
+            url = page.url or 'Unknown URL'
             if len(url) > 40:
                 url = url[:37] + '...'
 
