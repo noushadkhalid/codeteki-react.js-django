@@ -27,8 +27,8 @@ fi
 
 # 2. Install Python dependencies (run in your virtualenv)
 echo "Installing Python packages..."
-cd /var/www/codeteki
-source .venv/bin/activate
+cd /home/codeteki/codeteki-react.js-django
+source venv/bin/activate
 pip install celery redis django-celery-results
 
 # 3. Run Django migrations for celery results
@@ -41,8 +41,8 @@ python manage.py migrate
 echo "Creating Celery directories..."
 mkdir -p /var/log/celery
 mkdir -p /var/run/celery
-chown -R www-data:www-data /var/log/celery
-chown -R www-data:www-data /var/run/celery
+chown -R codeteki:codeteki /var/log/celery
+chown -R codeteki:codeteki /var/run/celery
 
 # 5. Install systemd service
 echo "Installing Celery systemd service..."
