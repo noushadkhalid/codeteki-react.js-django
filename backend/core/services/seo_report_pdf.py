@@ -1,8 +1,8 @@
 """
-SEO Audit PDF Report Generator - Premium Version.
+SEO Audit PDF Report Generator - Premium Edition.
 
 Professional PDF report generation with Codeteki branding.
-Designed to be better than SEMrush, Ahrefs, and other popular SEO tool reports.
+Designed to match/exceed SEMrush, Ahrefs, and Moz report quality.
 """
 
 from __future__ import annotations
@@ -21,80 +21,95 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch, mm
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
-    PageBreak, Image, HRFlowable, KeepTogether, ListFlowable, ListItem
+    PageBreak, Image, HRFlowable, KeepTogether, ListFlowable, ListItem,
+    CondPageBreak
 )
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
-from reportlab.graphics.shapes import Drawing, Rect, String, Circle, Wedge
+from reportlab.graphics.shapes import Drawing, Rect, String, Circle, Wedge, Line
 from reportlab.graphics.charts.piecharts import Pie
-from reportlab.graphics.charts.barcharts import HorizontalBarChart
-from reportlab.graphics.widgets.markers import makeMarker
 
 logger = logging.getLogger(__name__)
 
-# Codeteki Brand Colors
-CODETEKI_BRAND = {
+# Premium Brand Colors
+BRAND = {
     'primary': colors.HexColor('#6366F1'),       # Indigo
-    'primary_dark': colors.HexColor('#4F46E5'),  # Darker Indigo
+    'primary_dark': colors.HexColor('#4338CA'),  # Darker Indigo
     'secondary': colors.HexColor('#8B5CF6'),     # Purple
     'accent': colors.HexColor('#06B6D4'),        # Cyan
-    'success': colors.HexColor('#10B981'),       # Green
+    'success': colors.HexColor('#10B981'),       # Emerald
     'warning': colors.HexColor('#F59E0B'),       # Amber
     'danger': colors.HexColor('#EF4444'),        # Red
     'info': colors.HexColor('#3B82F6'),          # Blue
-    'dark': colors.HexColor('#1F2937'),          # Gray 800
+    'dark': colors.HexColor('#111827'),          # Gray 900
+    'text': colors.HexColor('#1F2937'),          # Gray 800
+    'text_secondary': colors.HexColor('#6B7280'), # Gray 500
     'light': colors.HexColor('#F9FAFB'),         # Gray 50
-    'gray': colors.HexColor('#6B7280'),          # Gray 500
-    'gray_light': colors.HexColor('#9CA3AF'),    # Gray 400
+    'lighter': colors.HexColor('#F3F4F6'),       # Gray 100
     'border': colors.HexColor('#E5E7EB'),        # Gray 200
-    'orange': colors.HexColor('#F97316'),        # Orange
-    'pink': colors.HexColor('#EC4899'),          # Pink
+    'white': colors.white,
+    'gradient_start': colors.HexColor('#4F46E5'),
+    'gradient_end': colors.HexColor('#7C3AED'),
 }
 
 
 def get_score_color(score: Optional[float]) -> colors.Color:
     """Get color based on score (0-100)."""
     if score is None:
-        return CODETEKI_BRAND['gray']
+        return BRAND['text_secondary']
+    score = float(score)
     if score >= 90:
-        return CODETEKI_BRAND['success']
+        return BRAND['success']
     elif score >= 50:
-        return CODETEKI_BRAND['warning']
+        return BRAND['warning']
     else:
-        return CODETEKI_BRAND['danger']
+        return BRAND['danger']
+
+
+def get_score_label(score: Optional[float]) -> str:
+    """Get label based on score."""
+    if score is None:
+        return 'N/A'
+    score = float(score)
+    if score >= 90:
+        return 'Good'
+    elif score >= 50:
+        return 'Needs Work'
+    else:
+        return 'Poor'
 
 
 def get_cwv_status(metric: str, value: Optional[float]) -> tuple:
     """Get status and color based on Core Web Vitals thresholds."""
     if value is None:
-        return 'N/A', CODETEKI_BRAND['gray']
+        return 'N/A', BRAND['text_secondary'], 'No data available'
 
     thresholds = {
-        'lcp': (2.5, 4.0),       # seconds
-        'fcp': (1.8, 3.0),       # seconds
-        'cls': (0.1, 0.25),      # unitless
-        'tbt': (200, 600),       # milliseconds
-        'fid': (100, 300),       # milliseconds
-        'inp': (200, 500),       # milliseconds
-        'ttfb': (800, 1800),     # milliseconds
-        'si': (3.4, 5.8),        # seconds
+        'lcp': (2.5, 4.0, 's', 'Should be under 2.5s'),
+        'fcp': (1.8, 3.0, 's', 'Should be under 1.8s'),
+        'cls': (0.1, 0.25, '', 'Should be under 0.1'),
+        'tbt': (200, 600, 'ms', 'Should be under 200ms'),
+        'fid': (100, 300, 'ms', 'Should be under 100ms'),
+        'inp': (200, 500, 'ms', 'Should be under 200ms'),
+        'ttfb': (800, 1800, 'ms', 'Should be under 800ms'),
+        'si': (3.4, 5.8, 's', 'Should be under 3.4s'),
     }
 
     if metric not in thresholds:
-        return 'N/A', CODETEKI_BRAND['gray']
+        return 'N/A', BRAND['text_secondary'], 'Unknown metric'
 
-    good, poor = thresholds[metric]
+    good, poor, unit, desc = thresholds[metric]
     if value <= good:
-        return 'Good', CODETEKI_BRAND['success']
+        return 'Good', BRAND['success'], desc
     elif value <= poor:
-        return 'Needs Work', CODETEKI_BRAND['warning']
+        return 'Needs Work', BRAND['warning'], desc
     else:
-        return 'Poor', CODETEKI_BRAND['danger']
+        return 'Poor', BRAND['danger'], desc
 
 
-class SEOReportPDFGenerator:
+class PremiumSEOReportGenerator:
     """
     Premium PDF Report Generator for SEO Audits.
-    Designed to match/exceed SEMrush report quality.
+    Designed to match/exceed SEMrush, Ahrefs, Moz report quality.
     """
 
     def __init__(self, site_audit):
@@ -102,7 +117,9 @@ class SEOReportPDFGenerator:
         self.buffer = io.BytesIO()
         self.styles = self._create_styles()
         self.logo_path = self._get_logo_path()
-        self.width = A4[0] - 1.5*inch  # Available width
+        self.page_width = A4[0]
+        self.page_height = A4[1]
+        self.content_width = A4[0] - 1.2*inch  # Available content width
 
     def _get_logo_path(self) -> Optional[str]:
         """Get the path to the Codeteki logo."""
@@ -117,68 +134,54 @@ class SEOReportPDFGenerator:
         return None
 
     def _create_styles(self) -> dict:
-        """Create custom styles for the report."""
+        """Create premium custom styles."""
         styles = getSampleStyleSheet()
 
-        # Main Title
+        # Cover Title
         styles.add(ParagraphStyle(
-            name='ReportTitle',
-            parent=styles['Heading1'],
-            fontSize=24,
-            textColor=CODETEKI_BRAND['dark'],
-            spaceAfter=5,
-            alignment=TA_LEFT,
-            fontName='Helvetica-Bold',
-        ))
-
-        # Domain highlight
-        styles.add(ParagraphStyle(
-            name='DomainTitle',
-            parent=styles['Heading1'],
-            fontSize=24,
-            textColor=CODETEKI_BRAND['primary'],
+            name='CoverTitle',
+            fontSize=36,
+            textColor=BRAND['primary'],
             spaceAfter=10,
-            alignment=TA_LEFT,
+            alignment=TA_CENTER,
             fontName='Helvetica-Bold',
+            leading=42,
         ))
 
-        # Summary text
+        # Cover Subtitle
         styles.add(ParagraphStyle(
-            name='SummaryText',
-            parent=styles['Normal'],
-            fontSize=11,
-            textColor=CODETEKI_BRAND['dark'],
-            spaceAfter=20,
-            leading=16,
-        ))
-
-        # Section header
-        styles.add(ParagraphStyle(
-            name='SectionHeader',
-            parent=styles['Heading2'],
+            name='CoverSubtitle',
             fontSize=18,
-            textColor=CODETEKI_BRAND['dark'],
+            textColor=BRAND['text'],
+            spaceAfter=30,
+            alignment=TA_CENTER,
+            fontName='Helvetica',
+        ))
+
+        # Section Title (large)
+        styles.add(ParagraphStyle(
+            name='SectionTitle',
+            fontSize=22,
+            textColor=BRAND['primary'],
             spaceBefore=20,
             spaceAfter=10,
             fontName='Helvetica-Bold',
         ))
 
-        # Section description
+        # Section Subtitle
         styles.add(ParagraphStyle(
-            name='SectionDesc',
-            parent=styles['Normal'],
-            fontSize=10,
-            textColor=CODETEKI_BRAND['gray'],
+            name='SectionSubtitle',
+            fontSize=11,
+            textColor=BRAND['text_secondary'],
             spaceAfter=15,
-            leading=14,
+            leading=15,
         ))
 
-        # Subsection header
+        # Subsection Title
         styles.add(ParagraphStyle(
-            name='SubsectionHeader',
-            parent=styles['Heading3'],
+            name='SubsectionTitle',
             fontSize=14,
-            textColor=CODETEKI_BRAND['dark'],
+            textColor=BRAND['text'],
             spaceBefore=15,
             spaceAfter=8,
             fontName='Helvetica-Bold',
@@ -186,138 +189,160 @@ class SEOReportPDFGenerator:
 
         # Body text
         styles.add(ParagraphStyle(
-            name='ReportBody',
-            parent=styles['Normal'],
+            name='Body',
             fontSize=10,
-            textColor=CODETEKI_BRAND['dark'],
+            textColor=BRAND['text'],
             spaceAfter=6,
             leading=14,
         ))
 
         # Small text
         styles.add(ParagraphStyle(
-            name='SmallText',
-            parent=styles['Normal'],
-            fontSize=8,
-            textColor=CODETEKI_BRAND['gray'],
-            leading=10,
+            name='Small',
+            fontSize=9,
+            textColor=BRAND['text_secondary'],
+            leading=12,
         ))
 
-        # URL text
+        # Metric Value (large number)
         styles.add(ParagraphStyle(
-            name='URLText',
-            parent=styles['Normal'],
-            fontSize=9,
-            textColor=CODETEKI_BRAND['primary'],
-            fontName='Helvetica',
+            name='MetricValue',
+            fontSize=28,
+            textColor=BRAND['text'],
+            alignment=TA_CENTER,
+            fontName='Helvetica-Bold',
         ))
 
-        # Metric badge
+        # Metric Label
         styles.add(ParagraphStyle(
-            name='MetricBadge',
-            parent=styles['Normal'],
+            name='MetricLabel',
             fontSize=9,
-            textColor=CODETEKI_BRAND['gray'],
-            backColor=CODETEKI_BRAND['light'],
+            textColor=BRAND['text_secondary'],
+            alignment=TA_CENTER,
+        ))
+
+        # URL Style
+        styles.add(ParagraphStyle(
+            name='URL',
+            fontSize=9,
+            textColor=BRAND['primary'],
+        ))
+
+        # Table Header
+        styles.add(ParagraphStyle(
+            name='TableHeader',
+            fontSize=9,
+            textColor=BRAND['white'],
+            fontName='Helvetica-Bold',
+        ))
+
+        # Table Cell
+        styles.add(ParagraphStyle(
+            name='TableCell',
+            fontSize=9,
+            textColor=BRAND['text'],
         ))
 
         return styles
 
-    def _create_score_donut(self, score: float, size: int = 100) -> Drawing:
-        """Create a donut chart showing the score."""
-        d = Drawing(size, size)
+    def _create_circular_score(self, score: float, size: int = 80, label: str = "Score") -> Drawing:
+        """Create a circular score gauge."""
+        d = Drawing(size + 20, size + 25)
 
         # Handle None score
         score = score if score is not None else 0
+        score = float(score)
 
-        # Background circle (gray)
-        d.add(Wedge(size/2, size/2, size/2 - 5, 0, 360,
-                    fillColor=CODETEKI_BRAND['border'], strokeColor=None))
+        center_x = (size + 20) / 2
+        center_y = (size + 25) / 2 + 5
+        radius = size / 2 - 5
+
+        # Background circle
+        d.add(Wedge(center_x, center_y, radius, 0, 360,
+                    fillColor=BRAND['border'], strokeColor=None))
 
         # Score arc
         if score > 0:
             angle = (score / 100) * 360
             color = get_score_color(score)
-            d.add(Wedge(size/2, size/2, size/2 - 5, 90, 90 - angle,
+            # Draw from top (90 degrees) going clockwise
+            d.add(Wedge(center_x, center_y, radius, 90 - angle, 90,
                         fillColor=color, strokeColor=None))
 
-        # Inner circle (white, creates donut effect)
-        d.add(Wedge(size/2, size/2, size/2 - 20, 0, 360,
-                    fillColor=colors.white, strokeColor=None))
+        # Inner white circle (donut effect)
+        inner_radius = radius - 12
+        d.add(Wedge(center_x, center_y, inner_radius, 0, 360,
+                    fillColor=BRAND['white'], strokeColor=None))
 
-        # Score text
-        d.add(String(size/2, size/2 + 5, str(int(score)),
-                     fontSize=20, fillColor=CODETEKI_BRAND['dark'],
+        # Score number
+        d.add(String(center_x, center_y - 3, str(int(score)),
+                     fontSize=18, fillColor=BRAND['text'],
                      textAnchor='middle', fontName='Helvetica-Bold'))
-        d.add(String(size/2, size/2 - 12, 'SEO Score',
-                     fontSize=8, fillColor=CODETEKI_BRAND['gray'],
+
+        # Label below
+        d.add(String(center_x, 5, label,
+                     fontSize=8, fillColor=BRAND['text_secondary'],
                      textAnchor='middle'))
 
         return d
 
-    def _create_progress_bar(self, percentage: float, width: float = 150, height: float = 12,
-                             color: colors.Color = None) -> Drawing:
-        """Create a progress bar."""
+    def _create_horizontal_bar(self, percentage: float, width: float = 180,
+                                height: float = 8, label: str = "",
+                                show_percent: bool = True) -> list:
+        """Create a horizontal progress bar with label."""
+        percentage = percentage if percentage is not None else 0
+        percentage = float(percentage)
+
         d = Drawing(width, height)
 
-        # Handle None percentage
-        percentage = percentage if percentage is not None else 0
+        # Background bar
+        d.add(Rect(0, 0, width, height,
+                   fillColor=BRAND['lighter'], strokeColor=None,
+                   rx=4, ry=4))
 
-        # Background
-        d.add(Rect(0, 0, width, height, fillColor=CODETEKI_BRAND['border'],
-                   strokeColor=None, rx=3, ry=3))
-
-        # Progress
+        # Progress bar
         if percentage > 0:
-            bar_color = color or get_score_color(percentage)
-            bar_width = (percentage / 100) * width
-            d.add(Rect(0, 0, bar_width, height, fillColor=bar_color,
-                       strokeColor=None, rx=3, ry=3))
+            bar_width = min((percentage / 100) * width, width)
+            color = get_score_color(percentage)
+            d.add(Rect(0, 0, bar_width, height,
+                       fillColor=color, strokeColor=None,
+                       rx=4, ry=4))
 
         return d
-
-    def _get_priority_symbol(self, severity: str) -> str:
-        """Get priority symbol based on severity."""
-        symbols = {
-            'error': '🚩',      # Red flag
-            'warning': '⚠️',    # Warning
-            'info': 'ℹ️',       # Info
-            'passed': '✅',     # Check
-        }
-        return symbols.get(severity, '•')
 
     def generate(self) -> bytes:
         """Generate the complete PDF report."""
         doc = SimpleDocTemplate(
             self.buffer,
             pagesize=A4,
-            rightMargin=0.75*inch,
-            leftMargin=0.75*inch,
-            topMargin=0.6*inch,
-            bottomMargin=0.6*inch,
+            rightMargin=0.6*inch,
+            leftMargin=0.6*inch,
+            topMargin=0.5*inch,
+            bottomMargin=0.5*inch,
         )
 
         elements = []
 
-        # Header/Title Section
-        elements.extend(self._build_header())
+        # 1. Cover Page
+        elements.extend(self._build_cover_page())
 
-        # Overview Section with Score Chart
-        elements.extend(self._build_overview())
-
-        # Issues and Recommendations
+        # 2. Executive Summary (same page as scores overview)
         elements.append(PageBreak())
-        elements.extend(self._build_issues_recommendations())
+        elements.extend(self._build_executive_summary())
 
-        # Page Speed & Core Web Vitals
-        elements.append(PageBreak())
-        elements.extend(self._build_page_speed_section())
+        # 3. Core Web Vitals
+        elements.append(CondPageBreak(4*inch))
+        elements.extend(self._build_core_web_vitals())
 
-        # Audited Pages List
+        # 4. Issues Overview
         elements.append(PageBreak())
+        elements.extend(self._build_issues_section())
+
+        # 5. Audited Pages
+        elements.append(CondPageBreak(3*inch))
         elements.extend(self._build_audited_pages())
 
-        # AI Analysis (if available)
+        # 6. AI Analysis (if available)
         if self.site_audit.ai_analysis:
             elements.append(PageBreak())
             elements.extend(self._build_ai_analysis())
@@ -334,69 +359,120 @@ class SEOReportPDFGenerator:
         canvas.saveState()
 
         # Footer line
-        canvas.setStrokeColor(CODETEKI_BRAND['border'])
+        canvas.setStrokeColor(BRAND['border'])
         canvas.setLineWidth(0.5)
-        canvas.line(0.75*inch, 0.5*inch, A4[0] - 0.75*inch, 0.5*inch)
+        canvas.line(0.6*inch, 0.4*inch, A4[0] - 0.6*inch, 0.4*inch)
 
         # Footer text
-        footer_text = f"Codeteki SEO Audit Report | Generated: {datetime.now().strftime('%B %d, %Y')}"
         canvas.setFont('Helvetica', 8)
-        canvas.setFillColor(CODETEKI_BRAND['gray'])
-        canvas.drawString(0.75*inch, 0.35*inch, footer_text)
+        canvas.setFillColor(BRAND['text_secondary'])
+        canvas.drawString(0.6*inch, 0.25*inch,
+                         f"Codeteki SEO Audit Report | Generated: {datetime.now().strftime('%B %d, %Y')}")
 
         # Page number
         page_num = canvas.getPageNumber()
-        canvas.drawRightString(A4[0] - 0.75*inch, 0.35*inch, f"Page {page_num}")
+        canvas.drawRightString(A4[0] - 0.6*inch, 0.25*inch, f"Page {page_num}")
 
         canvas.restoreState()
 
-    def _build_header(self) -> list:
-        """Build the header section."""
+    def _build_cover_page(self) -> list:
+        """Build the premium cover page."""
         elements = []
 
-        # Logo (if available)
+        # Add some top spacing
+        elements.append(Spacer(1, 1.5*inch))
+
+        # Logo
         if self.logo_path:
             try:
-                logo = Image(self.logo_path, width=1.5*inch, height=0.45*inch)
+                logo = Image(self.logo_path, width=2*inch, height=0.6*inch)
+                logo.hAlign = 'CENTER'
                 elements.append(logo)
-                elements.append(Spacer(1, 0.2*inch))
+                elements.append(Spacer(1, 0.5*inch))
             except Exception as e:
                 logger.warning(f"Could not load logo: {e}")
 
         # Title
+        elements.append(Paragraph("SEO AUDIT REPORT", self.styles['CoverTitle']))
+        elements.append(Spacer(1, 0.1*inch))
+
+        # Domain
         elements.append(Paragraph(
-            f"SEO Audit Results for <font color='{CODETEKI_BRAND['primary'].hexval()}'>{self.site_audit.domain}</font>",
-            self.styles['ReportTitle']
+            f"<font color='{BRAND['primary'].hexval()}'>{self.site_audit.domain}</font>",
+            self.styles['CoverSubtitle']
         ))
 
-        # Summary line
-        avg_seo = self.site_audit.avg_seo or 0
-        critical = self.site_audit.critical_issues or 0
-        warnings = self.site_audit.warning_issues or 0
-        total_pages = self.site_audit.total_pages or 0
+        elements.append(Spacer(1, 0.8*inch))
 
-        summary = (
-            f"The SEO score for this website is <b>{int(avg_seo)} out of 100</b>. "
-            f"We found <b><font color='{CODETEKI_BRAND['danger'].hexval()}'>{critical} critical issues</font></b> "
-            f"and <b><font color='{CODETEKI_BRAND['warning'].hexval()}'>{warnings} warnings</font></b> "
-            f"across <b>{total_pages} pages</b> that should be addressed to improve Google rankings and drive more traffic."
-        )
-        elements.append(Paragraph(summary, self.styles['SummaryText']))
+        # Report info box
+        info_data = [
+            ['Report Name:', self.site_audit.name or f'{self.site_audit.domain} SEO Audit'],
+            ['Strategy:', (self.site_audit.strategy or 'mobile').title()],
+            ['Audit Date:', self.site_audit.created_at.strftime('%B %d, %Y') if self.site_audit.created_at else 'N/A'],
+            ['Pages Analyzed:', str(self.site_audit.total_pages or 0)],
+            ['Issues Found:', str(self.site_audit.total_issues or 0)],
+        ]
+
+        info_table = Table(info_data, colWidths=[1.5*inch, 4*inch])
+        info_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 11),
+            ('TEXTCOLOR', (0, 0), (0, -1), BRAND['text_secondary']),
+            ('TEXTCOLOR', (1, 0), (1, -1), BRAND['text']),
+            ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+            ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('LEFTPADDING', (0, 0), (-1, -1), 15),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 15),
+        ]))
+        info_table.hAlign = 'CENTER'
+        elements.append(info_table)
+
+        elements.append(Spacer(1, 1*inch))
+
+        # Score summary boxes
+        scores = [
+            ('Performance', self.site_audit.avg_performance),
+            ('SEO', self.site_audit.avg_seo),
+            ('Accessibility', self.site_audit.avg_accessibility),
+            ('Best Practices', self.site_audit.avg_best_practices),
+        ]
+
+        score_cells = []
+        for label, score in scores:
+            score_val = int(score) if score is not None else 0
+            color = get_score_color(score)
+            cell = Paragraph(
+                f"<para alignment='center'><font size='10' color='{BRAND['text_secondary'].hexval()}'>{label}</font><br/>"
+                f"<font size='24' color='{color.hexval()}'><b>{score_val}</b></font></para>",
+                self.styles['Body']
+            )
+            score_cells.append(cell)
+
+        score_table = Table([score_cells], colWidths=[1.5*inch, 1.5*inch, 1.5*inch, 1.5*inch])
+        score_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('BOX', (0, 0), (-1, -1), 1, BRAND['border']),
+            ('INNERGRID', (0, 0), (-1, -1), 0.5, BRAND['border']),
+            ('TOPPADDING', (0, 0), (-1, -1), 15),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 15),
+            ('BACKGROUND', (0, 0), (-1, -1), BRAND['light']),
+        ]))
+        score_table.hAlign = 'CENTER'
+        elements.append(score_table)
 
         return elements
 
-    def _build_overview(self) -> list:
-        """Build the overview section with score chart."""
+    def _build_executive_summary(self) -> list:
+        """Build the executive summary section."""
         elements = []
 
-        elements.append(Paragraph("Overview", self.styles['SectionHeader']))
-        elements.append(Paragraph(
-            "This section summarizes your site's overall SEO performance, providing insights from performance, "
-            "SEO, accessibility, and best practices audits, highlighting both strengths and priority issues.",
-            self.styles['SectionDesc']
-        ))
+        elements.append(Paragraph("Executive Summary", self.styles['SectionTitle']))
+        elements.append(HRFlowable(width="100%", thickness=2, color=BRAND['primary'], spaceAfter=15))
 
-        # Calculate overall score
+        # Overall health assessment
         scores = [
             self.site_audit.avg_performance,
             self.site_audit.avg_seo,
@@ -404,319 +480,459 @@ class SEOReportPDFGenerator:
             self.site_audit.avg_best_practices
         ]
         valid_scores = [s for s in scores if s is not None]
-        overall_score = sum(valid_scores) / len(valid_scores) if valid_scores else 0
+        overall = sum(valid_scores) / len(valid_scores) if valid_scores else 0
 
-        # Create score breakdown data
+        if overall >= 90:
+            health = "Excellent"
+            health_color = BRAND['success']
+            health_desc = "Your website is performing exceptionally well across all metrics."
+        elif overall >= 70:
+            health = "Good"
+            health_color = BRAND['success']
+            health_desc = "Your website is performing well with minor areas for improvement."
+        elif overall >= 50:
+            health = "Needs Improvement"
+            health_color = BRAND['warning']
+            health_desc = "Your website has several areas that need attention to improve rankings."
+        else:
+            health = "Critical"
+            health_color = BRAND['danger']
+            health_desc = "Your website requires immediate attention to improve search visibility."
+
+        # Health box
+        health_table = Table([[
+            Paragraph(f"<b>Overall Health:</b>", self.styles['Body']),
+            Paragraph(f"<font color='{health_color.hexval()}'><b>{health}</b></font>", self.styles['Body']),
+        ]], colWidths=[1.5*inch, 4.5*inch])
+        health_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), BRAND['light']),
+            ('BOX', (0, 0), (-1, -1), 1, BRAND['border']),
+            ('TOPPADDING', (0, 0), (-1, -1), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+            ('LEFTPADDING', (0, 0), (-1, -1), 15),
+        ]))
+        elements.append(health_table)
+        elements.append(Spacer(1, 0.1*inch))
+        elements.append(Paragraph(health_desc, self.styles['Body']))
+
+        elements.append(Spacer(1, 0.3*inch))
+
+        # Key Findings
+        elements.append(Paragraph("Key Findings", self.styles['SubsectionTitle']))
+
+        findings = []
+
+        # Performance finding
+        perf = self.site_audit.avg_performance or 0
+        if perf >= 90:
+            findings.append(f"<b>Performance ({int(perf)}/100):</b> Excellent loading speeds and responsiveness.")
+        elif perf >= 50:
+            findings.append(f"<b>Performance ({int(perf)}/100):</b> Room for improvement in loading speeds and interactivity.")
+        else:
+            findings.append(f"<b>Performance ({int(perf)}/100):</b> Critical performance issues affecting user experience.")
+
+        # SEO finding
+        seo = self.site_audit.avg_seo or 0
+        if seo >= 90:
+            findings.append(f"<b>SEO ({int(seo)}/100):</b> Excellent search engine optimization.")
+        elif seo >= 50:
+            findings.append(f"<b>SEO ({int(seo)}/100):</b> Good SEO with room for improvement.")
+        else:
+            findings.append(f"<b>SEO ({int(seo)}/100):</b> SEO issues affecting search visibility.")
+
+        # Accessibility finding
+        access = self.site_audit.avg_accessibility or 0
+        if access >= 90:
+            findings.append(f"<b>Accessibility ({int(access)}/100):</b> Excellent accessibility for all users.")
+        elif access >= 50:
+            findings.append(f"<b>Accessibility ({int(access)}/100):</b> Some accessibility improvements needed.")
+        else:
+            findings.append(f"<b>Accessibility ({int(access)}/100):</b> Accessibility issues need attention.")
+
+        # Best Practices finding
+        bp = self.site_audit.avg_best_practices or 0
+        if bp >= 90:
+            findings.append(f"<b>Best Practices ({int(bp)}/100):</b> Following modern web standards.")
+        elif bp >= 50:
+            findings.append(f"<b>Best Practices ({int(bp)}/100):</b> Some standards improvements recommended.")
+        else:
+            findings.append(f"<b>Best Practices ({int(bp)}/100):</b> Needs to adopt modern best practices.")
+
+        for finding in findings:
+            elements.append(Paragraph(f"• {finding}", self.styles['Body']))
+
+        elements.append(Spacer(1, 0.3*inch))
+
+        # Performance Scores with visual bars
+        elements.append(Paragraph("Performance Scores", self.styles['SubsectionTitle']))
+
         score_data = [
-            ('Performance', self.site_audit.avg_performance or 0, CODETEKI_BRAND['orange']),
-            ('SEO', self.site_audit.avg_seo or 0, CODETEKI_BRAND['warning']),
-            ('Accessibility', self.site_audit.avg_accessibility or 0, CODETEKI_BRAND['success']),
-            ('Best Practices', self.site_audit.avg_best_practices or 0, CODETEKI_BRAND['info']),
+            ('Performance', self.site_audit.avg_performance or 0, 'Page load speed, interactivity, and visual stability'),
+            ('SEO', self.site_audit.avg_seo or 0, 'Search engine optimization and discoverability'),
+            ('Accessibility', self.site_audit.avg_accessibility or 0, 'Usability for people with disabilities'),
+            ('Best Practices', self.site_audit.avg_best_practices or 0, 'Modern web development standards'),
         ]
 
-        # Build score table with donut and bars
-        donut = self._create_score_donut(overall_score, 100)
-
-        # Score bars
-        bar_rows = []
-        for name, score, color in score_data:
-            bar = self._create_progress_bar(score, 180, 10, color)
-            bar_rows.append([
-                Paragraph(name, self.styles['ReportBody']),
+        rows = []
+        for name, score, desc in score_data:
+            color = get_score_color(score)
+            bar = self._create_horizontal_bar(score, width=150, height=10)
+            rows.append([
+                Paragraph(f"<b>{name}</b>", self.styles['Body']),
+                Paragraph(f"<font color='{color.hexval()}'><b>{int(score)}</b></font>", self.styles['Body']),
                 bar,
-                Paragraph(f"<b>{int(score)}%</b>", self.styles['ReportBody']),
+                Paragraph(f"<font size='8' color='{BRAND['text_secondary'].hexval()}'>{desc}</font>", self.styles['Small']),
             ])
 
-        bar_table = Table(bar_rows, colWidths=[1.2*inch, 2.8*inch, 0.5*inch])
-        bar_table.setStyle(TableStyle([
+        score_table = Table(rows, colWidths=[1.2*inch, 0.4*inch, 2.2*inch, 2.5*inch])
+        score_table.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('TOPPADDING', (0, 0), (-1, -1), 6),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+            ('LINEBELOW', (0, 0), (-1, -1), 0.5, BRAND['border']),
         ]))
-
-        # Combine donut and bars (use empty string for spacing column, not Spacer with 0 height)
-        main_table = Table([[donut, '', bar_table]],
-                          colWidths=[1.2*inch, 0.3*inch, 4.5*inch])
-        main_table.setStyle(TableStyle([
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('BACKGROUND', (0, 0), (-1, -1), CODETEKI_BRAND['light']),
-            ('BOX', (0, 0), (-1, -1), 1, CODETEKI_BRAND['border']),
-            ('TOPPADDING', (0, 0), (-1, -1), 15),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 15),
-            ('LEFTPADDING', (0, 0), (-1, -1), 15),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 15),
-        ]))
-        elements.append(main_table)
+        elements.append(score_table)
 
         elements.append(Spacer(1, 0.2*inch))
 
-        # Quick stats (with None guards)
-        total_pages = self.site_audit.total_pages or 0
-        total_issues = self.site_audit.total_issues or 0
-        critical_issues = self.site_audit.critical_issues or 0
-        warning_issues = self.site_audit.warning_issues or 0
+        # Score Interpretation
+        elements.append(Paragraph("Score Interpretation", self.styles['SubsectionTitle']))
 
-        stats_data = [[
-            Paragraph(f"<font size='16'><b>{total_pages}</b></font><br/><font size='8' color='{CODETEKI_BRAND['gray'].hexval()}'>Pages Audited</font>", self.styles['ReportBody']),
-            Paragraph(f"<font size='16'><b>{total_issues}</b></font><br/><font size='8' color='{CODETEKI_BRAND['gray'].hexval()}'>Total Issues</font>", self.styles['ReportBody']),
-            Paragraph(f"<font size='16' color='{CODETEKI_BRAND['danger'].hexval()}'><b>{critical_issues}</b></font><br/><font size='8' color='{CODETEKI_BRAND['gray'].hexval()}'>Critical</font>", self.styles['ReportBody']),
-            Paragraph(f"<font size='16' color='{CODETEKI_BRAND['warning'].hexval()}'><b>{warning_issues}</b></font><br/><font size='8' color='{CODETEKI_BRAND['gray'].hexval()}'>Warnings</font>", self.styles['ReportBody']),
-        ]]
+        interp_data = [
+            [Paragraph(f"<font color='{BRAND['success'].hexval()}'><b>90-100</b></font>", self.styles['Body']),
+             Paragraph("Good - No action needed", self.styles['Body'])],
+            [Paragraph(f"<font color='{BRAND['warning'].hexval()}'><b>50-89</b></font>", self.styles['Body']),
+             Paragraph("Needs Improvement - Should be addressed", self.styles['Body'])],
+            [Paragraph(f"<font color='{BRAND['danger'].hexval()}'><b>0-49</b></font>", self.styles['Body']),
+             Paragraph("Poor - Requires immediate attention", self.styles['Body'])],
+        ]
 
-        stats_table = Table(stats_data, colWidths=[1.5*inch, 1.5*inch, 1.5*inch, 1.5*inch])
-        stats_table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('BOX', (0, 0), (-1, -1), 1, CODETEKI_BRAND['border']),
-            ('INNERGRID', (0, 0), (-1, -1), 0.5, CODETEKI_BRAND['border']),
-            ('TOPPADDING', (0, 0), (-1, -1), 12),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        interp_table = Table(interp_data, colWidths=[1*inch, 5*inch])
+        interp_table.setStyle(TableStyle([
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('LEFTPADDING', (0, 0), (-1, -1), 15),
         ]))
-        elements.append(stats_table)
+        elements.append(interp_table)
 
         return elements
 
-    def _build_issues_recommendations(self) -> list:
-        """Build the issues and recommendations section."""
+    def _build_core_web_vitals(self) -> list:
+        """Build the Core Web Vitals section."""
+        elements = []
+
+        elements.append(Paragraph("Core Web Vitals", self.styles['SectionTitle']))
+        elements.append(HRFlowable(width="100%", thickness=2, color=BRAND['primary'], spaceAfter=10))
+        elements.append(Paragraph(
+            "Core Web Vitals are Google's essential metrics for user experience. These directly impact your search rankings.",
+            self.styles['SectionSubtitle']
+        ))
+
+        # Get page audits
+        page_audits = list(self.site_audit.page_audits.all()[:15])
+
+        if not page_audits:
+            elements.append(Paragraph("No Core Web Vitals data available.", self.styles['Body']))
+            return elements
+
+        # Calculate averages
+        metrics = {
+            'lcp': [], 'cls': [], 'tbt': [], 'fcp': [], 'si': [], 'ttfb': []
+        }
+
+        for page in page_audits:
+            if page.lcp is not None:
+                metrics['lcp'].append(page.lcp)
+            if page.cls is not None:
+                metrics['cls'].append(page.cls)
+            if page.tbt is not None:
+                metrics['tbt'].append(page.tbt)
+            if page.fcp is not None:
+                metrics['fcp'].append(page.fcp)
+            if page.si is not None:
+                metrics['si'].append(page.si)
+            if page.ttfb is not None:
+                metrics['ttfb'].append(page.ttfb)
+
+        # CWV definitions
+        cwv_info = [
+            ('LCP', 'Largest Contentful Paint', 'lcp', 's',
+             'Measures loading performance. The main content should load quickly.'),
+            ('CLS', 'Cumulative Layout Shift', 'cls', '',
+             'Measures visual stability. Page elements should not shift during loading.'),
+            ('TBT', 'Total Blocking Time', 'tbt', 'ms',
+             'Measures interactivity. Scripts should not block user interactions.'),
+            ('FCP', 'First Contentful Paint', 'fcp', 's',
+             'First content rendered. Users should see feedback quickly.'),
+            ('SI', 'Speed Index', 'si', 's',
+             'Visual progress speed. Content should appear progressively.'),
+        ]
+
+        # Header row
+        header = [
+            Paragraph("<b>Metric</b>", self.styles['TableHeader']),
+            Paragraph("<b>Value</b>", self.styles['TableHeader']),
+            Paragraph("<b>Status</b>", self.styles['TableHeader']),
+            Paragraph("<b>Description</b>", self.styles['TableHeader']),
+        ]
+
+        rows = [header]
+
+        for abbr, full_name, key, unit, desc in cwv_info:
+            values = metrics.get(key, [])
+            if values:
+                avg_val = sum(values) / len(values)
+                status, color, threshold_desc = get_cwv_status(key, avg_val)
+
+                # Format value
+                if key == 'cls':
+                    val_str = f"{avg_val:.3f}"
+                elif unit == 'ms':
+                    val_str = f"{int(avg_val)}ms"
+                else:
+                    val_str = f"{avg_val:.2f}s"
+
+                rows.append([
+                    Paragraph(f"<b>{abbr}</b><br/><font size='8' color='{BRAND['text_secondary'].hexval()}'>{full_name}</font>",
+                             self.styles['Body']),
+                    Paragraph(f"<font color='{color.hexval()}'><b>{val_str}</b></font>", self.styles['Body']),
+                    Paragraph(f"<font color='{color.hexval()}'>{status}</font>", self.styles['Body']),
+                    Paragraph(f"{desc}<br/><font size='8' color='{BRAND['text_secondary'].hexval()}'>{threshold_desc}</font>",
+                             self.styles['Small']),
+                ])
+
+        if len(rows) > 1:
+            cwv_table = Table(rows, colWidths=[1.5*inch, 0.8*inch, 0.9*inch, 3.2*inch])
+            cwv_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), BRAND['primary']),
+                ('TEXTCOLOR', (0, 0), (-1, 0), BRAND['white']),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('TOPPADDING', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+                ('LEFTPADDING', (0, 0), (-1, -1), 8),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+                ('LINEBELOW', (0, 0), (-1, -1), 0.5, BRAND['border']),
+                ('BOX', (0, 0), (-1, -1), 1, BRAND['border']),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [BRAND['white'], BRAND['light']]),
+            ]))
+            elements.append(cwv_table)
+        else:
+            elements.append(Paragraph("No Core Web Vitals data available.", self.styles['Body']))
+
+        return elements
+
+    def _build_issues_section(self) -> list:
+        """Build the issues overview section."""
         from ..models import AuditIssue
 
         elements = []
 
-        elements.append(Paragraph("Issues and Recommendations", self.styles['SectionHeader']))
-        elements.append(Paragraph(
-            "This section identifies your site's most critical SEO issues and delivers clear recommendations "
-            "to resolve them and strengthen search performance.",
-            self.styles['SectionDesc']
-        ))
+        elements.append(Paragraph("Issues Overview", self.styles['SectionTitle']))
+        elements.append(HRFlowable(width="100%", thickness=2, color=BRAND['primary'], spaceAfter=15))
 
-        # Get all issues
-        issues = AuditIssue.objects.filter(
-            page_audit__site_audit=self.site_audit
-        ).exclude(severity='passed').select_related('page_audit').order_by('severity', '-savings_ms')[:25]
+        # Issues by Severity
+        elements.append(Paragraph("Issues by Severity", self.styles['SubsectionTitle']))
 
-        if not issues:
-            elements.append(Paragraph("No issues found. Great job!", self.styles['ReportBody']))
-            return elements
+        critical = self.site_audit.critical_issues or 0
+        warnings = self.site_audit.warning_issues or 0
+        info_count = (self.site_audit.total_issues or 0) - critical - warnings
+        if info_count < 0:
+            info_count = 0
 
-        # Table header
-        header = ['Type', 'Element', 'Priority', 'Problem and Recommendation']
-        rows = [header]
+        severity_data = [[
+            Paragraph(f"<para alignment='center'><font color='{BRAND['danger'].hexval()}'><b>Errors</b></font></para>", self.styles['Body']),
+            Paragraph(f"<para alignment='center'><font color='{BRAND['warning'].hexval()}'><b>Warnings</b></font></para>", self.styles['Body']),
+            Paragraph(f"<para alignment='center'><font color='{BRAND['info'].hexval()}'><b>Info</b></font></para>", self.styles['Body']),
+        ], [
+            Paragraph(f"<para alignment='center'><font size='20' color='{BRAND['danger'].hexval()}'><b>{critical}</b></font></para>", self.styles['Body']),
+            Paragraph(f"<para alignment='center'><font size='20' color='{BRAND['warning'].hexval()}'><b>{warnings}</b></font></para>", self.styles['Body']),
+            Paragraph(f"<para alignment='center'><font size='20' color='{BRAND['info'].hexval()}'><b>{info_count}</b></font></para>", self.styles['Body']),
+        ]]
 
-        for issue in issues:
-            # Determine priority icon/color
-            if issue.severity == 'error':
-                priority = Paragraph(f"<font color='{CODETEKI_BRAND['danger'].hexval()}'>●</font>", self.styles['ReportBody'])
-            elif issue.severity == 'warning':
-                priority = Paragraph(f"<font color='{CODETEKI_BRAND['warning'].hexval()}'>●</font>", self.styles['ReportBody'])
-            else:
-                priority = Paragraph(f"<font color='{CODETEKI_BRAND['info'].hexval()}'>●</font>", self.styles['ReportBody'])
-
-            # Truncate title if needed
-            title = issue.title or 'Unknown Issue'
-            title = title[:40] + '...' if len(title) > 40 else title
-
-            # Create recommendation text
-            desc = issue.description or ''
-            desc = desc[:150] + '...' if len(desc) > 150 else desc
-
-            # Handle None category
-            category = (issue.category or 'general').title()
-
-            rows.append([
-                Paragraph(f"<font size='8'>{category}</font>", self.styles['ReportBody']),
-                Paragraph(f"<font size='9'><b>{title}</b></font>", self.styles['ReportBody']),
-                priority,
-                Paragraph(f"<font size='8'>{desc}</font>", self.styles['SmallText']),
-            ])
-
-        issue_table = Table(rows, colWidths=[0.9*inch, 1.3*inch, 0.5*inch, 3.3*inch])
-        issue_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), CODETEKI_BRAND['light']),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 9),
-            ('TEXTCOLOR', (0, 0), (-1, 0), CODETEKI_BRAND['gray']),
-            ('ALIGN', (2, 0), (2, -1), 'CENTER'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-            ('LINEBELOW', (0, 0), (-1, -1), 0.5, CODETEKI_BRAND['border']),
-            ('BOX', (0, 0), (-1, -1), 1, CODETEKI_BRAND['border']),
-        ]))
-        elements.append(issue_table)
-
-        return elements
-
-    def _build_page_speed_section(self) -> list:
-        """Build the Page Speed & Core Web Vitals section."""
-        elements = []
-
-        elements.append(Paragraph("Page Speed & Core Web Vitals", self.styles['SectionHeader']))
-        elements.append(Paragraph(
-            "This section shows your page load time, Core Web Vitals, and other speed signals that affect "
-            "search results and user experience. All recommendations follow Google's performance guidelines.",
-            self.styles['SectionDesc']
-        ))
-
-        # Get page audits
-        page_audits = self.site_audit.page_audits.all()[:10]
-
-        if not page_audits:
-            elements.append(Paragraph("No page speed data available.", self.styles['ReportBody']))
-            return elements
-
-        # Calculate averages
-        metrics_data = {
-            'lcp': [], 'cls': [], 'tbt': [], 'fcp': [], 'si': [], 'ttfb': [], 'inp': []
-        }
-        perf_scores = []
-
-        for page in page_audits:
-            if page.performance_score:
-                perf_scores.append(page.performance_score)
-            if page.lcp:
-                metrics_data['lcp'].append(page.lcp)
-            if page.cls:
-                metrics_data['cls'].append(page.cls)
-            if page.tbt:
-                metrics_data['tbt'].append(page.tbt)
-            if page.fcp:
-                metrics_data['fcp'].append(page.fcp)
-            if page.si:
-                metrics_data['si'].append(page.si)
-            if page.ttfb:
-                metrics_data['ttfb'].append(page.ttfb)
-            if page.inp:
-                metrics_data['inp'].append(page.inp)
-
-        # Performance Score
-        avg_perf = sum(perf_scores) / len(perf_scores) if perf_scores else 0
-        perf_status, perf_color = ('Good', CODETEKI_BRAND['success']) if avg_perf >= 90 else (('Needs Work', CODETEKI_BRAND['warning']) if avg_perf >= 50 else ('Poor', CODETEKI_BRAND['danger']))
-
-        cwv_items = [
-            ('Performance Score', None, f"{int(avg_perf)}/100", perf_status, perf_color,
-             "Your page performs reasonably well. Compress images, remove unused CSS/JavaScript to improve."),
-        ]
-
-        # Core Web Vitals
-        cwv_definitions = [
-            ('Largest Contentful Paint (LCP)', 'lcp', 's',
-             "The main image or block of text appears quickly, giving users confidence the page is loading."),
-            ('Cumulative Layout Shift (CLS)', 'cls', '',
-             "Page elements are visually stable while loading, so elements don't jump around."),
-            ('Total Blocking Time (TBT)', 'tbt', 'ms',
-             "Scripts rarely block the main thread, so interactions feel smooth and responsive."),
-            ('First Contentful Paint (FCP)', 'fcp', 's',
-             "The first text or image appears quickly, giving users feedback that the page is loading."),
-            ('Speed Index', 'si', 's',
-             "Visual content loads progressively. Compress images and defer non-critical scripts."),
-            ('Time to First Byte (TTFB)', 'ttfb', 'ms',
-             "The server responds quickly, so users start receiving data almost instantly."),
-        ]
-
-        for name, key, unit, desc in cwv_definitions:
-            values = metrics_data.get(key, [])
-            if values:
-                avg_val = sum(values) / len(values)
-                status, color = get_cwv_status(key, avg_val)
-                if key == 'cls':
-                    display_val = f"{avg_val:.3f}"
-                elif unit == 'ms':
-                    display_val = f"{int(avg_val)}ms"
-                else:
-                    display_val = f"{avg_val:.2f}s"
-                cwv_items.append((name, key, display_val, status, color, desc))
-
-        # Build CWV table
-        rows = []
-        for name, key, value, status, color, desc in cwv_items:
-            # Status indicator
-            if status == 'Good':
-                indicator = Paragraph(f"<font color='{CODETEKI_BRAND['success'].hexval()}'>✓</font>", self.styles['ReportBody'])
-            elif status == 'Needs Work':
-                indicator = Paragraph(f"<font color='{CODETEKI_BRAND['warning'].hexval()}'>⚠</font>", self.styles['ReportBody'])
-            else:
-                indicator = Paragraph(f"<font color='{CODETEKI_BRAND['danger'].hexval()}'>✗</font>", self.styles['ReportBody'])
-
-            # Value badge
-            value_badge = Paragraph(
-                f"<font size='8' backcolor='{CODETEKI_BRAND['light'].hexval()}'> {value} </font>",
-                self.styles['ReportBody']
-            )
-
-            rows.append([
-                Paragraph(f"<b>{name}</b>", self.styles['ReportBody']),
-                indicator,
-                Paragraph(f"<font size='9'>{desc}</font><br/>{value_badge}", self.styles['SmallText']),
-            ])
-
-        cwv_table = Table(rows, colWidths=[1.8*inch, 0.4*inch, 3.8*inch])
-        cwv_table.setStyle(TableStyle([
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('ALIGN', (1, 0), (1, -1), 'CENTER'),
+        severity_table = Table(severity_data, colWidths=[2*inch, 2*inch, 2*inch])
+        severity_table.setStyle(TableStyle([
+            ('BOX', (0, 0), (-1, -1), 1, BRAND['border']),
+            ('INNERGRID', (0, 0), (-1, -1), 0.5, BRAND['border']),
             ('TOPPADDING', (0, 0), (-1, -1), 10),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-            ('LINEBELOW', (0, 0), (-1, -1), 0.5, CODETEKI_BRAND['border']),
-            ('BOX', (0, 0), (-1, -1), 1, CODETEKI_BRAND['border']),
+            ('BACKGROUND', (0, 0), (-1, 0), BRAND['light']),
         ]))
-        elements.append(cwv_table)
+        elements.append(severity_table)
+
+        elements.append(Spacer(1, 0.3*inch))
+
+        # Issues by Category
+        elements.append(Paragraph("Issues by Category", self.styles['SubsectionTitle']))
+
+        # Get issues grouped by category
+        issues = AuditIssue.objects.filter(
+            page_audit__site_audit=self.site_audit
+        ).exclude(severity='passed')
+
+        categories = {}
+        for issue in issues:
+            cat = issue.category or 'general'
+            categories[cat] = categories.get(cat, 0) + 1
+
+        cat_header = [
+            Paragraph("<b>Category</b>", self.styles['TableHeader']),
+            Paragraph("<b>Issues</b>", self.styles['TableHeader']),
+            Paragraph("<b>Description</b>", self.styles['TableHeader']),
+        ]
+
+        cat_descriptions = {
+            'performance': 'Speed, loading, and responsiveness issues',
+            'seo': 'Search engine optimization issues',
+            'accessibility': 'Issues affecting users with disabilities',
+            'best-practices': 'Modern web standards and security',
+            'general': 'General website issues',
+        }
+
+        cat_rows = [cat_header]
+        if categories:
+            for cat, count in sorted(categories.items()):
+                cat_rows.append([
+                    Paragraph(f"<b>{cat.replace('-', ' ').title()}</b>", self.styles['Body']),
+                    Paragraph(str(count), self.styles['Body']),
+                    Paragraph(cat_descriptions.get(cat, 'Other issues'), self.styles['Small']),
+                ])
+        else:
+            # Show default categories with 0
+            for cat in ['performance', 'seo', 'accessibility', 'best-practices']:
+                cat_rows.append([
+                    Paragraph(f"<b>{cat.replace('-', ' ').title()}</b>", self.styles['Body']),
+                    Paragraph("0", self.styles['Body']),
+                    Paragraph(cat_descriptions.get(cat, ''), self.styles['Small']),
+                ])
+
+        cat_table = Table(cat_rows, colWidths=[1.5*inch, 0.8*inch, 4*inch])
+        cat_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), BRAND['primary']),
+            ('TEXTCOLOR', (0, 0), (-1, 0), BRAND['white']),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('LEFTPADDING', (0, 0), (-1, -1), 10),
+            ('LINEBELOW', (0, 0), (-1, -1), 0.5, BRAND['border']),
+            ('BOX', (0, 0), (-1, -1), 1, BRAND['border']),
+        ]))
+        elements.append(cat_table)
+
+        # Detailed Issues List (if any)
+        if issues.exists():
+            elements.append(Spacer(1, 0.3*inch))
+            elements.append(Paragraph("Detailed Issues", self.styles['SubsectionTitle']))
+
+            detail_header = [
+                Paragraph("<b>Issue</b>", self.styles['TableHeader']),
+                Paragraph("<b>Severity</b>", self.styles['TableHeader']),
+                Paragraph("<b>Category</b>", self.styles['TableHeader']),
+                Paragraph("<b>Description</b>", self.styles['TableHeader']),
+            ]
+
+            detail_rows = [detail_header]
+            for issue in issues[:20]:  # Limit to 20 issues
+                title = (issue.title or 'Unknown Issue')[:35]
+                if len(issue.title or '') > 35:
+                    title += '...'
+
+                severity = issue.severity or 'info'
+                sev_color = BRAND['danger'] if severity == 'error' else (
+                    BRAND['warning'] if severity == 'warning' else BRAND['info']
+                )
+
+                desc = (issue.description or '')[:80]
+                if len(issue.description or '') > 80:
+                    desc += '...'
+
+                detail_rows.append([
+                    Paragraph(f"<font size='8'>{title}</font>", self.styles['Body']),
+                    Paragraph(f"<font size='8' color='{sev_color.hexval()}'>{severity.title()}</font>", self.styles['Body']),
+                    Paragraph(f"<font size='8'>{(issue.category or 'general').title()}</font>", self.styles['Body']),
+                    Paragraph(f"<font size='8'>{desc}</font>", self.styles['Small']),
+                ])
+
+            detail_table = Table(detail_rows, colWidths=[1.5*inch, 0.7*inch, 0.9*inch, 3.2*inch])
+            detail_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), BRAND['primary']),
+                ('TEXTCOLOR', (0, 0), (-1, 0), BRAND['white']),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                ('LEFTPADDING', (0, 0), (-1, -1), 5),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+                ('LINEBELOW', (0, 0), (-1, -1), 0.5, BRAND['border']),
+                ('BOX', (0, 0), (-1, -1), 1, BRAND['border']),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [BRAND['white'], BRAND['light']]),
+            ]))
+            elements.append(detail_table)
 
         return elements
 
     def _build_audited_pages(self) -> list:
-        """Build the list of all audited pages with their scores."""
+        """Build the audited pages section."""
         elements = []
 
-        elements.append(Paragraph("Audited Pages", self.styles['SectionHeader']))
+        total_pages = self.site_audit.total_pages or 0
+        elements.append(Paragraph("Audited Pages", self.styles['SectionTitle']))
+        elements.append(HRFlowable(width="100%", thickness=2, color=BRAND['primary'], spaceAfter=10))
         elements.append(Paragraph(
-            f"This section lists all {self.site_audit.total_pages or 0} pages that were audited, "
-            "showing individual performance scores for each URL.",
-            self.styles['SectionDesc']
+            f"This section lists all {total_pages} pages that were audited, showing individual performance scores for each URL.",
+            self.styles['SectionSubtitle']
         ))
 
-        page_audits = self.site_audit.page_audits.all()
+        page_audits = list(self.site_audit.page_audits.all())
 
         if not page_audits:
-            elements.append(Paragraph("No pages audited.", self.styles['ReportBody']))
+            elements.append(Paragraph("No pages audited.", self.styles['Body']))
             return elements
 
-        # Table header
-        header = ['URL', 'Performance', 'SEO', 'Accessibility', 'Best Practices']
+        # Header
+        header = [
+            Paragraph("<b>URL</b>", self.styles['TableHeader']),
+            Paragraph("<b>Perf</b>", self.styles['TableHeader']),
+            Paragraph("<b>SEO</b>", self.styles['TableHeader']),
+            Paragraph("<b>Access</b>", self.styles['TableHeader']),
+            Paragraph("<b>BP</b>", self.styles['TableHeader']),
+        ]
+
         rows = [header]
 
         for page in page_audits:
-            # Truncate URL (with None guard)
+            # Truncate URL
             url = page.url or 'Unknown URL'
-            if len(url) > 40:
-                url = url[:37] + '...'
+            if len(url) > 45:
+                url = url[:42] + '...'
 
-            # Color-code scores
-            def score_cell(score):
+            def format_score(score):
                 if score is None:
-                    return 'N/A'
+                    return Paragraph("N/A", self.styles['TableCell'])
                 color = get_score_color(score)
-                return Paragraph(f"<font color='{color.hexval()}'><b>{int(score)}</b></font>", self.styles['ReportBody'])
+                return Paragraph(f"<font color='{color.hexval()}'><b>{int(score)}</b></font>", self.styles['TableCell'])
 
             rows.append([
-                Paragraph(f"<font size='8' color='{CODETEKI_BRAND['primary'].hexval()}'>{url}</font>", self.styles['ReportBody']),
-                score_cell(page.performance_score),
-                score_cell(page.seo_score),
-                score_cell(page.accessibility_score),
-                score_cell(page.best_practices_score),
+                Paragraph(f"<font size='8' color='{BRAND['primary'].hexval()}'>{url}</font>", self.styles['URL']),
+                format_score(page.performance_score),
+                format_score(page.seo_score),
+                format_score(page.accessibility_score),
+                format_score(page.best_practices_score),
             ])
 
-        page_table = Table(rows, colWidths=[2.5*inch, 0.8*inch, 0.6*inch, 0.9*inch, 1*inch])
+        page_table = Table(rows, colWidths=[3.2*inch, 0.6*inch, 0.6*inch, 0.7*inch, 0.6*inch])
         page_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), CODETEKI_BRAND['primary']),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('BACKGROUND', (0, 0), (-1, 0), BRAND['primary']),
+            ('TEXTCOLOR', (0, 0), (-1, 0), BRAND['white']),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 9),
             ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('TOPPADDING', (0, 0), (-1, -1), 8),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-            ('LINEBELOW', (0, 0), (-1, -1), 0.5, CODETEKI_BRAND['border']),
-            ('BOX', (0, 0), (-1, -1), 1, CODETEKI_BRAND['border']),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, CODETEKI_BRAND['light']]),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('LINEBELOW', (0, 0), (-1, -1), 0.5, BRAND['border']),
+            ('BOX', (0, 0), (-1, -1), 1, BRAND['border']),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [BRAND['white'], BRAND['light']]),
         ]))
         elements.append(page_table)
 
@@ -726,11 +942,11 @@ class SEOReportPDFGenerator:
         """Build the AI analysis section."""
         elements = []
 
-        elements.append(Paragraph("AI-Powered Analysis & Recommendations", self.styles['SectionHeader']))
+        elements.append(Paragraph("AI-Powered Analysis & Recommendations", self.styles['SectionTitle']))
+        elements.append(HRFlowable(width="100%", thickness=2, color=BRAND['primary'], spaceAfter=10))
         elements.append(Paragraph(
-            "The following analysis was generated by AI based on your audit results, providing "
-            "prioritized recommendations and implementation guidance.",
-            self.styles['SectionDesc']
+            "The following analysis was generated by AI based on your audit results:",
+            self.styles['SectionSubtitle']
         ))
 
         # Parse and format the AI analysis
@@ -745,20 +961,28 @@ class SEOReportPDFGenerator:
 
             # Handle markdown-style headers
             if line.startswith('### '):
-                elements.append(Paragraph(line[4:], self.styles['SubsectionHeader']))
+                elements.append(Paragraph(line[4:], self.styles['SubsectionTitle']))
             elif line.startswith('## '):
-                elements.append(Paragraph(line[3:], self.styles['SubsectionHeader']))
+                elements.append(Paragraph(line[3:], self.styles['SubsectionTitle']))
             elif line.startswith('# '):
-                elements.append(Paragraph(line[2:], self.styles['SectionHeader']))
+                elements.append(Spacer(1, 0.1*inch))
+                elements.append(Paragraph(
+                    f"<font color='{BRAND['primary'].hexval()}'><b>{line[2:]}</b></font>",
+                    self.styles['SubsectionTitle']
+                ))
             elif line.startswith('- ') or line.startswith('* '):
-                elements.append(Paragraph(f"• {line[2:]}", self.styles['ReportBody']))
+                elements.append(Paragraph(f"• {line[2:]}", self.styles['Body']))
+            elif line.startswith('|'):
+                # Skip markdown table formatting
+                continue
             elif line.startswith('```'):
                 continue
             else:
+                # Handle bold/italic markdown
                 import re
                 line = re.sub(r'\*\*([^*]+)\*\*', r'<b>\1</b>', line)
                 line = re.sub(r'\*([^*]+)\*', r'<i>\1</i>', line)
-                elements.append(Paragraph(line, self.styles['ReportBody']))
+                elements.append(Paragraph(line, self.styles['Body']))
 
         return elements
 
@@ -773,5 +997,5 @@ def generate_seo_audit_pdf(site_audit) -> bytes:
     Returns:
         PDF content as bytes
     """
-    generator = SEOReportPDFGenerator(site_audit)
+    generator = PremiumSEOReportGenerator(site_audit)
     return generator.generate()
