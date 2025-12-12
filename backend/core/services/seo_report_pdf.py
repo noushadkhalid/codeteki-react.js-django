@@ -434,8 +434,8 @@ class SEOReportPDFGenerator:
             ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
         ]))
 
-        # Combine donut and bars
-        main_table = Table([[donut, Spacer(0.3*inch, 0), bar_table]],
+        # Combine donut and bars (use empty string for spacing column, not Spacer with 0 height)
+        main_table = Table([[donut, '', bar_table]],
                           colWidths=[1.2*inch, 0.3*inch, 4.5*inch])
         main_table.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
