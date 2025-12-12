@@ -2012,7 +2012,7 @@ class SiteAuditAdmin(ModelAdmin):
                        'started_at', 'completed_at', 'ai_analysis', 'celery_task_id', 'created_at', 'updated_at')
     inlines = [PageAuditInline]
     date_hierarchy = 'created_at'
-    actions = ['run_lighthouse_audit', 'run_pagespeed_analysis', 'generate_ai_analysis', 'generate_combined_ai_analysis', 'preview_ai_data']
+    actions = ['run_lighthouse_audit', 'run_pagespeed_analysis', 'generate_ai_analysis', 'generate_combined_ai_analysis', 'generate_pdf_report', 'preview_ai_data']
 
     class Media:
         js = ('admin/js/seo-loading.js',)
@@ -2181,6 +2181,44 @@ class SiteAuditAdmin(ModelAdmin):
         except Exception as e:
             self.message_user(request, f"❌ Error gathering data: {str(e)}", messages.ERROR)
 
+    @action(description="📄 Generate PDF Report")
+    def generate_pdf_report(self, request, queryset):
+        """Generate a professional PDF report for the selected audit."""
+        from django.http import HttpResponse
+        from .services.seo_report_pdf import generate_seo_audit_pdf
+
+        audit = queryset.first()
+        if not audit:
+            self.message_user(request, "❌ No audit selected", messages.ERROR)
+            return
+
+        if audit.total_pages == 0:
+            self.message_user(
+                request,
+                "❌ No page audits found. Run a Lighthouse or PageSpeed audit first.",
+                messages.ERROR
+            )
+            return
+
+        try:
+            pdf_content = generate_seo_audit_pdf(audit)
+
+            # Create response with PDF
+            filename = f"{audit.domain.replace('.', '_')}-seo-report-{audit.created_at.strftime('%Y%m%d')}.pdf"
+            response = HttpResponse(pdf_content, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+            self.message_user(
+                request,
+                f"✅ PDF report generated for '{audit.name}'",
+                messages.SUCCESS
+            )
+
+            return response
+
+        except Exception as e:
+            self.message_user(request, f"❌ Error generating PDF: {str(e)}", messages.ERROR)
+
     class Meta:
         verbose_name_plural = "🔍 SEO Engine: Site Audits"
 
@@ -2194,7 +2232,7 @@ class AIAnalysisReportAdmin(ModelAdmin):
     readonly_fields = ('name', 'domain', 'strategy', 'status', 'ai_analysis_display',
                        'avg_performance', 'avg_seo', 'avg_accessibility', 'avg_best_practices',
                        'total_issues', 'critical_issues', 'created_at')
-    actions = ['regenerate_ai_analysis', 'export_analysis_markdown']
+    actions = ['regenerate_ai_analysis', 'export_analysis_markdown', 'generate_pdf_report']
     date_hierarchy = 'created_at'
 
     class Media:
@@ -2295,6 +2333,30 @@ class AIAnalysisReportAdmin(ModelAdmin):
         response['Content-Disposition'] = f'attachment; filename="{audit.domain}-seo-analysis.md"'
         return response
 
+    @action(description="📄 Generate PDF Report")
+    def generate_pdf_report(self, request, queryset):
+        """Generate a professional PDF report for the selected audit."""
+        from django.http import HttpResponse
+        from .services.seo_report_pdf import generate_seo_audit_pdf
+
+        audit = queryset.first()
+        if not audit:
+            self.message_user(request, "❌ No audit selected", messages.ERROR)
+            return
+
+        try:
+            pdf_content = generate_seo_audit_pdf(audit)
+
+            # Create response with PDF
+            filename = f"{audit.domain.replace('.', '_')}-seo-report-{audit.created_at.strftime('%Y%m%d')}.pdf"
+            response = HttpResponse(pdf_content, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+            return response
+
+        except Exception as e:
+            self.message_user(request, f"❌ Error generating PDF: {str(e)}", messages.ERROR)
+
     class Meta:
         verbose_name = "AI Analysis Report"
         verbose_name_plural = "🤖 SEO Engine: AI Analysis"
@@ -2348,16 +2410,36 @@ class PageAuditAdmin(ModelAdmin):
 
 @admin.register(AuditIssue)
 class AuditIssueAdmin(ModelAdmin):
-    list_display = ('title', 'severity', 'category', 'page_url', 'display_value', 'savings_ms', 'status')
-    list_filter = ('severity', 'category', 'status')
-    search_fields = ('title', 'description', 'audit_id')
+    list_display = ('title', 'severity', 'category', 'page_url_display', 'display_value', 'savings_ms', 'status', 'created_at_display')
+    list_filter = ('severity', 'category', 'status', 'page_audit__site_audit', 'created_at')
+    search_fields = ('title', 'description', 'audit_id', 'page_audit__url')
     readonly_fields = ('audit_id', 'title', 'description', 'category', 'severity', 'score',
-                       'display_value', 'savings_ms', 'savings_bytes', 'details', 'ai_fix_recommendation')
+                       'display_value', 'savings_ms', 'savings_bytes', 'details', 'ai_fix_recommendation',
+                       'created_at', 'updated_at')
     actions = ['mark_fixed', 'mark_ignored', 'generate_fix_recommendation']
+    date_hierarchy = 'created_at'
+    ordering = ['-created_at', 'severity', '-savings_ms']
+    list_per_page = 50
 
-    def page_url(self, obj):
-        return obj.page_audit.url if obj.page_audit else "—"
-    page_url.short_description = "Page URL"
+    @display(description="Page URL", ordering='page_audit__url')
+    def page_url_display(self, obj):
+        """Display page URL with link and truncation."""
+        if not obj.page_audit:
+            return "—"
+        url = obj.page_audit.url
+        # Truncate long URLs for display
+        display_url = url if len(url) <= 50 else url[:47] + '...'
+        return format_html(
+            '<a href="{}" target="_blank" title="{}" style="color: #6366F1;">{}</a>',
+            url, url, display_url
+        )
+
+    @display(description="Found", ordering='created_at')
+    def created_at_display(self, obj):
+        """Display creation date in a readable format."""
+        if obj.created_at:
+            return obj.created_at.strftime('%Y-%m-%d %H:%M')
+        return "—"
 
     fieldsets = (
         ('⚠️ Issue Details', {
@@ -2371,6 +2453,10 @@ class AuditIssueAdmin(ModelAdmin):
         }),
         ('🔧 Fix Status', {
             'fields': ('status', 'fixed_at', 'ai_fix_recommendation')
+        }),
+        ('📅 Timestamps', {
+            'fields': (('created_at', 'updated_at'),),
+            'classes': ('collapse',)
         }),
         ('📄 Details', {
             'fields': ('details',),

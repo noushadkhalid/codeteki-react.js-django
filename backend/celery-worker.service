@@ -12,16 +12,16 @@ After=network.target redis.service
 
 [Service]
 Type=forking
-User=www-data
-Group=www-data
-WorkingDirectory=/var/www/codeteki/backend
+User=codeteki
+Group=codeteki
+WorkingDirectory=/home/codeteki/codeteki-react.js-django/backend
 
 # Adjust paths to match your server setup
-Environment="PATH=/var/www/codeteki/.venv/bin"
+Environment="PATH=/home/codeteki/codeteki-react.js-django/venv/bin"
 Environment="DJANGO_SETTINGS_MODULE=codeteki_site.settings"
 Environment="CELERY_BROKER_URL=redis://localhost:6379/0"
 
-ExecStart=/var/www/codeteki/.venv/bin/celery -A codeteki_site worker \
+ExecStart=/home/codeteki/codeteki-react.js-django/venv/bin/celery -A codeteki_site worker \
     --loglevel=info \
     --concurrency=2 \
     --logfile=/var/log/celery/worker.log \
