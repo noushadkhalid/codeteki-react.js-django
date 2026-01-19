@@ -12,7 +12,7 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-PROJECT_DIR="/home/codeteki/apps/codeteki"
+PROJECT_DIR="/home/codeteki/codeteki-react.js-django"
 BACKEND_DIR="$PROJECT_DIR/backend"
 VENV_DIR="$PROJECT_DIR/venv"
 

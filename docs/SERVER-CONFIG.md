@@ -7,11 +7,11 @@
 | Domain | codeteki.au |
 | Server | Ubuntu (DigitalOcean/AWS) |
 | User | codeteki |
-| Project Path | `/home/codeteki/apps/codeteki` |
-| Backend Path | `/home/codeteki/apps/codeteki/backend` |
-| Virtualenv | `/home/codeteki/apps/codeteki/venv` |
-| Static Files | `/home/codeteki/apps/codeteki/backend/staticfiles` |
-| Media Files | `/home/codeteki/apps/codeteki/backend/media` |
+| Project Path | `/home/codeteki/codeteki-react.js-django` |
+| Backend Path | `/home/codeteki/codeteki-react.js-django/backend` |
+| Virtualenv | `/home/codeteki/codeteki-react.js-django/venv` |
+| Static Files | `/home/codeteki/codeteki-react.js-django/backend/staticfiles` |
+| Media Files | `/home/codeteki/codeteki-react.js-django/backend/media` |
 
 ## Service Names
 
@@ -36,7 +36,7 @@
 
 ### Deployment
 ```bash
-cd /home/codeteki/apps/codeteki/backend
+cd /home/codeteki/codeteki-react.js-django/backend
 ./deploy.sh
 ```
 
@@ -61,7 +61,7 @@ tail -f /var/log/celery/worker.log
 
 ### Database
 ```bash
-cd /home/codeteki/apps/codeteki/backend
+cd /home/codeteki/codeteki-react.js-django/backend
 source ../venv/bin/activate
 python manage.py migrate
 python manage.py createsuperuser
@@ -79,8 +79,8 @@ Location: `/etc/nginx/sites-available/codeteki`
 
 Key settings:
 - Proxy to Gunicorn socket: `proxy_pass http://unix:/run/gunicorn.sock`
-- Static files: `/home/codeteki/apps/codeteki/backend/staticfiles/`
-- Media files: `/home/codeteki/apps/codeteki/backend/media/`
+- Static files: `/home/codeteki/codeteki-react.js-django/backend/staticfiles/`
+- Media files: `/home/codeteki/codeteki-react.js-django/backend/media/`
 - Max upload: `client_max_body_size 250m`
 
 ## Gunicorn Service Example
@@ -95,8 +95,8 @@ After=network.target
 [Service]
 User=codeteki
 Group=www-data
-WorkingDirectory=/home/codeteki/apps/codeteki/backend
-ExecStart=/home/codeteki/apps/codeteki/venv/bin/gunicorn \
+WorkingDirectory=/home/codeteki/codeteki-react.js-django/backend
+ExecStart=/home/codeteki/codeteki-react.js-django/venv/bin/gunicorn \
     --access-logfile - \
     --workers 3 \
     --bind unix:/run/gunicorn.sock \
@@ -130,9 +130,9 @@ After=network.target redis-server.service
 Type=forking
 User=codeteki
 Group=codeteki
-WorkingDirectory=/home/codeteki/apps/codeteki/backend
-Environment="PATH=/home/codeteki/apps/codeteki/venv/bin"
-ExecStart=/home/codeteki/apps/codeteki/venv/bin/celery \
+WorkingDirectory=/home/codeteki/codeteki-react.js-django/backend
+Environment="PATH=/home/codeteki/codeteki-react.js-django/venv/bin"
+ExecStart=/home/codeteki/codeteki-react.js-django/venv/bin/celery \
     -A codeteki_site worker \
     --loglevel=info \
     --logfile=/var/log/celery/worker.log \
@@ -160,9 +160,9 @@ After=network.target redis-server.service
 Type=forking
 User=codeteki
 Group=codeteki
-WorkingDirectory=/home/codeteki/apps/codeteki/backend
-Environment="PATH=/home/codeteki/apps/codeteki/venv/bin"
-ExecStart=/home/codeteki/apps/codeteki/venv/bin/celery \
+WorkingDirectory=/home/codeteki/codeteki-react.js-django/backend
+Environment="PATH=/home/codeteki/codeteki-react.js-django/venv/bin"
+ExecStart=/home/codeteki/codeteki-react.js-django/venv/bin/celery \
     -A codeteki_site beat \
     --loglevel=info \
     --logfile=/var/log/celery/beat.log \
@@ -178,7 +178,7 @@ WantedBy=multi-user.target
 
 ## Environment Variables
 
-Create `/home/codeteki/apps/codeteki/backend/.env`:
+Create `/home/codeteki/codeteki-react.js-django/backend/.env`:
 
 ```bash
 DEBUG=False

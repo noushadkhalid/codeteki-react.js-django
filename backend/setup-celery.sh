@@ -13,7 +13,7 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-PROJECT_DIR="/home/codeteki/apps/codeteki"
+PROJECT_DIR="/home/codeteki/codeteki-react.js-django"
 BACKEND_DIR="$PROJECT_DIR/backend"
 VENV_DIR="$PROJECT_DIR/venv"
 
@@ -67,9 +67,9 @@ After=network.target redis-server.service
 Type=forking
 User=codeteki
 Group=codeteki
-WorkingDirectory=/home/codeteki/apps/codeteki/backend
-Environment="PATH=/home/codeteki/apps/codeteki/venv/bin"
-ExecStart=/home/codeteki/apps/codeteki/venv/bin/celery \
+WorkingDirectory=/home/codeteki/codeteki-react.js-django/backend
+Environment="PATH=/home/codeteki/codeteki-react.js-django/venv/bin"
+ExecStart=/home/codeteki/codeteki-react.js-django/venv/bin/celery \
     -A codeteki_site worker \
     --loglevel=info \
     --logfile=/var/log/celery/worker.log \
@@ -96,9 +96,9 @@ After=network.target redis-server.service
 Type=forking
 User=codeteki
 Group=codeteki
-WorkingDirectory=/home/codeteki/apps/codeteki/backend
-Environment="PATH=/home/codeteki/apps/codeteki/venv/bin"
-ExecStart=/home/codeteki/apps/codeteki/venv/bin/celery \
+WorkingDirectory=/home/codeteki/codeteki-react.js-django/backend
+Environment="PATH=/home/codeteki/codeteki-react.js-django/venv/bin"
+ExecStart=/home/codeteki/codeteki-react.js-django/venv/bin/celery \
     -A codeteki_site beat \
     --loglevel=info \
     --logfile=/var/log/celery/beat.log \
