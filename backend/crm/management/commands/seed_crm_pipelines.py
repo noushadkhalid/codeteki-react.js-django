@@ -42,6 +42,7 @@ class Command(BaseCommand):
             # Create Desi Firms listing acquisition pipelines
             # Note: No Deals pipeline - deals are a feature for listed businesses (plan-based)
             self._create_desifirms_business_pipeline(desifirms_brand, force)
+            self._create_desifirms_backlink_pipeline(desifirms_brand, force)
             self._create_desifirms_events_pipeline(desifirms_brand, force)
             self._create_desifirms_realestate_pipeline(desifirms_brand, force)
             self._create_desifirms_classifieds_pipeline(desifirms_brand, force)
@@ -525,6 +526,95 @@ class Command(BaseCommand):
             PipelineStage.objects.create(pipeline=pipeline, **stage_data)
 
         self.stdout.write(f'Created {pipeline_name} with {len(stages)} stages')
+
+    def _create_desifirms_backlink_pipeline(self, brand, force=False):
+        """
+        Desi Firms: Backlink Outreach Pipeline
+        Goal: SEO link building for Desi Firms website
+        """
+        pipeline_name = 'Desi Firms Backlink Outreach'
+        description = 'SEO backlink outreach for desifirms.com.au'
+
+        pipeline, created = Pipeline.objects.get_or_create(
+            brand=brand,
+            pipeline_type='backlink',
+            defaults={
+                'name': pipeline_name,
+                'description': description,
+                'is_active': True,
+            }
+        )
+
+        if not created and not force:
+            self.stdout.write(f'{pipeline.name} already exists (id: {pipeline.id})')
+            return
+
+        if not created and force:
+            pipeline.name = pipeline_name
+            pipeline.description = description
+            pipeline.save(update_fields=['name', 'description'])
+            pipeline.stages.all().delete()
+            self.stdout.write(f'Updated and reset: {pipeline_name}')
+
+        stages = [
+            {
+                'name': 'Target Found',
+                'order': 1,
+                'auto_actions': {'action': 'queue_pitch'},
+                'days_until_followup': 0,
+                'is_terminal': False,
+            },
+            {
+                'name': 'Pitch Sent',
+                'order': 2,
+                'auto_actions': {'action': 'wait_for_reply'},
+                'days_until_followup': 5,
+                'is_terminal': False,
+            },
+            {
+                'name': 'Follow Up 1',
+                'order': 3,
+                'auto_actions': {'action': 'send_followup'},
+                'days_until_followup': 5,
+                'is_terminal': False,
+            },
+            {
+                'name': 'Follow Up 2',
+                'order': 4,
+                'auto_actions': {'action': 'send_followup'},
+                'days_until_followup': 7,
+                'is_terminal': False,
+            },
+            {
+                'name': 'Responded',
+                'order': 5,
+                'auto_actions': {'action': 'classify_response'},
+                'days_until_followup': 2,
+                'is_terminal': False,
+            },
+            {
+                'name': 'Link Placed',
+                'order': 6,
+                'auto_actions': {'action': 'verify_link'},
+                'days_until_followup': 0,
+                'is_terminal': True,
+            },
+            {
+                'name': 'Rejected',
+                'order': 7,
+                'auto_actions': {'action': 'archive'},
+                'days_until_followup': 0,
+                'is_terminal': True,
+            },
+        ]
+
+        for stage_data in stages:
+            PipelineStage.objects.create(pipeline=pipeline, **stage_data)
+
+        self.stdout.write(f'Created {pipeline_name} with {len(stages)} stages')
+
+        # Create email sequence for backlink outreach
+        self._create_backlink_email_sequence(pipeline, brand)
 
     def _create_desifirms_deals_pipeline(self, brand, force=False):
         """
