@@ -9,7 +9,7 @@
 | User | codeteki |
 | Project Path | `/home/codeteki/codeteki-react.js-django` |
 | Backend Path | `/home/codeteki/codeteki-react.js-django/backend` |
-| Virtualenv | `/home/codeteki/codeteki-react.js-django/venv` |
+| Virtualenv | `/home/codeteki/codeteki-react.js-django/backend/venv` |
 | Static Files | `/home/codeteki/codeteki-react.js-django/backend/staticfiles` |
 | Media Files | `/home/codeteki/codeteki-react.js-django/backend/media` |
 
@@ -96,7 +96,7 @@ After=network.target
 User=codeteki
 Group=www-data
 WorkingDirectory=/home/codeteki/codeteki-react.js-django/backend
-ExecStart=/home/codeteki/codeteki-react.js-django/venv/bin/gunicorn \
+ExecStart=/home/codeteki/codeteki-react.js-django/backend/venv/bin/gunicorn \
     --access-logfile - \
     --workers 3 \
     --bind unix:/run/gunicorn.sock \
@@ -131,8 +131,8 @@ Type=forking
 User=codeteki
 Group=codeteki
 WorkingDirectory=/home/codeteki/codeteki-react.js-django/backend
-Environment="PATH=/home/codeteki/codeteki-react.js-django/venv/bin"
-ExecStart=/home/codeteki/codeteki-react.js-django/venv/bin/celery \
+Environment="PATH=/home/codeteki/codeteki-react.js-django/backend/venv/bin"
+ExecStart=/home/codeteki/codeteki-react.js-django/backend/venv/bin/celery \
     -A codeteki_site worker \
     --loglevel=info \
     --logfile=/var/log/celery/worker.log \
@@ -161,8 +161,8 @@ Type=forking
 User=codeteki
 Group=codeteki
 WorkingDirectory=/home/codeteki/codeteki-react.js-django/backend
-Environment="PATH=/home/codeteki/codeteki-react.js-django/venv/bin"
-ExecStart=/home/codeteki/codeteki-react.js-django/venv/bin/celery \
+Environment="PATH=/home/codeteki/codeteki-react.js-django/backend/venv/bin"
+ExecStart=/home/codeteki/codeteki-react.js-django/backend/venv/bin/celery \
     -A codeteki_site beat \
     --loglevel=info \
     --logfile=/var/log/celery/beat.log \

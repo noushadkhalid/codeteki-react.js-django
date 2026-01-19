@@ -14,7 +14,7 @@ NC='\033[0m'
 
 PROJECT_DIR="/home/codeteki/codeteki-react.js-django"
 BACKEND_DIR="$PROJECT_DIR/backend"
-VENV_DIR="$PROJECT_DIR/venv"
+VENV_DIR="$BACKEND_DIR/venv"
 
 cd $PROJECT_DIR
 

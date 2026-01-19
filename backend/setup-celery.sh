@@ -15,7 +15,7 @@ NC='\033[0m'
 
 PROJECT_DIR="/home/codeteki/codeteki-react.js-django"
 BACKEND_DIR="$PROJECT_DIR/backend"
-VENV_DIR="$PROJECT_DIR/venv"
+VENV_DIR="$BACKEND_DIR/venv"
 
 echo -e "${YELLOW}=== Codeteki Celery Setup ===${NC}"
 
@@ -68,8 +68,8 @@ Type=forking
 User=codeteki
 Group=codeteki
 WorkingDirectory=/home/codeteki/codeteki-react.js-django/backend
-Environment="PATH=/home/codeteki/codeteki-react.js-django/venv/bin"
-ExecStart=/home/codeteki/codeteki-react.js-django/venv/bin/celery \
+Environment="PATH=/home/codeteki/codeteki-react.js-django/backend/venv/bin"
+ExecStart=/home/codeteki/codeteki-react.js-django/backend/venv/bin/celery \
     -A codeteki_site worker \
     --loglevel=info \
     --logfile=/var/log/celery/worker.log \
@@ -97,8 +97,8 @@ Type=forking
 User=codeteki
 Group=codeteki
 WorkingDirectory=/home/codeteki/codeteki-react.js-django/backend
-Environment="PATH=/home/codeteki/codeteki-react.js-django/venv/bin"
-ExecStart=/home/codeteki/codeteki-react.js-django/venv/bin/celery \
+Environment="PATH=/home/codeteki/codeteki-react.js-django/backend/venv/bin"
+ExecStart=/home/codeteki/codeteki-react.js-django/backend/venv/bin/celery \
     -A codeteki_site beat \
     --loglevel=info \
     --logfile=/var/log/celery/beat.log \
