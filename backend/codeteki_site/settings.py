@@ -60,7 +60,9 @@ INSTALLED_APPS = [
     'django.contrib.sitemaps',  # Dynamic sitemap generation
     'ckeditor',  # Rich text editor
     'django_celery_results',  # Store Celery task results in database
+    'django_celery_beat',  # Periodic task scheduler
     'core',
+    'crm',  # CRM with AI-powered outreach
 ]
 
 MIDDLEWARE = [
@@ -233,6 +235,35 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes max per task
+
+# Celery Beat Schedule for CRM tasks
+from celery.schedules import crontab
+CELERY_BEAT_SCHEDULE = {
+    'crm-process-pending-deals': {
+        'task': 'crm.tasks.process_pending_deals',
+        'schedule': crontab(minute=0),  # Every hour
+    },
+    'crm-send-scheduled-emails': {
+        'task': 'crm.tasks.send_scheduled_emails',
+        'schedule': crontab(minute='*/15'),  # Every 15 minutes
+    },
+    'crm-check-email-replies': {
+        'task': 'crm.tasks.check_email_replies',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
+    },
+    'crm-daily-ai-review': {
+        'task': 'crm.tasks.daily_ai_review',
+        'schedule': crontab(hour=9, minute=0),  # 9 AM daily
+    },
+}
+
+# Zoho Mail API Configuration (for CRM email outreach)
+ZOHO_CLIENT_ID = os.getenv("ZOHO_CLIENT_ID", "")
+ZOHO_CLIENT_SECRET = os.getenv("ZOHO_CLIENT_SECRET", "")
+ZOHO_REFRESH_TOKEN = os.getenv("ZOHO_REFRESH_TOKEN", "")
+ZOHO_ACCOUNT_ID = os.getenv("ZOHO_ACCOUNT_ID", "")
+ZOHO_FROM_EMAIL = os.getenv("ZOHO_FROM_EMAIL", "outreach@codeteki.au")
+ZOHO_API_DOMAIN = os.getenv("ZOHO_API_DOMAIN", "zoho.com")  # Use zoho.com.au for Australia
 
 # Django Unfold Configuration
 from django.templatetags.static import static
@@ -644,6 +675,86 @@ UNFOLD = {
                         "title": "Statistics",
                         "icon": "bar_chart",
                         "link": reverse_lazy("admin:core_statmetric_changelist"),
+                    },
+                ],
+            },
+            # ============================================
+            # CRM & Outreach (Merged)
+            # ============================================
+            {
+                "title": "CRM & Outreach",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": "Pipeline Board",
+                        "icon": "view_kanban",
+                        "link": "/admin/crm/dashboard/",
+                    },
+                    {
+                        "title": "Contacts",
+                        "icon": "contacts",
+                        "link": reverse_lazy("admin:crm_contact_changelist"),
+                    },
+                    {
+                        "title": "Email Composer",
+                        "icon": "edit_note",
+                        "link": reverse_lazy("admin:crm_emaildraft_changelist"),
+                    },
+                    {
+                        "title": "Deals",
+                        "icon": "handshake",
+                        "link": reverse_lazy("admin:crm_deal_changelist"),
+                    },
+                    {
+                        "title": "Import Contacts",
+                        "icon": "upload_file",
+                        "link": reverse_lazy("admin:crm_contactimport_changelist"),
+                    },
+                    {
+                        "title": "Brands",
+                        "icon": "business",
+                        "link": reverse_lazy("admin:crm_brand_changelist"),
+                    },
+                    {
+                        "title": "Pipeline Settings",
+                        "icon": "settings",
+                        "link": reverse_lazy("admin:crm_pipeline_changelist"),
+                    },
+                    {
+                        "title": "Backlinks",
+                        "icon": "link",
+                        "link": reverse_lazy("admin:crm_backlinkopportunity_changelist"),
+                    },
+                ],
+            },
+            # ============================================
+            # Celery Task Management
+            # ============================================
+            {
+                "title": "Background Tasks",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": "Periodic Tasks",
+                        "icon": "schedule",
+                        "link": reverse_lazy("admin:django_celery_beat_periodictask_changelist"),
+                    },
+                    {
+                        "title": "Task Results",
+                        "icon": "task_alt",
+                        "link": reverse_lazy("admin:django_celery_results_taskresult_changelist"),
+                    },
+                    {
+                        "title": "Interval Schedules",
+                        "icon": "timer",
+                        "link": reverse_lazy("admin:django_celery_beat_intervalschedule_changelist"),
+                    },
+                    {
+                        "title": "Crontab Schedules",
+                        "icon": "event_repeat",
+                        "link": reverse_lazy("admin:django_celery_beat_crontabschedule_changelist"),
                     },
                 ],
             },

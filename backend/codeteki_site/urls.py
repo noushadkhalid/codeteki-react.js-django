@@ -37,9 +37,21 @@ def sitemap_view(request, sitemaps, **kwargs):
         del response.headers['X-Robots-Tag']
     return response
 
+from crm.views import pipeline_dashboard, pipeline_board, move_deal_stage
+from django.contrib.admin.views.decorators import staff_member_required
+from django.shortcuts import redirect
+
 urlpatterns = [
+    # CRM Dashboard (before admin to avoid catch-all)
+    path('admin/crm/dashboard/', staff_member_required(pipeline_dashboard), name='crm_dashboard'),
+    path('admin/crm/board/<int:pipeline_id>/', staff_member_required(pipeline_board), name='crm_board'),
+    path('admin/crm/board/move-deal/', staff_member_required(move_deal_stage), name='crm_move_deal'),
+    # Redirect /admin/crm/ to dashboard (fixes 404 on nav clicks)
+    path('admin/crm/', lambda r: redirect('/admin/crm/dashboard/')),
+
     path('admin/', admin.site.urls),
     path('api/', include('core.urls')),
+    path('api/crm/', include('crm.urls')),  # CRM API endpoints
 
     # Sitemap for SEO - dynamically updates with new content (custom view removes X-Robots-Tag)
     path('sitemap.xml', sitemap_view, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),

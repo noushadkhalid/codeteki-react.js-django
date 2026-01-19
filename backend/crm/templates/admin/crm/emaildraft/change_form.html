@@ -1,0 +1,1265 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls static %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+/* ===========================================
+   UNIFIED EMAIL COMPOSER - SINGLE PANEL
+   =========================================== */
+
+/* Hide ALL original Django form content */
+#original-form-container {
+    display: none !important;
+}
+
+/* Main Composer Layout */
+.unified-composer {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 0;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    min-height: 700px;
+    border: 1px solid #e2e8f0;
+}
+
+/* Left Panel - Email Compose */
+.compose-panel {
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #e2e8f0;
+}
+
+/* Header with Brand/Pipeline */
+.compose-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    gap: 12px;
+}
+
+.header-selects {
+    display: flex;
+    gap: 12px;
+    flex: 1;
+}
+
+.header-select {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.header-select label {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.header-select select {
+    padding: 6px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 13px;
+    background: white;
+    min-width: 180px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s ease;
+}
+
+.btn-primary {
+    background: #3b82f6;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2563eb;
+}
+
+.btn-secondary {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+
+.btn-secondary:hover {
+    background: #e2e8f0;
+}
+
+/* Email Fields */
+.email-fields {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.field-row {
+    display: flex;
+    align-items: flex-start;
+    padding: 10px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    gap: 8px;
+}
+
+.field-label {
+    min-width: 55px;
+    font-size: 13px;
+    color: #64748b;
+    padding-top: 6px;
+    font-weight: 500;
+}
+
+.field-content {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+    position: relative;
+}
+
+/* Contact Chips - Compact */
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px 3px 3px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 500;
+    animation: chipIn 0.2s ease;
+}
+
+@keyframes chipIn {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.chip-avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    color: white;
+    text-transform: uppercase;
+}
+
+.chip-name {
+    color: #1e293b;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chip-remove {
+    width: 14px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0.5;
+    font-size: 12px;
+    margin-left: 2px;
+}
+
+.chip-remove:hover {
+    opacity: 1;
+}
+
+/* Chip Colors */
+.chip-0 { background: #fef3c7; } .chip-0 .chip-avatar { background: #f59e0b; }
+.chip-1 { background: #dbeafe; } .chip-1 .chip-avatar { background: #3b82f6; }
+.chip-2 { background: #dcfce7; } .chip-2 .chip-avatar { background: #22c55e; }
+.chip-3 { background: #fce7f3; } .chip-3 .chip-avatar { background: #ec4899; }
+.chip-4 { background: #e0e7ff; } .chip-4 .chip-avatar { background: #6366f1; }
+.chip-5 { background: #f3e8ff; } .chip-5 .chip-avatar { background: #a855f7; }
+.chip-6 { background: #cffafe; } .chip-6 .chip-avatar { background: #06b6d4; }
+.chip-7 { background: #fee2e2; } .chip-7 .chip-avatar { background: #ef4444; }
+.chip-8 { background: #fef9c3; } .chip-8 .chip-avatar { background: #eab308; }
+.chip-9 { background: #d1fae5; } .chip-9 .chip-avatar { background: #10b981; }
+
+.chip-input {
+    border: none;
+    outline: none;
+    font-size: 13px;
+    padding: 4px;
+    min-width: 180px;
+    flex: 1;
+    background: transparent;
+}
+
+.chip-input::placeholder {
+    color: #94a3b8;
+}
+
+/* Subject Input */
+.subject-input {
+    width: 100%;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 4px 0;
+    color: #1e293b;
+}
+
+/* Body Area */
+.body-container {
+    flex: 1;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+.body-textarea {
+    flex: 1;
+    width: 100%;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    line-height: 1.6;
+    resize: none;
+    color: #334155;
+    min-height: 350px;
+}
+
+/* Footer */
+.compose-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+}
+
+.footer-stats {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.footer-stat span {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.footer-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Right Panel - AI & Settings */
+.ai-panel {
+    background: #fafafa;
+    display: flex;
+    flex-direction: column;
+}
+
+.ai-panel-header {
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+    color: white;
+}
+
+.ai-panel-header h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ai-panel-header p {
+    font-size: 11px;
+    opacity: 0.9;
+    margin: 0;
+}
+
+.ai-panel-content {
+    flex: 1;
+    padding: 12px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Settings Section */
+.settings-section {
+    background: white;
+    border-radius: 8px;
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.settings-section h4 {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: #64748b;
+    margin: 0 0 8px 0;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.setting-row {
+    margin-bottom: 10px;
+}
+
+.setting-row:last-child {
+    margin-bottom: 0;
+}
+
+.setting-row label {
+    display: block;
+    font-size: 12px;
+    color: #475569;
+    margin-bottom: 4px;
+}
+
+.setting-row select,
+.setting-row input[type="text"] {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+/* AI Suggestions Box */
+.suggestions-box {
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.suggestions-box h4 {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: #64748b;
+    margin: 0;
+    padding: 10px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.suggestions-textarea {
+    flex: 1;
+    width: 100%;
+    border: none;
+    outline: none;
+    padding: 10px 12px;
+    font-size: 12px;
+    line-height: 1.5;
+    resize: none;
+    color: #334155;
+    min-height: 150px;
+}
+
+.suggestions-textarea::placeholder {
+    color: #94a3b8;
+}
+
+/* AI Actions */
+.ai-actions {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.btn-ai {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+    color: white;
+    width: 100%;
+    justify-content: center;
+    padding: 10px 16px;
+}
+
+.btn-ai:hover {
+    filter: brightness(1.1);
+}
+
+/* Template Section */
+.template-section {
+    background: white;
+    border-radius: 8px;
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.template-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.template-row input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #8b5cf6;
+}
+
+.template-row label {
+    font-size: 12px;
+    color: #475569;
+}
+
+.template-name-input {
+    margin-top: 8px;
+    display: none;
+}
+
+.template-name-input.show {
+    display: block;
+}
+
+/* Contact Suggestions Dropdown */
+.contact-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 100;
+    display: none;
+    margin-top: 4px;
+    border: 1px solid #e2e8f0;
+}
+
+.contact-dropdown.show {
+    display: block;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.dropdown-item:hover {
+    background: #f8fafc;
+}
+
+.dropdown-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: white;
+}
+
+.dropdown-info {
+    flex: 1;
+}
+
+.dropdown-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #1e293b;
+}
+
+.dropdown-email {
+    font-size: 11px;
+    color: #64748b;
+}
+
+.dropdown-loading {
+    padding: 16px;
+    text-align: center;
+    color: #64748b;
+    font-size: 12px;
+}
+
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #1e293b;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    z-index: 9999;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Status Badge */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.status-draft {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.status-ready {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-sent {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .unified-composer {
+        grid-template-columns: 1fr;
+    }
+
+    .ai-panel {
+        border-top: 1px solid #e2e8f0;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="unified-composer">
+    <!-- Left: Email Compose Panel -->
+    <div class="compose-panel">
+        <!-- Header with Brand/Pipeline -->
+        <div class="compose-header">
+            <div class="header-selects">
+                <div class="header-select">
+                    <label>Brand:</label>
+                    <select id="brandSelect"></select>
+                </div>
+                <div class="header-select">
+                    <label>Pipeline:</label>
+                    <select id="pipelineSelect"></select>
+                </div>
+            </div>
+            <div class="header-actions">
+                <span class="status-badge status-draft" id="statusBadge">Draft</span>
+            </div>
+        </div>
+
+        <!-- Email Fields -->
+        <div class="email-fields">
+            <!-- To Field -->
+            <div class="field-row">
+                <div class="field-label">To</div>
+                <div class="field-content" id="toFieldContent">
+                    <div id="recipientChips"></div>
+                    <input type="text" class="chip-input" id="toInput"
+                           placeholder="Type email + Enter, or search contacts...">
+                    <div class="contact-dropdown" id="contactDropdown">
+                        <div class="dropdown-loading" id="dropdownLoading">Searching...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subject Field -->
+            <div class="field-row">
+                <div class="field-label">Subject</div>
+                <div class="field-content">
+                    <input type="text" class="subject-input" id="subjectInput"
+                           placeholder="Email subject...">
+                </div>
+            </div>
+
+            <!-- Body -->
+            <div class="body-container">
+                <textarea class="body-textarea" id="bodyInput"
+                          placeholder="Write your email here..."></textarea>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="compose-footer">
+            <div class="footer-stats">
+                <div class="footer-stat">Recipients: <span id="recipientCount">0</span></div>
+            </div>
+            <div class="footer-actions">
+                <button type="button" class="btn btn-secondary" id="saveDraftBtn">
+                    Save Draft
+                </button>
+                <button type="button" class="btn btn-primary" id="sendBtn">
+                    Send & Add to Pipeline
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: AI & Settings Panel -->
+    <div class="ai-panel">
+        <div class="ai-panel-header">
+            <h3>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"></path>
+                    <path d="M12 17h.01"></path>
+                </svg>
+                AI Assistant
+            </h3>
+            <p>Generate personalized emails with AI</p>
+        </div>
+
+        <div class="ai-panel-content">
+            <!-- Email Type & Tone -->
+            <div class="settings-section">
+                <h4>Email Settings</h4>
+                <div class="setting-row">
+                    <label>Type</label>
+                    <select id="emailTypeSelect">
+                        <option value="invitation">Invitation</option>
+                        <option value="followup">Follow-up</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <label>Tone</label>
+                    <select id="toneSelect">
+                        <option value="professional">Professional</option>
+                        <option value="friendly">Friendly</option>
+                        <option value="casual">Casual</option>
+                        <option value="formal">Formal</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- AI Suggestions -->
+            <div class="suggestions-box">
+                <h4>
+                    Your Suggestions
+                    <span style="font-size: 10px; color: #94a3b8; text-transform: none;">for AI</span>
+                </h4>
+                <textarea class="suggestions-textarea" id="suggestionsInput"
+                          placeholder="Add your key points, ideas, or specific content you want the AI to include in the email...
+
+Example:
+- Mention our free listing offer
+- Include the registration link
+- Highlight community benefits"></textarea>
+            </div>
+
+            <!-- AI Actions -->
+            <div class="ai-actions">
+                <button type="button" class="btn btn-ai" id="generateAiBtn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93z"/>
+                    </svg>
+                    Generate with AI
+                </button>
+            </div>
+
+            <!-- Save as Template -->
+            <div class="template-section">
+                <div class="template-row">
+                    <input type="checkbox" id="saveAsTemplate">
+                    <label for="saveAsTemplate">Save as reusable template</label>
+                </div>
+                <div class="template-name-input" id="templateNameWrapper">
+                    <input type="text" id="templateNameInput" placeholder="Template name...">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden Django Form -->
+<div id="original-form-container" style="display: none !important;">
+{{ block.super }}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Django form fields
+    const djangoForm = document.querySelector('#original-form-container form');
+    const idBrand = document.getElementById('id_brand');
+    const idPipeline = document.getElementById('id_pipeline');
+    const idEmailType = document.getElementById('id_email_type');
+    const idTone = document.getElementById('id_tone');
+    const idSuggestions = document.getElementById('id_your_suggestions');
+    const idManualEmails = document.getElementById('id_manual_emails');
+    const idFinalSubject = document.getElementById('id_final_subject');
+    const idFinalBody = document.getElementById('id_final_body');
+    const idGeneratedSubject = document.getElementById('id_generated_subject');
+    const idGeneratedBody = document.getElementById('id_generated_body');
+    const idIsTemplate = document.getElementById('id_is_template');
+    const idTemplateName = document.getElementById('id_template_name');
+
+    // UI elements
+    const brandSelect = document.getElementById('brandSelect');
+    const pipelineSelect = document.getElementById('pipelineSelect');
+    const emailTypeSelect = document.getElementById('emailTypeSelect');
+    const toneSelect = document.getElementById('toneSelect');
+    const suggestionsInput = document.getElementById('suggestionsInput');
+    const toInput = document.getElementById('toInput');
+    const recipientChips = document.getElementById('recipientChips');
+    const contactDropdown = document.getElementById('contactDropdown');
+    const dropdownLoading = document.getElementById('dropdownLoading');
+    const subjectInput = document.getElementById('subjectInput');
+    const bodyInput = document.getElementById('bodyInput');
+    const recipientCount = document.getElementById('recipientCount');
+    const statusBadge = document.getElementById('statusBadge');
+    const saveAsTemplate = document.getElementById('saveAsTemplate');
+    const templateNameWrapper = document.getElementById('templateNameWrapper');
+    const templateNameInput = document.getElementById('templateNameInput');
+
+    // Recipients array
+    let recipients = [];
+
+    // Copy options from Django fields to custom selects
+    function syncSelect(djangoSelect, customSelect) {
+        if (!djangoSelect || !customSelect) return;
+        customSelect.innerHTML = '';
+        Array.from(djangoSelect.options).forEach(opt => {
+            const newOpt = document.createElement('option');
+            newOpt.value = opt.value;
+            newOpt.textContent = opt.textContent;
+            newOpt.selected = opt.selected;
+            customSelect.appendChild(newOpt);
+        });
+    }
+
+    syncSelect(idBrand, brandSelect);
+    syncSelect(idPipeline, pipelineSelect);
+    // Note: Don't sync email type - it's dynamically populated based on pipeline
+    syncSelect(idTone, toneSelect);
+
+    // Email type options per pipeline
+    const emailTypesByPipeline = {
+        // Desi Firms pipelines
+        'business': [
+            { value: 'directory_invitation', label: 'Directory Invitation' },
+            { value: 'listing_benefits', label: 'Free Listing Benefits' },
+            { value: 'invitation_followup', label: 'Invitation Follow-up' },
+            { value: 'onboarding_help', label: 'Onboarding Help' },
+            { value: 'custom', label: 'Custom' }
+        ],
+        'events': [
+            { value: 'event_invitation', label: 'Event Organizer Invitation' },
+            { value: 'event_benefits', label: 'Platform Benefits' },
+            { value: 'invitation_followup', label: 'Invitation Follow-up' },
+            { value: 'custom', label: 'Custom' }
+        ],
+        'realestate': [
+            { value: 'agent_invitation', label: 'Agent/Agency Invitation' },
+            { value: 'free_listing', label: 'Free Property Listing' },
+            { value: 'invitation_followup', label: 'Invitation Follow-up' },
+            { value: 'custom', label: 'Custom' }
+        ],
+        'classifieds': [
+            { value: 'classifieds_invitation', label: 'Classifieds Invitation' },
+            { value: 'invitation_followup', label: 'Invitation Follow-up' },
+            { value: 'custom', label: 'Custom' }
+        ],
+        // Codeteki pipelines
+        'sales': [
+            { value: 'services_intro', label: 'Web/AI Services Introduction' },
+            { value: 'seo_services', label: 'SEO Services Pitch' },
+            { value: 'sales_followup', label: 'Sales Follow-up' },
+            { value: 'proposal_followup', label: 'Proposal Follow-up' },
+            { value: 'custom', label: 'Custom' }
+        ],
+        'backlink': [
+            { value: 'backlink_pitch', label: 'Backlink Pitch' },
+            { value: 'guest_post', label: 'Guest Post Offer' },
+            { value: 'backlink_followup', label: 'Backlink Follow-up' },
+            { value: 'custom', label: 'Custom' }
+        ],
+        'partnership': [
+            { value: 'partnership_intro', label: 'Partnership Introduction' },
+            { value: 'collaboration', label: 'Collaboration Proposal' },
+            { value: 'partnership_followup', label: 'Partnership Follow-up' },
+            { value: 'custom', label: 'Custom' }
+        ],
+        // Default
+        'default': [
+            { value: 'invitation', label: 'Invitation' },
+            { value: 'followup', label: 'Follow-up' },
+            { value: 'custom', label: 'Custom' }
+        ]
+    };
+
+    // Update email types when pipeline changes
+    function updateEmailTypes() {
+        const selectedPipeline = pipelineSelect.options[pipelineSelect.selectedIndex];
+        if (!selectedPipeline || !selectedPipeline.text) return;
+
+        // Get pipeline type from pipeline name
+        const pipelineText = selectedPipeline.text.toLowerCase();
+        let pipelineType = 'default';
+
+        // Desi Firms pipelines
+        if (pipelineText.includes('business listing')) pipelineType = 'business';
+        else if (pipelineText.includes('event')) pipelineType = 'events';
+        else if (pipelineText.includes('real estate')) pipelineType = 'realestate';
+        else if (pipelineText.includes('classified')) pipelineType = 'classifieds';
+        // Codeteki pipelines
+        else if (pipelineText.includes('sales')) pipelineType = 'sales';
+        else if (pipelineText.includes('backlink')) pipelineType = 'backlink';
+        else if (pipelineText.includes('partnership')) pipelineType = 'partnership';
+
+        const options = emailTypesByPipeline[pipelineType] || emailTypesByPipeline['default'];
+
+        // Clear and repopulate
+        emailTypeSelect.innerHTML = '';
+        options.forEach(opt => {
+            const option = document.createElement('option');
+            option.value = opt.value;
+            option.textContent = opt.label;
+            emailTypeSelect.appendChild(option);
+        });
+
+        // Sync to Django field
+        if (idEmailType) idEmailType.value = emailTypeSelect.value;
+
+        console.log('Pipeline:', pipelineText, '-> Type:', pipelineType, '-> Options:', options.length);
+    }
+
+    // Sync custom selects back to Django fields
+    brandSelect.addEventListener('change', () => { if(idBrand) idBrand.value = brandSelect.value; });
+    pipelineSelect.addEventListener('change', () => {
+        if(idPipeline) idPipeline.value = pipelineSelect.value;
+        updateEmailTypes();
+    });
+    emailTypeSelect.addEventListener('change', () => { if(idEmailType) idEmailType.value = emailTypeSelect.value; });
+    toneSelect.addEventListener('change', () => { if(idTone) idTone.value = toneSelect.value; });
+
+    // Initialize email types based on current pipeline (after DOM is ready)
+    updateEmailTypes();
+
+    // Load existing values
+    if (idSuggestions && idSuggestions.value) suggestionsInput.value = idSuggestions.value;
+    if (idFinalSubject && idFinalSubject.value) subjectInput.value = idFinalSubject.value;
+    else if (idGeneratedSubject && idGeneratedSubject.value) subjectInput.value = idGeneratedSubject.value;
+    if (idFinalBody && idFinalBody.value) bodyInput.value = idFinalBody.value;
+    else if (idGeneratedBody && idGeneratedBody.value) bodyInput.value = idGeneratedBody.value;
+    if (idIsTemplate && idIsTemplate.checked) {
+        saveAsTemplate.checked = true;
+        templateNameWrapper.classList.add('show');
+    }
+    if (idTemplateName && idTemplateName.value) templateNameInput.value = idTemplateName.value;
+
+    // Sync suggestions
+    suggestionsInput.addEventListener('input', () => {
+        if (idSuggestions) idSuggestions.value = suggestionsInput.value;
+    });
+
+    // Sync subject & body
+    subjectInput.addEventListener('input', () => {
+        if (idFinalSubject) idFinalSubject.value = subjectInput.value;
+        updateStatus();
+    });
+    bodyInput.addEventListener('input', () => {
+        if (idFinalBody) idFinalBody.value = bodyInput.value;
+        updateStatus();
+    });
+
+    // Template checkbox
+    saveAsTemplate.addEventListener('change', () => {
+        templateNameWrapper.classList.toggle('show', saveAsTemplate.checked);
+        if (idIsTemplate) idIsTemplate.checked = saveAsTemplate.checked;
+    });
+    templateNameInput.addEventListener('input', () => {
+        if (idTemplateName) idTemplateName.value = templateNameInput.value;
+    });
+
+    // Get color index from email
+    const getColorIndex = (email) => {
+        let hash = 0;
+        for (let i = 0; i < email.length; i++) {
+            hash = email.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return Math.abs(hash) % 10;
+    };
+
+    // Get initials
+    const getInitials = (name, email) => {
+        if (name && name.trim()) {
+            const parts = name.trim().split(' ');
+            if (parts.length >= 2) return (parts[0][0] + parts[parts.length-1][0]).toUpperCase();
+            return name.substring(0, 2).toUpperCase();
+        }
+        return email.substring(0, 2).toUpperCase();
+    };
+
+    // Create chip
+    const createChip = (recipient) => {
+        const chip = document.createElement('div');
+        const colorIndex = getColorIndex(recipient.email);
+        chip.className = `chip chip-${colorIndex}`;
+        chip.dataset.email = recipient.email;
+
+        const initials = getInitials(recipient.name, recipient.email);
+        const displayName = recipient.name || recipient.email.split('@')[0];
+
+        chip.innerHTML = `
+            <div class="chip-avatar">${initials}</div>
+            <span class="chip-name">${displayName}</span>
+            <span class="chip-remove">&times;</span>
+        `;
+
+        chip.querySelector('.chip-remove').addEventListener('click', () => {
+            removeRecipient(recipient.email);
+        });
+
+        return chip;
+    };
+
+    // Add recipient
+    const addRecipient = (email, name = '') => {
+        email = email.toLowerCase().trim();
+        if (!email || recipients.find(r => r.email === email)) return;
+
+        recipients.push({ email, name });
+        recipientChips.appendChild(createChip({ email, name }));
+        updateRecipientCount();
+        syncRecipientsToForm();
+    };
+
+    // Remove recipient
+    const removeRecipient = (email) => {
+        recipients = recipients.filter(r => r.email !== email);
+        const chip = recipientChips.querySelector(`[data-email="${email}"]`);
+        if (chip) chip.remove();
+        updateRecipientCount();
+        syncRecipientsToForm();
+    };
+
+    // Update count
+    const updateRecipientCount = () => {
+        recipientCount.textContent = recipients.length;
+    };
+
+    // Sync to Django form
+    const syncRecipientsToForm = () => {
+        if (idManualEmails) {
+            idManualEmails.value = recipients.map(r => r.name ? `${r.name} <${r.email}>` : r.email).join('\n');
+        }
+    };
+
+    // Load existing recipients
+    if (idManualEmails && idManualEmails.value) {
+        idManualEmails.value.split('\n').forEach(line => {
+            line = line.trim();
+            if (!line) return;
+            const match = line.match(/^(.+?)\s*<(.+?)>$/) || line.match(/^(.+)$/);
+            if (match) {
+                const email = (match[2] || match[1]).trim();
+                const name = match[2] ? match[1].trim() : '';
+                if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                    addRecipient(email, name);
+                }
+            }
+        });
+    }
+
+    // Email validation
+    const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+    // To input handlers
+    toInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            const value = toInput.value.trim().replace(',', '');
+            if (isValidEmail(value)) {
+                addRecipient(value);
+                toInput.value = '';
+                hideDropdown();
+            }
+        } else if (e.key === 'Backspace' && !toInput.value && recipients.length > 0) {
+            removeRecipient(recipients[recipients.length - 1].email);
+        } else if (e.key === 'Escape') {
+            hideDropdown();
+        }
+    });
+
+    // Paste handler
+    toInput.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const text = (e.clipboardData || window.clipboardData).getData('text');
+        text.split(/[\n,;\s]+/).filter(isValidEmail).forEach(email => addRecipient(email));
+        toInput.value = '';
+    });
+
+    // Search contacts
+    let searchTimeout;
+    toInput.addEventListener('input', () => {
+        const query = toInput.value.trim();
+        clearTimeout(searchTimeout);
+        if (query.length < 2) { hideDropdown(); return; }
+
+        showDropdownLoading();
+        searchTimeout = setTimeout(() => {
+            const brandId = brandSelect.value || '';
+            fetch(`/api/crm/contacts/search/?q=${encodeURIComponent(query)}&brand=${brandId}&limit=6`)
+                .then(r => r.json())
+                .then(data => showDropdownResults(data.contacts || []))
+                .catch(() => hideDropdown());
+        }, 250);
+    });
+
+    const showDropdownLoading = () => {
+        dropdownLoading.style.display = 'block';
+        contactDropdown.querySelectorAll('.dropdown-item').forEach(el => el.remove());
+        contactDropdown.classList.add('show');
+    };
+
+    const showDropdownResults = (contacts) => {
+        dropdownLoading.style.display = 'none';
+        contactDropdown.querySelectorAll('.dropdown-item').forEach(el => el.remove());
+
+        if (contacts.length === 0) { hideDropdown(); return; }
+
+        const colors = ['#f59e0b', '#3b82f6', '#22c55e', '#ec4899', '#6366f1',
+                       '#a855f7', '#06b6d4', '#ef4444', '#eab308', '#10b981'];
+
+        contacts.forEach(c => {
+            const item = document.createElement('div');
+            item.className = 'dropdown-item';
+            const colorIdx = getColorIndex(c.email);
+            const initials = getInitials(c.name, c.email);
+
+            item.innerHTML = `
+                <div class="dropdown-avatar" style="background: ${colors[colorIdx]}">${initials}</div>
+                <div class="dropdown-info">
+                    <div class="dropdown-name">${c.name || 'Unknown'}</div>
+                    <div class="dropdown-email">${c.email}</div>
+                </div>
+            `;
+
+            item.addEventListener('click', () => {
+                addRecipient(c.email, c.name);
+                toInput.value = '';
+                hideDropdown();
+                toInput.focus();
+            });
+
+            contactDropdown.appendChild(item);
+        });
+
+        contactDropdown.classList.add('show');
+    };
+
+    const hideDropdown = () => {
+        contactDropdown.classList.remove('show');
+    };
+
+    document.addEventListener('click', (e) => {
+        if (!contactDropdown.contains(e.target) && e.target !== toInput) {
+            hideDropdown();
+        }
+    });
+
+    // Update status
+    const updateStatus = () => {
+        const hasSubject = subjectInput.value.trim();
+        const hasBody = bodyInput.value.trim();
+
+        if (hasSubject && hasBody) {
+            statusBadge.textContent = 'Ready';
+            statusBadge.className = 'status-badge status-ready';
+        } else {
+            statusBadge.textContent = 'Draft';
+            statusBadge.className = 'status-badge status-draft';
+        }
+    };
+
+    updateStatus();
+
+    // Toast
+    const showToast = (msg) => {
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.textContent = msg;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2500);
+    };
+
+    // Save Draft
+    document.getElementById('saveDraftBtn').addEventListener('click', () => {
+        syncRecipientsToForm();
+        if (idFinalSubject) idFinalSubject.value = subjectInput.value;
+        if (idFinalBody) idFinalBody.value = bodyInput.value;
+        if (idSuggestions) idSuggestions.value = suggestionsInput.value;
+
+        djangoForm.submit();
+    });
+
+    // Send button with loading state
+    const sendBtn = document.getElementById('sendBtn');
+    let isSending = false;
+
+    sendBtn.addEventListener('click', () => {
+        if (isSending) return;
+
+        if (recipients.length === 0) { showToast('Add at least one recipient'); return; }
+        if (!pipelineSelect.value) { showToast('Select a pipeline'); return; }
+        if (!subjectInput.value.trim()) { showToast('Enter a subject'); return; }
+        if (!bodyInput.value.trim()) { showToast('Enter email content'); return; }
+
+        // Show loading state
+        isSending = true;
+        const originalText = sendBtn.innerHTML;
+        sendBtn.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;">
+                <circle cx="12" cy="12" r="10"></circle>
+            </svg>
+            Sending...
+        `;
+        sendBtn.style.opacity = '0.7';
+        sendBtn.disabled = true;
+
+        syncRecipientsToForm();
+        if (idFinalSubject) idFinalSubject.value = subjectInput.value;
+        if (idFinalBody) idFinalBody.value = bodyInput.value;
+        if (idSuggestions) idSuggestions.value = suggestionsInput.value;
+
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = '_send_and_pipeline';
+        actionInput.value = '1';
+        djangoForm.appendChild(actionInput);
+
+        djangoForm.submit();
+    });
+
+    // Generate AI
+    const generateAiBtn = document.getElementById('generateAiBtn');
+    let isGenerating = false;
+
+    generateAiBtn.addEventListener('click', async () => {
+        if (isGenerating) return;
+
+        // Validate brand is selected
+        if (!brandSelect.value) {
+            showToast('Please select a brand first');
+            return;
+        }
+
+        isGenerating = true;
+        const originalText = generateAiBtn.innerHTML;
+        generateAiBtn.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;">
+                <circle cx="12" cy="12" r="10"></circle>
+            </svg>
+            Generating...
+        `;
+        generateAiBtn.style.opacity = '0.7';
+
+        try {
+            // Collect recipient emails for smart salutation
+            const recipientEmails = recipients.map(r => r.email);
+
+            const response = await fetch('/api/crm/generate-email/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    brand_id: brandSelect.value,
+                    pipeline_id: pipelineSelect.value,  // Send pipeline for context
+                    email_type: emailTypeSelect.value,
+                    tone: toneSelect.value,
+                    suggestions: suggestionsInput.value,
+                    recipient_emails: recipientEmails,  // For smart salutation
+                    recipient_name: recipients.length > 0 ? recipients[0].name : '',
+                    recipient_company: recipients.length > 0 ? recipients[0].company : ''
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Fill in the subject and body
+                subjectInput.value = data.subject || '';
+                bodyInput.value = data.body || '';
+
+                // Sync to Django form
+                if (idFinalSubject) idFinalSubject.value = data.subject || '';
+                if (idFinalBody) idFinalBody.value = data.body || '';
+                if (idGeneratedSubject) idGeneratedSubject.value = data.subject || '';
+                if (idGeneratedBody) idGeneratedBody.value = data.body || '';
+
+                updateStatus();
+                showToast('Email generated successfully!');
+            } else {
+                showToast(data.error || 'Failed to generate email');
+            }
+        } catch (error) {
+            console.error('AI generation error:', error);
+            showToast('Error generating email. Please try again.');
+        } finally {
+            isGenerating = false;
+            generateAiBtn.innerHTML = originalText;
+            generateAiBtn.style.opacity = '1';
+        }
+    });
+
+    // Add spin animation for loading
+    const spinStyle = document.createElement('style');
+    spinStyle.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+    document.head.appendChild(spinStyle);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,89 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}{{ pipeline.name }} - Board{% endblock %}
+{% block breadcrumbs %}
+<div class="flex gap-1.5 overflow-x-auto whitespace-nowrap px-4 py-3 text-sm lg:px-6">
+    <a href="{% url 'admin:index' %}" class="text-gray-400 hover:text-primary-600 dark:text-gray-500">Home</a>
+    <span class="text-gray-300 dark:text-gray-600">/</span>
+    <span class="text-gray-400 dark:text-gray-500">CRM & Outreach</span>
+    <span class="text-gray-300 dark:text-gray-600">/</span>
+    <a href="/admin/crm/dashboard/" class="text-gray-400 hover:text-primary-600 dark:text-gray-500">Pipeline Dashboard</a>
+    <span class="text-gray-300 dark:text-gray-600">/</span>
+    <span class="font-medium text-gray-900 dark:text-white">{{ pipeline.name }}</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div style="padding: 20px;">
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 24px; margin-bottom: 24px; color: white;">
+        <div>
+            <a href="/admin/crm/dashboard/" style="display: inline-flex; align-items: center; gap: 6px; color: white; text-decoration: none; font-size: 13px; opacity: 0.9; margin-bottom: 4px;"
+               onmouseover="this.style.opacity='1';" onmouseout="this.style.opacity='0.9';">
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                All Pipelines
+            </a>
+            <h1 style="margin: 0; font-size: 24px; font-weight: 700;">{{ pipeline.name }}</h1>
+        </div>
+        <div style="display: flex; gap: 24px; text-align: center;">
+            <div>
+                <div style="font-size: 28px; font-weight: 700;">{{ total_active }}</div>
+                <div style="font-size: 11px; text-transform: uppercase; opacity: 0.9;">Active</div>
+            </div>
+            <div>
+                <div style="font-size: 28px; font-weight: 700;">{{ total_won }}</div>
+                <div style="font-size: 11px; text-transform: uppercase; opacity: 0.9;">Won</div>
+            </div>
+            <div>
+                <div style="font-size: 28px; font-weight: 700;">{{ total_lost }}</div>
+                <div style="font-size: 11px; text-transform: uppercase; opacity: 0.9;">Lost</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kanban Board -->
+    <div style="display: flex; gap: 16px; overflow-x: auto; padding-bottom: 16px;">
+        {% for col in columns %}
+        <div style="min-width: 280px; max-width: 280px; background: #f9fafb; border-radius: 10px; border: 1px solid #e5e7eb; display: flex; flex-direction: column;">
+            <!-- Column Header -->
+            <div style="padding: 14px 16px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; background: white; border-radius: 10px 10px 0 0;">
+                <span style="font-weight: 600; color: #374151; font-size: 14px;">{{ col.stage.name }}</span>
+                <span style="background: {% if col.count > 0 %}#667eea{% else %}#9ca3af{% endif %}; color: white; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;">{{ col.count }}</span>
+            </div>
+
+            <!-- Cards Container -->
+            <div style="padding: 12px; flex: 1; overflow-y: auto; max-height: 500px;">
+                {% if col.deals %}
+                    {% for deal in col.deals %}
+                    <a href="{% url 'admin:crm_deal_change' deal.id %}" style="display: block; background: white; border-radius: 8px; padding: 14px; margin-bottom: 10px; text-decoration: none; border: 1px solid #e5e7eb; border-left: 3px solid {% cycle '#6b7280' '#3b82f6' '#8b5cf6' '#f59e0b' '#22c55e' '#06b6d4' '#ec4899' '#ef4444' %}; transition: all 0.15s;"
+                       onmouseover="this.style.boxShadow='0 4px 8px rgba(0,0,0,0.08)'; this.style.transform='translateY(-1px)';"
+                       onmouseout="this.style.boxShadow='none'; this.style.transform='none';">
+                        <div style="font-weight: 600; color: #111827; margin-bottom: 4px; font-size: 14px;">{{ deal.contact.name|default:"No Name" }}</div>
+                        <div style="color: #6b7280; font-size: 12px; margin-bottom: 10px; word-break: break-all;">{{ deal.contact.email }}</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="display: flex; align-items: center; gap: 4px; font-size: 11px; color: #9ca3af;">
+                                <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                {{ deal.emails_sent }} sent
+                            </span>
+                            {% if deal.next_action_date %}
+                            <span style="font-size: 10px; padding: 3px 8px; border-radius: 4px; font-weight: 500;
+                                {% if deal.next_action_date < today %}background: #fee2e2; color: #dc2626;{% else %}background: #dbeafe; color: #1e40af;{% endif %}">
+                                {{ deal.next_action_date|date:"M j" }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </a>
+                    {% endfor %}
+                {% else %}
+                    <div style="text-align: center; padding: 32px 16px; color: #9ca3af;">
+                        <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin: 0 auto 8px; opacity: 0.4;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
+                        <div style="font-size: 13px;">No deals</div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Pipeline Dashboard{% endblock %}
+{% block breadcrumbs %}
+<div class="flex gap-1.5 overflow-x-auto whitespace-nowrap px-4 py-3 text-sm lg:px-6">
+    <a href="{% url 'admin:index' %}" class="text-gray-400 hover:text-primary-600 dark:text-gray-500">Home</a>
+    <span class="text-gray-300 dark:text-gray-600">/</span>
+    <span class="text-gray-400 dark:text-gray-500">CRM & Outreach</span>
+    <span class="text-gray-300 dark:text-gray-600">/</span>
+    <span class="font-medium text-gray-900 dark:text-white">Pipeline Dashboard</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<div style="padding: 20px;">
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 32px; margin-bottom: 24px; color: white; position: relative;">
+        <div style="text-align: center;">
+            <h1 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0;">Pipeline Dashboard</h1>
+            <p style="margin: 0; opacity: 0.9;">Click a pipeline to see its Kanban board</p>
+        </div>
+        <a href="{% url 'admin:crm_pipeline_changelist' %}"
+           style="position: absolute; top: 16px; right: 16px; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background: rgba(255,255,255,0.2); color: white; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 500; transition: background 0.2s;"
+           onmouseover="this.style.background='rgba(255,255,255,0.3)';"
+           onmouseout="this.style.background='rgba(255,255,255,0.2)';">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            Configure
+        </a>
+    </div>
+
+    <!-- Pipeline Grid -->
+    {% if pipeline_data %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
+        {% for item in pipeline_data %}
+        <div style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden; transition: all 0.2s;"
+             onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'; this.style.transform='translateY(-2px)';"
+             onmouseout="this.style.boxShadow='none'; this.style.transform='none';">
+
+            <!-- Card Header -->
+            <div style="padding: 20px; border-bottom: 1px solid #e5e7eb;">
+                <span style="display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
+                    {% if item.pipeline.pipeline_type == 'sales' %}background: #dcfce7; color: #166534;
+                    {% elif item.pipeline.pipeline_type == 'backlink' %}background: #fef3c7; color: #92400e;
+                    {% elif item.pipeline.pipeline_type == 'real_estate' %}background: #fce7f3; color: #9d174d;
+                    {% elif item.pipeline.pipeline_type == 'events' %}background: #e0e7ff; color: #3730a3;
+                    {% elif item.pipeline.pipeline_type == 'classifieds' %}background: #ccfbf1; color: #0d9488;
+                    {% elif item.pipeline.pipeline_type == 'business_listings' %}background: #fed7aa; color: #c2410c;
+                    {% else %}background: #f3f4f6; color: #374151;{% endif %}">
+                    {{ item.pipeline.get_pipeline_type_display }}
+                </span>
+                <h2 style="margin: 0; font-size: 18px; font-weight: 600; color: #111827;">{{ item.pipeline.name }}</h2>
+            </div>
+
+            <!-- Card Body -->
+            <div style="padding: 20px;">
+                <!-- Active Deals Count -->
+                <div style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; background: #f9fafb; border-radius: 8px; margin-bottom: 16px;">
+                    <span style="font-size: 20px; font-weight: 700; color: #667eea;">{{ item.total_active }}</span>
+                    <span style="font-size: 14px; color: #6b7280;">active deals</span>
+                </div>
+
+                <!-- Stages Preview -->
+                <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
+                    {% for s in item.stages|slice:":5" %}
+                    <div style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; background: #f3f4f6; border-radius: 6px; font-size: 12px; color: #4b5563;">
+                        <span>{{ s.stage.name }}</span>
+                        <span style="background: {% if s.count > 0 %}#667eea{% else %}#9ca3af{% endif %}; color: white; padding: 2px 8px; border-radius: 10px; font-weight: 600; font-size: 11px;">{{ s.count }}</span>
+                    </div>
+                    {% endfor %}
+                    {% if item.stages|length > 5 %}
+                    <div style="display: inline-flex; align-items: center; padding: 6px 10px; background: #f3f4f6; border-radius: 6px; font-size: 12px; color: #6b7280;">
+                        +{{ item.stages|length|add:"-5" }} more
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- View Board Button -->
+                <a href="/admin/crm/board/{{ item.pipeline.id }}/"
+                   style="display: block; width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center; text-decoration: none; font-weight: 600; font-size: 14px; border-radius: 8px; transition: opacity 0.2s;"
+                   onmouseover="this.style.opacity='0.9';"
+                   onmouseout="this.style.opacity='1';">
+                    View Board
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="background: white; border-radius: 12px; padding: 60px; text-align: center; border: 1px solid #e5e7eb;">
+        <p style="color: #9ca3af; font-size: 16px; margin: 0;">No active pipelines. Create a pipeline to get started.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
