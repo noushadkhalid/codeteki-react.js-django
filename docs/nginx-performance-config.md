@@ -24,7 +24,7 @@ server {
 
     # Static files with hash in filename (JS/CSS bundles) - cache forever
     location /static/ {
-        alias /home/codeteki/apps/codeteki/backend/staticfiles/;
+        alias /home/codeteki/codeteki-react.js-django/backend/staticfiles/;
         expires 1y;
         add_header Cache-Control "public, max-age=31536000, immutable";
         add_header Vary "Accept-Encoding";
@@ -38,7 +38,7 @@ server {
 
     # Root level static assets (images, logos, webp files)
     location ~* \.(png|jpg|jpeg|gif|webp|svg|ico|woff|woff2|ttf|eot)$ {
-        root /home/codeteki/apps/codeteki/backend/staticfiles/;
+        root /home/codeteki/codeteki-react.js-django/backend/staticfiles/;
         expires 1y;
         add_header Cache-Control "public, max-age=31536000, immutable";
         access_log off;
@@ -46,7 +46,7 @@ server {
 
     # Media files (user uploads) - cache for 7 days
     location /media/ {
-        alias /home/codeteki/apps/codeteki/backend/media/;
+        alias /home/codeteki/codeteki-react.js-django/backend/media/;
         expires 7d;
         add_header Cache-Control "public, max-age=604800";
     }
