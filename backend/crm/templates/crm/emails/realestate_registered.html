@@ -1,0 +1,104 @@
+{% extends "crm/emails/base_desifirms.html" %}
+
+{% block title %}Welcome to Desi Firms!{% endblock %}
+{% block preheader %}{{ recipient_name }}, your founding member account is ready!{% endblock %}
+{% block subtitle %}Real Estate Platform{% endblock %}
+
+{% block content %}
+<tr>
+    <td style="padding: 40px 30px;">
+        <!-- Welcome Banner -->
+        <div style="text-align: center; margin-bottom: 25px;">
+            <div style="width: 100px; height: 100px; background: linear-gradient(135deg, #0093E9, #80D0C7); border-radius: 50%; margin: 0 auto; display: inline-block; line-height: 100px;">
+                <span style="font-size: 50px;">🏠</span>
+            </div>
+        </div>
+
+        <!-- Heading -->
+        <h1 style="color: #1f2937; font-size: 28px; font-weight: 700; text-align: center; margin: 0 0 10px 0;">
+            Welcome to Desi Firms!
+        </h1>
+        <p style="color: #0093E9; font-size: 16px; font-weight: 600; text-align: center; margin: 0 0 30px 0;">
+            🎖️ You're now a Founding Member!
+        </p>
+
+        <!-- Greeting -->
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            Hi {{ recipient_name }},
+        </p>
+
+        <!-- Message -->
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            <strong>Congratulations!</strong> Your account for <strong>{{ recipient_company }}</strong> has been successfully created. Welcome to the Desi Firms real estate community!
+        </p>
+
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            As a founding member, you'll always have special recognition on our platform. Thank you for being an early believer in what we're building.
+        </p>
+
+        <!-- What's Next Box -->
+        <div style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border: 1px solid #7dd3fc; border-radius: 12px; padding: 24px; margin: 0 0 25px 0;">
+            <h3 style="color: #0369a1; font-size: 14px; font-weight: 600; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 1px;">
+                🚀 Get Started Now
+            </h3>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #0284c7; font-size: 16px; margin-right: 10px;">✓</span>
+                        <span style="color: #1f2937; font-size: 14px;"><strong>Complete your profile</strong> - Add your photo and bio</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #0284c7; font-size: 16px; margin-right: 10px;">✓</span>
+                        <span style="color: #1f2937; font-size: 14px;"><strong>Add agency details</strong> - Logo, description, and contact info</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #0284c7; font-size: 16px; margin-right: 10px;">✓</span>
+                        <span style="color: #1f2937; font-size: 14px;"><strong>List your first property</strong> - Takes less than 5 minutes!</span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- CTA Buttons -->
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="https://www.desifirms.com.au/real-estate/dashboard"
+               style="display: inline-block; background: linear-gradient(135deg, #0093E9 0%, #80D0C7 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 10px; font-weight: 600; font-size: 16px; box-shadow: 0 8px 25px rgba(0, 147, 233, 0.25);">
+                Go to Dashboard →
+            </a>
+        </div>
+        <div style="text-align: center; margin: 15px 0;">
+            <a href="https://www.desifirms.com.au/real-estate/add-property"
+               style="display: inline-block; background: #ffffff; color: #0093E9; border: 2px solid #0093E9; text-decoration: none; padding: 14px 35px; border-radius: 10px; font-weight: 600; font-size: 15px;">
+                List Your First Property
+            </a>
+        </div>
+
+        <!-- Support Box -->
+        <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center;">
+            <p style="color: #374151; font-size: 14px; line-height: 1.6; margin: 0;">
+                Need help getting started? Reply to this email or call me directly at <strong>0424 538 777</strong> - I'm here to help!
+            </p>
+        </div>
+
+        <!-- Signature -->
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0;">
+                Welcome aboard,
+            </p>
+            <p style="color: #1f2937; font-size: 15px; font-weight: 600; margin: 10px 0 5px 0;">
+                Noushad
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0 0 5px 0;">
+                Desi Firms
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                📱 0424 538 777 &nbsp;|&nbsp; 🌐 <a href="https://desifirms.com.au" style="color: #0093E9; text-decoration: none;">desifirms.com.au</a>
+            </p>
+        </div>
+    </td>
+</tr>
+{% endblock %}

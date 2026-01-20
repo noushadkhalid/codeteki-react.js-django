@@ -37,7 +37,7 @@ def sitemap_view(request, sitemaps, **kwargs):
         del response.headers['X-Robots-Tag']
     return response
 
-from crm.views import pipeline_dashboard, pipeline_board, move_deal_stage
+from crm.views import pipeline_dashboard, pipeline_board, move_deal_stage, UnsubscribeView
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import redirect
 
@@ -48,6 +48,9 @@ urlpatterns = [
     path('admin/crm/board/move-deal/', staff_member_required(move_deal_stage), name='crm_move_deal'),
     # Redirect /admin/crm/ to dashboard (fixes 404 on nav clicks)
     path('admin/crm/', lambda r: redirect('/admin/crm/dashboard/')),
+
+    # Public CRM pages (no /api/ prefix for user-facing URLs)
+    path('crm/unsubscribe/', UnsubscribeView.as_view(), name='public_unsubscribe'),
 
     path('admin/', admin.site.urls),
     path('api/', include('core.urls')),

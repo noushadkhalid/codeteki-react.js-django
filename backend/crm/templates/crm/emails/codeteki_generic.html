@@ -1,0 +1,31 @@
+{% extends "crm/emails/base_codeteki.html" %}
+
+{% block title %}{{ subject }}{% endblock %}
+{% block preheader %}{{ subject }}{% endblock %}
+
+{% block content %}
+<tr>
+    <td style="padding: 40px 30px; background-color: #1e293b;">
+        <!-- Dynamic Body Content -->
+        <div style="color: #cbd5e1; font-size: 16px; line-height: 1.7;">
+            {{ body_html|safe }}
+        </div>
+
+        <!-- Signature -->
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #334155;">
+            <p style="color: #cbd5e1; font-size: 15px; line-height: 1.6; margin: 0;">
+                Warm regards,
+            </p>
+            <p style="color: #f8fafc; font-size: 15px; font-weight: 600; margin: 10px 0 5px 0;">
+                Noushad
+            </p>
+            <p style="color: #94a3b8; font-size: 14px; margin: 0 0 5px 0;">
+                Codeteki Digital Services
+            </p>
+            <p style="color: #94a3b8; font-size: 14px; margin: 0;">
+                📱 0424 538 777 &nbsp;|&nbsp; 🌐 <a href="https://codeteki.au" style="color: #a78bfa; text-decoration: none;">codeteki.au</a>
+            </p>
+        </div>
+    </td>
+</tr>
+{% endblock %}

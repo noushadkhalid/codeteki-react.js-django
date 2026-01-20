@@ -1,0 +1,31 @@
+{% extends "crm/emails/base_desifirms.html" %}
+
+{% block title %}{{ subject }}{% endblock %}
+{% block preheader %}{{ subject }}{% endblock %}
+
+{% block content %}
+<tr>
+    <td style="padding: 40px 30px;">
+        <!-- Dynamic Body Content -->
+        <div style="color: #4b5563; font-size: 16px; line-height: 1.7;">
+            {{ body_html|safe }}
+        </div>
+
+        <!-- Signature -->
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0;">
+                Warm regards,
+            </p>
+            <p style="color: #1f2937; font-size: 15px; font-weight: 600; margin: 10px 0 5px 0;">
+                Noushad
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0 0 5px 0;">
+                Desi Firms
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                📱 0424 538 777 &nbsp;|&nbsp; 🌐 <a href="https://desifirms.com.au" style="color: #0093E9; text-decoration: none;">desifirms.com.au</a>
+            </p>
+        </div>
+    </td>
+</tr>
+{% endblock %}

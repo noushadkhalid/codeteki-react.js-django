@@ -1536,7 +1536,7 @@ class ChatConversationAdmin(ModelAdmin):
             'fields': ('conversation_id', 'status', 'message_count')
         }),
         ('👤 Visitor Info', {
-            'fields': ('visitor_name', 'visitor_email', 'visitor_phone', 'visitor_company')
+            'fields': ('visitor_name', 'visitor_email', 'visitor_company', 'source')
         }),
         ('📊 Metadata', {
             'fields': ('last_user_message', 'metadata', 'created_at', 'updated_at'),
@@ -3101,3 +3101,225 @@ class SEOContentGapAdmin(ModelAdmin):
 
     class Meta:
         verbose_name_plural = "🔍 Ubersuggest: Content Gaps"
+
+
+# =============================================================================
+# CELERY ADMIN OVERRIDES (Using Unfold for consistent styling)
+# =============================================================================
+
+# Override django_celery_results admin
+try:
+    from django_celery_results.models import TaskResult, GroupResult
+    from django_celery_results.admin import TaskResultAdmin as OriginalTaskResultAdmin
+
+    # Unregister the default admin
+    admin.site.unregister(TaskResult)
+    admin.site.unregister(GroupResult)
+
+    @admin.register(TaskResult)
+    class TaskResultAdmin(ModelAdmin):
+        list_display = ('task_id', 'task_name', 'status_badge', 'date_done', 'worker')
+        list_filter = ('status', 'task_name', 'worker', 'date_done')
+        search_fields = ('task_id', 'task_name')
+        readonly_fields = ('task_id', 'task_name', 'task_args', 'task_kwargs', 'status',
+                          'content_type', 'content_encoding', 'result', 'date_created',
+                          'date_done', 'traceback', 'meta', 'worker')
+        ordering = ['-date_done']
+
+        fieldsets = (
+            ('Task Info', {
+                'fields': ('task_id', 'task_name', 'status', 'worker')
+            }),
+            ('Arguments', {
+                'fields': ('task_args', 'task_kwargs'),
+                'classes': ['collapse']
+            }),
+            ('Result', {
+                'fields': ('result', 'traceback', 'meta'),
+            }),
+            ('Timestamps', {
+                'fields': ('date_created', 'date_done'),
+                'classes': ['collapse']
+            }),
+        )
+
+        def has_add_permission(self, request):
+            return False
+
+        def has_change_permission(self, request, obj=None):
+            return False
+
+        @display(description="Status", label=True)
+        def status_badge(self, obj):
+            colors = {
+                'SUCCESS': 'success',
+                'FAILURE': 'danger',
+                'PENDING': 'warning',
+                'STARTED': 'info',
+                'RETRY': 'warning',
+                'REVOKED': 'secondary',
+            }
+            return obj.status, colors.get(obj.status, 'info')
+
+    @admin.register(GroupResult)
+    class GroupResultAdmin(ModelAdmin):
+        list_display = ('group_id', 'date_done')
+        list_filter = ('date_done',)
+        search_fields = ('group_id',)
+        readonly_fields = ('group_id', 'date_created', 'date_done', 'content_type',
+                          'content_encoding', 'result')
+        ordering = ['-date_done']
+
+        def has_add_permission(self, request):
+            return False
+
+        def has_change_permission(self, request, obj=None):
+            return False
+
+except ImportError:
+    pass  # django_celery_results not installed
+
+
+# Override django_celery_beat admin
+try:
+    from django_celery_beat.models import (
+        PeriodicTask, IntervalSchedule, CrontabSchedule,
+        SolarSchedule, ClockedSchedule, PeriodicTasks
+    )
+    from django_celery_beat import admin as celery_beat_admin
+
+    # Unregister all default celery beat admin classes
+    admin.site.unregister(PeriodicTask)
+    admin.site.unregister(IntervalSchedule)
+    admin.site.unregister(CrontabSchedule)
+    admin.site.unregister(SolarSchedule)
+    admin.site.unregister(ClockedSchedule)
+
+    @admin.register(PeriodicTask)
+    class PeriodicTaskAdmin(ModelAdmin):
+        list_display = ('name', 'task', 'enabled_badge', 'schedule_display', 'last_run_at', 'total_run_count')
+        list_filter = ('enabled', 'task', 'one_off')
+        search_fields = ('name', 'task')
+        ordering = ['name']
+        actions = ['enable_tasks', 'disable_tasks', 'run_tasks']
+
+        fieldsets = (
+            ('Task Settings', {
+                'fields': ('name', 'task', 'enabled', 'one_off', 'description')
+            }),
+            ('Schedule', {
+                'fields': ('interval', 'crontab', 'solar', 'clocked', 'start_time', 'expires'),
+                'description': 'Set one type of schedule (interval, crontab, solar, or clocked)'
+            }),
+            ('Arguments', {
+                'fields': ('args', 'kwargs'),
+                'classes': ['collapse']
+            }),
+            ('Execution Options', {
+                'fields': ('queue', 'exchange', 'routing_key', 'headers', 'priority'),
+                'classes': ['collapse']
+            }),
+            ('Run Info', {
+                'fields': ('last_run_at', 'total_run_count', 'date_changed'),
+                'classes': ['collapse']
+            }),
+        )
+
+        readonly_fields = ('last_run_at', 'total_run_count', 'date_changed')
+
+        @display(description="Enabled", label=True)
+        def enabled_badge(self, obj):
+            if obj.enabled:
+                return "Yes", "success"
+            return "No", "danger"
+
+        @display(description="Schedule")
+        def schedule_display(self, obj):
+            if obj.interval:
+                return f"Every {obj.interval}"
+            if obj.crontab:
+                return f"Cron: {obj.crontab}"
+            if obj.solar:
+                return f"Solar: {obj.solar}"
+            if obj.clocked:
+                return f"Clocked: {obj.clocked}"
+            return "No schedule"
+
+        @action(description="Enable selected tasks")
+        def enable_tasks(self, request, queryset):
+            updated = queryset.update(enabled=True)
+            self.message_user(request, f"Enabled {updated} task(s)")
+
+        @action(description="Disable selected tasks")
+        def disable_tasks(self, request, queryset):
+            updated = queryset.update(enabled=False)
+            self.message_user(request, f"Disabled {updated} task(s)")
+
+        @action(description="Run selected tasks now")
+        def run_tasks(self, request, queryset):
+            from celery import current_app
+            ran = 0
+            for task in queryset:
+                try:
+                    args = json.loads(task.args or '[]')
+                    kwargs = json.loads(task.kwargs or '{}')
+                    current_app.send_task(task.task, args=args, kwargs=kwargs)
+                    ran += 1
+                except Exception as e:
+                    self.message_user(request, f"Failed to run {task.name}: {e}", messages.ERROR)
+            if ran:
+                self.message_user(request, f"Triggered {ran} task(s)")
+
+    @admin.register(IntervalSchedule)
+    class IntervalScheduleAdmin(ModelAdmin):
+        list_display = ('__str__', 'every', 'period')
+        list_filter = ('period',)
+        ordering = ['period', 'every']
+
+    @admin.register(CrontabSchedule)
+    class CrontabScheduleAdmin(ModelAdmin):
+        list_display = ('__str__', 'minute', 'hour', 'day_of_week', 'day_of_month', 'month_of_year')
+        ordering = ['month_of_year', 'day_of_month', 'day_of_week', 'hour', 'minute']
+
+    @admin.register(SolarSchedule)
+    class SolarScheduleAdmin(ModelAdmin):
+        list_display = ('__str__', 'event', 'latitude', 'longitude')
+        list_filter = ('event',)
+        ordering = ['event']
+
+    @admin.register(ClockedSchedule)
+    class ClockedScheduleAdmin(ModelAdmin):
+        list_display = ('__str__', 'clocked_time')
+        ordering = ['-clocked_time']
+
+except ImportError:
+    pass  # django_celery_beat not installed
+
+
+# =============================================================================
+# AUTH ADMIN OVERRIDES (Using Unfold for consistent styling)
+# =============================================================================
+
+from django.contrib.auth.models import User, Group
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin, GroupAdmin as BaseGroupAdmin
+
+# Unregister default auth admin
+admin.site.unregister(User)
+admin.site.unregister(Group)
+
+
+@admin.register(User)
+class UserAdmin(BaseUserAdmin, ModelAdmin):
+    """User admin with Unfold styling."""
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'is_active')
+    list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups')
+    search_fields = ('username', 'first_name', 'last_name', 'email')
+    ordering = ('username',)
+
+
+@admin.register(Group)
+class GroupAdmin(BaseGroupAdmin, ModelAdmin):
+    """Group admin with Unfold styling."""
+    list_display = ('name',)
+    search_fields = ('name',)
+    ordering = ('name',)

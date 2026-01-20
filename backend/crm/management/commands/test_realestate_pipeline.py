@@ -21,9 +21,10 @@ import time
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from crm.models import Brand, Contact, Pipeline, Deal, EmailLog
+from crm.models import Brand, Contact, Pipeline, PipelineStage, Deal, EmailLog
 from crm.services.email_service import get_email_service
 from crm.services.ai_agent import CRMAIAgent
+from crm.services.email_templates import get_styled_email, get_pipeline_type_from_name
 
 
 class Command(BaseCommand):
@@ -254,12 +255,28 @@ class Command(BaseCommand):
                     emails_sent=stage_num - 1,  # Emails sent before this stage
                 )
 
-                # Send email
-                self.stdout.write("   Sending via Zoho...")
+                # Get styled HTML email
+                self.stdout.write("   Rendering styled HTML email...")
+                styled_content = get_styled_email(
+                    brand_slug=brand.slug,
+                    pipeline_type='realestate',
+                    email_type=config['email_type'],
+                    recipient_name=name.split()[0] if name else 'there',
+                    recipient_email=email,
+                    recipient_company=company,
+                    subject=subject,
+                    body=body
+                )
+
+                html_body = styled_content['html']
+                self.stdout.write(f"   ✓ HTML template rendered ({len(html_body)} chars)")
+
+                # Send HTML email
+                self.stdout.write("   Sending styled HTML via Zoho...")
                 send_result = email_service.send(
                     to=email,
                     subject=subject,
-                    body=body,
+                    body=html_body,
                     from_name=brand.from_name,
                 )
 
@@ -270,7 +287,7 @@ class Command(BaseCommand):
                         to_email=email,
                         from_email=brand.from_email or 'sales@desifirms.com.au',
                         subject=subject,
-                        body=body,
+                        body=body,  # Store plain text for logging
                         sent_at=timezone.now(),
                         zoho_message_id=send_result.get('message_id', ''),
                         ai_generated=True,

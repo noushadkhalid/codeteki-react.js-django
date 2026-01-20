@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Unsubscribe - Desi Firms</title>
+    <title>Unsubscribe - {% if brand == 'codeteki' %}Codeteki{% else %}Desi Firms{% endif %}</title>
     <style>
         * {
             margin: 0;
@@ -12,7 +12,11 @@
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            {% if brand == 'codeteki' %}
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            {% else %}
+            background: linear-gradient(135deg, #0093E9 0%, #80D0C7 100%);
+            {% endif %}
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -31,11 +35,16 @@
         .logo {
             font-size: 28px;
             font-weight: 700;
-            color: #E53935;
             margin-bottom: 8px;
         }
-        .logo span {
+        .logo-desifirms {
+            color: #0093E9;
+        }
+        .logo-desifirms span {
             color: #333;
+        }
+        .logo-codeteki {
+            color: #6366f1;
         }
         h1 {
             color: #333;
@@ -69,11 +78,19 @@
             margin: 10px 5px;
         }
         .btn-primary {
-            background: #E53935;
+            {% if brand == 'codeteki' %}
+            background: #6366f1;
+            {% else %}
+            background: #0093E9;
+            {% endif %}
             color: white;
         }
         .btn-primary:hover {
-            background: #C62828;
+            {% if brand == 'codeteki' %}
+            background: #4f46e5;
+            {% else %}
+            background: #0077c0;
+            {% endif %}
         }
         .btn-secondary {
             background: #f0f0f0;
@@ -117,7 +134,11 @@
         }
         textarea:focus {
             outline: none;
-            border-color: #667eea;
+            {% if brand == 'codeteki' %}
+            border-color: #6366f1;
+            {% else %}
+            border-color: #0093E9;
+            {% endif %}
         }
         label {
             display: block;
@@ -135,14 +156,22 @@
 </head>
 <body>
     <div class="container">
-        <div class="logo">Desi <span>Firms</span></div>
+        {% if brand == 'codeteki' %}
+        <div class="logo logo-codeteki">Codeteki</div>
+        {% else %}
+        <div class="logo logo-desifirms">Desi <span>Firms</span></div>
+        {% endif %}
 
         {% if error %}
             <div class="error-box">
                 {{ error }}
             </div>
             <p>Please contact us if you believe this is an error.</p>
+            {% if brand == 'codeteki' %}
+            <a href="https://codeteki.au" class="btn btn-secondary">Go to Website</a>
+            {% else %}
             <a href="https://www.desifirms.com.au" class="btn btn-secondary">Go to Website</a>
+            {% endif %}
 
         {% elif confirmed %}
             <div class="success-icon">
@@ -151,15 +180,20 @@
             <h1>You've Been Unsubscribed</h1>
             <p>We've removed <strong>{{ email }}</strong> from our mailing list. You won't receive any more emails from us.</p>
             <p class="note">We're sorry to see you go. If you change your mind, you can always sign up again at our website.</p>
+            {% if brand == 'codeteki' %}
+            <a href="https://codeteki.au" class="btn btn-secondary">Visit Codeteki</a>
+            {% else %}
             <a href="https://www.desifirms.com.au" class="btn btn-secondary">Visit Desi Firms</a>
+            {% endif %}
 
         {% else %}
             <h1>Unsubscribe from Emails</h1>
-            <p>You're about to unsubscribe this email address from all Desi Firms communications:</p>
+            <p>You're about to unsubscribe this email address from all {% if brand == 'codeteki' %}Codeteki{% else %}Desi Firms{% endif %} communications:</p>
 
             <div class="email-display">{{ email }}</div>
 
             <form method="POST">
+                {% csrf_token %}
                 <input type="hidden" name="email" value="{{ email }}">
                 <input type="hidden" name="token" value="{{ token }}">
                 <input type="hidden" name="brand" value="{{ brand }}">
@@ -168,10 +202,14 @@
                 <textarea name="reason" id="reason" placeholder="Your feedback helps us improve..."></textarea>
 
                 <button type="submit" class="btn btn-primary">Confirm Unsubscribe</button>
+                {% if brand == 'codeteki' %}
+                <a href="https://codeteki.au" class="btn btn-secondary">Cancel</a>
+                {% else %}
                 <a href="https://www.desifirms.com.au" class="btn btn-secondary">Cancel</a>
+                {% endif %}
             </form>
 
-            <p class="note">After unsubscribing, you will no longer receive promotional emails from Desi Firms.</p>
+            <p class="note">After unsubscribing, you will no longer receive promotional emails from {% if brand == 'codeteki' %}Codeteki{% else %}Desi Firms{% endif %}.</p>
         {% endif %}
     </div>
 </body>

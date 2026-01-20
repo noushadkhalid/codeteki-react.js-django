@@ -1,0 +1,62 @@
+{% extends "crm/emails/base_desifirms.html" %}
+
+{% block title %}Final Follow-Up | Desi Firms{% endblock %}
+{% block preheader %}{{ recipient_name }}, last chance to join as a founding member{% endblock %}
+{% block subtitle %}Real Estate Platform{% endblock %}
+
+{% block content %}
+<tr>
+    <td style="padding: 40px 30px;">
+        <!-- Heading -->
+        <h1 style="color: #1f2937; font-size: 22px; font-weight: 700; text-align: center; margin: 0 0 25px 0;">
+            Final Follow-Up
+        </h1>
+
+        <!-- Greeting -->
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            Hi {{ recipient_name }},
+        </p>
+
+        <!-- Message -->
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            This is my last follow-up regarding the opportunity to list <strong>{{ recipient_company }}</strong> on Desi Firms.
+        </p>
+
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            We're offering <strong>free listings</strong> and <strong>founding member</strong> status to early agencies who join our newly launched real estate platform for the South Asian community.
+        </p>
+
+        <!-- Simple Box -->
+        <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin: 0 0 25px 0; text-align: center;">
+            <p style="color: #374151; font-size: 15px; line-height: 1.6; margin: 0;">
+                If this isn't the right fit for you, I completely respect your decision. <br>
+                The door is always open if your needs change in the future.
+            </p>
+        </div>
+
+        <!-- CTA Button -->
+        <div style="text-align: center; margin: 25px 0;">
+            <a href="https://www.desifirms.com.au/real-estate/register"
+               style="display: inline-block; background: linear-gradient(135deg, #0093E9 0%, #80D0C7 100%); color: #ffffff; text-decoration: none; padding: 14px 35px; border-radius: 10px; font-weight: 600; font-size: 15px;">
+                Join Now (Free) →
+            </a>
+        </div>
+
+        <!-- Signature -->
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0;">
+                Wishing you all the best,
+            </p>
+            <p style="color: #1f2937; font-size: 15px; font-weight: 600; margin: 10px 0 5px 0;">
+                Noushad
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0 0 5px 0;">
+                Desi Firms
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                📱 0424 538 777 &nbsp;|&nbsp; 🌐 <a href="https://desifirms.com.au" style="color: #0093E9; text-decoration: none;">desifirms.com.au</a>
+            </p>
+        </div>
+    </td>
+</tr>
+{% endblock %}

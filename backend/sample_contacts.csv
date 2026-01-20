@@ -1,0 +1,6 @@
+email,name,company,website,domain_authority,notes,tags
+john@techstartup.com.au,John Smith,Tech Startup AU,https://techstartup.com.au,35,Interested in AI solutions,"technology, startup"
+sarah@melbournecafe.com.au,Sarah Johnson,Melbourne Cafe Co,https://melbournecafe.com.au,28,Small business owner,"hospitality, melbourne"
+raj@sydneyimports.com.au,Raj Kumar,Sydney Imports,https://sydneyimports.com.au,42,Import/export business,"imports, sydney"
+priya@designstudio.com.au,Priya Patel,Creative Design Studio,https://designstudio.com.au,31,Looking for web development,"design, creative"
+mike@constructionpro.com.au,Mike Wilson,Construction Pro,https://constructionpro.com.au,38,Needs company website,"construction, tradies"

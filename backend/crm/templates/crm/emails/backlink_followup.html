@@ -1,0 +1,68 @@
+{% extends "crm/emails/base_desifirms.html" %}
+
+{% block title %}Following Up | Desi Firms{% endblock %}
+{% block preheader %}{{ recipient_name }}, quick follow-up on my partnership proposal{% endblock %}
+{% block subtitle %}Partnership{% endblock %}
+
+{% block content %}
+<tr>
+    <td style="padding: 40px 30px;">
+        <!-- Heading -->
+        <h1 style="color: #1f2937; font-size: 22px; font-weight: 700; text-align: center; margin: 0 0 25px 0;">
+            Quick Follow-Up
+        </h1>
+
+        <!-- Greeting -->
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            Hi {{ recipient_name }},
+        </p>
+
+        <!-- Message -->
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            I wanted to follow up on my previous email about a potential collaboration between Desi Firms and <strong>{{ recipient_company }}</strong>.
+        </p>
+
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            I understand you're busy, so I'll keep this brief. We're genuinely interested in creating value for both our audiences through:
+        </p>
+
+        <!-- Simple List -->
+        <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin: 0 0 25px 0;">
+            <p style="color: #374151; font-size: 15px; line-height: 1.8; margin: 0;">
+                ✓ Guest post exchange<br>
+                ✓ Resource link sharing<br>
+                ✓ Joint content creation<br>
+                ✓ Or any other form you prefer
+            </p>
+        </div>
+
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            If you're open to it, I'd love to hear your thoughts. If this isn't the right time, no worries at all!
+        </p>
+
+        <!-- CTA Button -->
+        <div style="text-align: center; margin: 25px 0;">
+            <a href="mailto:hello@desifirms.com.au?subject=Re:%20Partnership%20Discussion"
+               style="display: inline-block; background: linear-gradient(135deg, #0093E9 0%, #80D0C7 100%); color: #ffffff; text-decoration: none; padding: 14px 35px; border-radius: 10px; font-weight: 600; font-size: 15px;">
+                Reply & Connect →
+            </a>
+        </div>
+
+        <!-- Signature -->
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0;">
+                Best regards,
+            </p>
+            <p style="color: #1f2937; font-size: 15px; font-weight: 600; margin: 10px 0 5px 0;">
+                Noushad
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0 0 5px 0;">
+                Desi Firms
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                📱 0424 538 777 &nbsp;|&nbsp; 🌐 <a href="https://desifirms.com.au" style="color: #0093E9; text-decoration: none;">desifirms.com.au</a>
+            </p>
+        </div>
+    </td>
+</tr>
+{% endblock %}

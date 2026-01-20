@@ -1,0 +1,103 @@
+{% autoescape off %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>{% block title %}Desi Firms{% endblock %}</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
+    <style type="text/css">
+        body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+        table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+        img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+        body { height: 100% !important; margin: 0 !important; padding: 0 !important; width: 100% !important; }
+        a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; }
+        @media only screen and (max-width: 620px) {
+            .email-container { width: 100% !important; max-width: 100% !important; }
+            .mobile-padding { padding: 20px !important; }
+        }
+    </style>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f3f4f6; -webkit-font-smoothing: antialiased;">
+    <!-- Preheader text (hidden) -->
+    <div style="display: none; max-height: 0; overflow: hidden;">
+        {% block preheader %}Desi Firms - Australia's South Asian Business Platform{% endblock %}
+    </div>
+
+    <!-- Email wrapper -->
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f3f4f6;">
+        <tr>
+            <td align="center" style="padding: 40px 20px;">
+                <!-- Email container -->
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" class="email-container" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08); overflow: hidden;">
+
+                    <!-- Header with Logo -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #0093E9 0%, #80D0C7 100%); padding: 35px 30px; text-align: center;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                <tr>
+                                    <td align="center">
+                                        <div style="width: 55px; height: 55px; background: rgba(255,255,255,0.2); border-radius: 12px; margin: 0 auto 12px; line-height: 55px; text-align: center;">
+                                            <span style="font-size: 24px; color: #ffffff; font-weight: 800;">DF</span>
+                                        </div>
+                                        <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">DESI FIRMS</h1>
+                                        <p style="margin: 6px 0 0; color: rgba(255,255,255,0.9); font-size: 13px; font-weight: 500;">{% block subtitle %}South Asian Business Platform{% endblock %}</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Main Content Block -->
+                    {% block content %}{% endblock %}
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background: #f8fafc; padding: 25px 30px; border-top: 1px solid #e5e7eb;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                <tr>
+                                    <td align="center">
+                                        <!-- Contact -->
+                                        <p style="margin: 0 0 12px; color: #6b7280; font-size: 14px; line-height: 1.6;">
+                                            Questions? Reply to this email or contact us at
+                                            <a href="mailto:sales@desifirms.com.au" style="color: #0093E9; text-decoration: none; font-weight: 500;">sales@desifirms.com.au</a>
+                                        </p>
+
+                                        <!-- Social Links -->
+                                        <p style="margin: 0 0 12px; font-size: 13px;">
+                                            <a href="https://www.desifirms.com.au" style="color: #0093E9; text-decoration: none; margin: 0 8px;">Website</a>
+                                            <a href="https://www.facebook.com/desifirmsaustralia" style="color: #1877F2; text-decoration: none; margin: 0 8px;">Facebook</a>
+                                            <a href="https://www.instagram.com/desifirms/" style="color: #E4405F; text-decoration: none; margin: 0 8px;">Instagram</a>
+                                        </p>
+
+                                        <!-- Unsubscribe -->
+                                        <p style="margin: 0 0 10px; color: #9ca3af; font-size: 12px;">
+                                            <a href="{{ unsubscribe_url }}" style="color: #9ca3af; text-decoration: underline;">Unsubscribe</a> from these emails
+                                        </p>
+
+                                        <!-- Copyright -->
+                                        <p style="margin: 0; color: #9ca3af; font-size: 12px;">
+                                            &copy; {% now "Y" %} Desi Firms (APTAA PTY LTD). Australia.
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+{% endautoescape %}

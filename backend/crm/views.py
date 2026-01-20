@@ -1033,12 +1033,23 @@ def verify_unsubscribe_token(email: str, token: str) -> bool:
     return hmac.compare_digest(expected, token)
 
 
-def get_unsubscribe_url(email: str, brand_slug: str = 'desifirms') -> str:
-    """Generate full unsubscribe URL for an email."""
+def get_unsubscribe_url(email: str, brand_slug: str = 'desifirms', brand=None) -> str:
+    """
+    Generate full unsubscribe URL for an email.
+
+    The CRM backend lives on codeteki.au, so all unsubscribe links point there.
+    The brand parameter ensures the unsubscribe page shows correct branding.
+
+    To use brand-specific domains (e.g., desifirms.com.au), set up a nginx
+    redirect from /crm/* on that domain to codeteki.au/crm/*
+    """
     token = generate_unsubscribe_token(email)
-    # Use production URL
+
+    # CRM lives on codeteki.au - all unsubscribe links go there
+    # Using /api/crm/ path which is the established CRM URL namespace
     base_url = 'https://codeteki.au'
-    return f"{base_url}/crm/unsubscribe/?email={email}&token={token}&brand={brand_slug}"
+
+    return f"{base_url}/api/crm/unsubscribe/?email={email}&token={token}&brand={brand_slug}"
 
 
 @method_decorator(csrf_exempt, name='dispatch')

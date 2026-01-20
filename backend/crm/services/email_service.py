@@ -410,22 +410,50 @@ class ZohoEmailService:
         """
         from crm.views import generate_unsubscribe_token
 
-        # Generate unsubscribe URL
-        token = generate_unsubscribe_token(recipient_email)
-        brand_slug = self.brand.slug if self.brand else 'desifirms'
-        base_url = 'https://codeteki.au'
-        unsubscribe_url = f"{base_url}/crm/unsubscribe/?email={recipient_email}&token={token}&brand={brand_slug}"
+        # Check if body already has unsubscribe link (from HTML templates)
+        if 'unsubscribe' in body.lower() and ('href=' in body or 'http' in body):
+            # HTML template already has unsubscribe link - skip adding footer
+            return body
 
-        # Create footer (plain text format)
-        footer = f"""
+        # Generate unsubscribe URL using brand-aware function
+        from crm.views import get_unsubscribe_url
+        brand_slug = self.brand.slug if self.brand else 'desifirms'
+        unsubscribe_url = get_unsubscribe_url(recipient_email, brand_slug, self.brand)
+
+        # Check if body is HTML
+        is_html = '<html' in body.lower() or '<body' in body.lower() or '<!doctype' in body.lower()
+
+        if is_html:
+            # For HTML emails, add a styled footer before </body>
+            brand_name = self.brand.name if self.brand else 'Desi Firms'
+            html_footer = f'''
+<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
+    <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+        <a href="{unsubscribe_url}" style="color: #9ca3af; text-decoration: underline;">Unsubscribe</a> from these emails
+    </p>
+    <p style="color: #9ca3af; font-size: 11px; margin: 8px 0 0 0;">
+        This email was sent by {brand_name}. We respect your privacy.
+    </p>
+</div>
+'''
+            if '</body>' in body.lower():
+                return body.replace('</body>', f'{html_footer}</body>')
+            elif '</html>' in body.lower():
+                return body.replace('</html>', f'{html_footer}</html>')
+            else:
+                return body + html_footer
+        else:
+            # Plain text footer
+            brand_name = self.brand.name if self.brand else 'Desi Firms'
+            footer = f"""
 
 ---
 If you no longer wish to receive these emails, you can unsubscribe here:
 {unsubscribe_url}
 
-This email was sent by Desi Firms. We respect your privacy."""
+This email was sent by {brand_name}. We respect your privacy."""
 
-        return body + footer
+            return body + footer
 
     def send_bulk(
         self,
@@ -854,6 +882,83 @@ def get_email_service_for_deal(deal: 'Deal') -> ZohoEmailService:
     """
     brand = deal.pipeline.brand if deal.pipeline else None
     return get_email_service(brand=brand)
+
+
+def send_styled_email(
+    deal: 'Deal',
+    subject: str,
+    plain_body: str,
+    email_type: Optional[str] = None,
+    tracking_id: Optional[str] = None
+) -> dict:
+    """
+    Send a styled HTML email for a deal, using the appropriate template.
+
+    This function determines the brand, pipeline type, and email type from the deal,
+    then renders the appropriate HTML template and sends the email.
+
+    Args:
+        deal: Deal object containing contact and pipeline info
+        subject: Email subject
+        plain_body: Plain text version of the email body
+        email_type: Optional email type override (e.g., 'agent_invitation')
+        tracking_id: Optional UUID for open tracking
+
+    Returns:
+        {
+            'success': bool,
+            'message_id': str or None,
+            'error': str or None
+        }
+    """
+    from crm.services.email_templates import (
+        get_styled_email,
+        get_email_type_for_stage,
+        get_pipeline_type_from_name
+    )
+
+    # Get brand and pipeline info
+    brand = deal.pipeline.brand if deal.pipeline else None
+    brand_slug = brand.slug if brand else 'desifirms'
+    pipeline_name = deal.pipeline.name if deal.pipeline else 'business'
+    pipeline_type = get_pipeline_type_from_name(pipeline_name)
+
+    # Get email type from stage if not provided
+    if not email_type and deal.current_stage:
+        email_type = get_email_type_for_stage(deal.current_stage.name)
+
+    # If no email type found, use a generic template
+    if not email_type:
+        email_type = '_default'
+
+    # Get contact info
+    contact = deal.contact
+    recipient_name = contact.first_name or contact.name.split()[0] if contact.name else 'there'
+    recipient_email = contact.email
+    recipient_company = contact.company or 'your business'
+
+    # Get styled email content
+    styled_content = get_styled_email(
+        brand_slug=brand_slug,
+        pipeline_type=pipeline_type,
+        email_type=email_type,
+        recipient_name=recipient_name,
+        recipient_email=recipient_email,
+        recipient_company=recipient_company,
+        subject=subject,
+        body=plain_body
+    )
+
+    # Get email service for the brand
+    email_service = get_email_service(brand=brand)
+
+    # Send the HTML version
+    return email_service.send(
+        to=recipient_email,
+        subject=subject,
+        body=styled_content['html'],
+        tracking_id=tracking_id
+    )
 
 
 def clear_email_service_cache():

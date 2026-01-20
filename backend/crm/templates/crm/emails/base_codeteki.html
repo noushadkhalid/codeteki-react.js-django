@@ -1,0 +1,103 @@
+{% autoescape off %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>{% block title %}Codeteki{% endblock %}</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
+    <style type="text/css">
+        body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+        table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+        img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+        body { height: 100% !important; margin: 0 !important; padding: 0 !important; width: 100% !important; }
+        a[x-apple-data-detectors] { color: inherit !important; text-decoration: none !important; }
+        @media only screen and (max-width: 620px) {
+            .email-container { width: 100% !important; max-width: 100% !important; }
+            .mobile-padding { padding: 20px !important; }
+        }
+    </style>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0f172a; -webkit-font-smoothing: antialiased;">
+    <!-- Preheader text (hidden) -->
+    <div style="display: none; max-height: 0; overflow: hidden;">
+        {% block preheader %}Codeteki - AI-Powered Digital Solutions{% endblock %}
+    </div>
+
+    <!-- Email wrapper -->
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #0f172a;">
+        <tr>
+            <td align="center" style="padding: 40px 20px;">
+                <!-- Email container -->
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" class="email-container" style="max-width: 600px; background-color: #1e293b; border-radius: 16px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3); overflow: hidden; border: 1px solid #334155;">
+
+                    <!-- Header with Logo -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%); padding: 35px 30px; text-align: center;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                <tr>
+                                    <td align="center">
+                                        <div style="width: 55px; height: 55px; background: rgba(255,255,255,0.15); border-radius: 12px; margin: 0 auto 12px; line-height: 55px; text-align: center; backdrop-filter: blur(10px);">
+                                            <span style="font-size: 24px; color: #ffffff; font-weight: 800;">C</span>
+                                        </div>
+                                        <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">CODETEKI</h1>
+                                        <p style="margin: 6px 0 0; color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 500;">{% block subtitle %}Digital Services{% endblock %}</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Main Content Block -->
+                    {% block content %}{% endblock %}
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background: #0f172a; padding: 25px 30px; border-top: 1px solid #334155;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                                <tr>
+                                    <td align="center">
+                                        <!-- Contact -->
+                                        <p style="margin: 0 0 12px; color: #94a3b8; font-size: 14px; line-height: 1.6;">
+                                            Questions? Reply to this email or contact us at
+                                            <a href="mailto:hello@codeteki.au" style="color: #a78bfa; text-decoration: none; font-weight: 500;">hello@codeteki.au</a>
+                                        </p>
+
+                                        <!-- Links -->
+                                        <p style="margin: 0 0 12px; font-size: 13px;">
+                                            <a href="https://codeteki.au" style="color: #a78bfa; text-decoration: none; margin: 0 10px;">Website</a>
+                                            <a href="https://codeteki.au/services" style="color: #a78bfa; text-decoration: none; margin: 0 10px;">Services</a>
+                                            <a href="https://codeteki.au/contact" style="color: #a78bfa; text-decoration: none; margin: 0 10px;">Contact</a>
+                                        </p>
+
+                                        <!-- Unsubscribe -->
+                                        <p style="margin: 0 0 10px; color: #64748b; font-size: 12px;">
+                                            <a href="{{ unsubscribe_url }}" style="color: #64748b; text-decoration: underline;">Unsubscribe</a> from these emails
+                                        </p>
+
+                                        <!-- Copyright -->
+                                        <p style="margin: 0; color: #64748b; font-size: 12px;">
+                                            &copy; {% now "Y" %} Codeteki Digital Services. Australia.
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+{% endautoescape %}

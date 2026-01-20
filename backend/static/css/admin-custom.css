@@ -3,6 +3,36 @@
  * Hides confusing default app list on dashboard
  */
 
+/* ===========================================
+   CHECKBOX FIX - Simple native checkboxes
+   =========================================== */
+
+/* Reset all checkboxes to native browser styling */
+input[type="checkbox"] {
+    -webkit-appearance: auto !important;
+    -moz-appearance: auto !important;
+    appearance: auto !important;
+    width: 16px !important;
+    height: 16px !important;
+    cursor: pointer !important;
+    accent-color: #f59e0b !important;
+    vertical-align: middle !important;
+}
+
+/* Ensure checkboxes in tables are visible */
+table input[type="checkbox"],
+.inline-group input[type="checkbox"],
+.tabular input[type="checkbox"] {
+    opacity: 1 !important;
+    position: static !important;
+    pointer-events: auto !important;
+}
+
+/* Fix for Unfold's label-wrapped checkboxes */
+label input[type="checkbox"] {
+    margin-right: 8px !important;
+}
+
 /* Hide the default "Site administration" section on dashboard index */
 body.dashboard #content-main > .module {
     display: none !important;

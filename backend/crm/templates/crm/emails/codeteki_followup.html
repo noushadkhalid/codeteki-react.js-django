@@ -1,0 +1,93 @@
+{% extends "crm/emails/base_codeteki.html" %}
+
+{% block title %}Following Up | Codeteki{% endblock %}
+{% block preheader %}{{ recipient_name }}, quick follow-up on our AI solutions{% endblock %}
+{% block subtitle %}Digital Services{% endblock %}
+
+{% block content %}
+<tr>
+    <td style="padding: 40px 30px; background-color: #1e293b;">
+        <!-- Icon -->
+        <div style="text-align: center; margin-bottom: 25px;">
+            <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #6366f1, #a855f7); border-radius: 50%; margin: 0 auto; display: inline-block; line-height: 70px;">
+                <span style="font-size: 35px;">👋</span>
+            </div>
+        </div>
+
+        <!-- Heading -->
+        <h1 style="color: #f8fafc; font-size: 22px; font-weight: 700; text-align: center; margin: 0 0 25px 0;">
+            Quick Follow-Up
+        </h1>
+
+        <!-- Greeting -->
+        <p style="color: #cbd5e1; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            Hi {{ recipient_name }},
+        </p>
+
+        <!-- Message -->
+        <p style="color: #cbd5e1; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            I wanted to follow up on my previous email about how <strong style="color: #a78bfa;">Codeteki</strong> can help <strong style="color: #f8fafc;">{{ recipient_company }}</strong> leverage technology for growth.
+        </p>
+
+        <p style="color: #cbd5e1; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            I understand you're busy, so I'll keep this brief. Many businesses we work with have seen:
+        </p>
+
+        <!-- Results Box -->
+        <div style="background: rgba(99, 102, 241, 0.15); border: 1px solid #6366f1; border-radius: 12px; padding: 20px; margin: 0 0 25px 0;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #22c55e; font-size: 16px; margin-right: 10px;">✓</span>
+                        <span style="color: #f1f5f9; font-size: 14px;">60% reduction in customer support time</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #22c55e; font-size: 16px; margin-right: 10px;">✓</span>
+                        <span style="color: #f1f5f9; font-size: 14px;">3x more leads from their website</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #22c55e; font-size: 16px; margin-right: 10px;">✓</span>
+                        <span style="color: #f1f5f9; font-size: 14px;">Hours saved weekly through automation</span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <p style="color: #cbd5e1; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            Would a quick 15-minute chat be helpful? I'd love to understand your specific challenges and see if we can help.
+        </p>
+
+        <!-- CTA Button -->
+        <div style="text-align: center; margin: 25px 0;">
+            <a href="https://codeteki.au/contact"
+               style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); color: #ffffff; text-decoration: none; padding: 14px 35px; border-radius: 10px; font-weight: 600; font-size: 15px; box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);">
+                Let's Chat →
+            </a>
+        </div>
+
+        <p style="color: #94a3b8; font-size: 14px; text-align: center; margin: 20px 0 0 0;">
+            Or simply reply to this email!
+        </p>
+
+        <!-- Signature -->
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #334155;">
+            <p style="color: #cbd5e1; font-size: 15px; line-height: 1.6; margin: 0;">
+                Best regards,
+            </p>
+            <p style="color: #f8fafc; font-size: 15px; font-weight: 600; margin: 10px 0 5px 0;">
+                Noushad
+            </p>
+            <p style="color: #94a3b8; font-size: 14px; margin: 0 0 5px 0;">
+                Codeteki Digital Services
+            </p>
+            <p style="color: #94a3b8; font-size: 14px; margin: 0;">
+                📱 0424 538 777 &nbsp;|&nbsp; 🌐 <a href="https://codeteki.au" style="color: #a78bfa; text-decoration: none;">codeteki.au</a>
+            </p>
+        </div>
+    </td>
+</tr>
+{% endblock %}

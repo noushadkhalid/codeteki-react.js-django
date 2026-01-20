@@ -1,0 +1,109 @@
+{% extends "crm/emails/base_desifirms.html" %}
+
+{% block title %}Partnership Opportunity | Desi Firms{% endblock %}
+{% block preheader %}{{ recipient_name }}, let's create content together{% endblock %}
+{% block subtitle %}Partnership{% endblock %}
+
+{% block content %}
+<tr>
+    <td style="padding: 40px 30px;">
+        <!-- Icon -->
+        <div style="text-align: center; margin-bottom: 25px;">
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #0093E9, #80D0C7); border-radius: 50%; margin: 0 auto; display: inline-block; line-height: 80px;">
+                <span style="font-size: 40px;">🤝</span>
+            </div>
+        </div>
+
+        <!-- Heading -->
+        <h1 style="color: #1f2937; font-size: 24px; font-weight: 700; text-align: center; margin: 0 0 10px 0;">
+            Partnership Opportunity
+        </h1>
+        <p style="color: #0093E9; font-size: 16px; font-weight: 600; text-align: center; margin: 0 0 25px 0;">
+            Let's Create Value Together
+        </p>
+
+        <!-- Greeting -->
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            Hi {{ recipient_name }},
+        </p>
+
+        <!-- Message -->
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            I'm Noushad from <strong>Desi Firms</strong> - a community platform connecting South Asian businesses and professionals in Australia.
+        </p>
+
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            I came across <strong>{{ recipient_company }}</strong> and was impressed by the content you create. I think there's a great opportunity for us to collaborate.
+        </p>
+
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            We're open to various forms of collaboration:
+        </p>
+
+        <!-- Collaboration Options -->
+        <div style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border: 1px solid #7dd3fc; border-radius: 12px; padding: 24px; margin: 0 0 25px 0;">
+            <h3 style="color: #0369a1; font-size: 14px; font-weight: 600; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 1px;">
+                💡 Collaboration Ideas
+            </h3>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #0284c7; font-size: 16px; margin-right: 10px;">•</span>
+                        <span style="color: #1f2937; font-size: 14px;">Guest post exchange - share expertise with both audiences</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #0284c7; font-size: 16px; margin-right: 10px;">•</span>
+                        <span style="color: #1f2937; font-size: 14px;">Resource mentions - link to each other's helpful content</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #0284c7; font-size: 16px; margin-right: 10px;">•</span>
+                        <span style="color: #1f2937; font-size: 14px;">Joint content creation - articles, guides, or infographics</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #0284c7; font-size: 16px; margin-right: 10px;">•</span>
+                        <span style="color: #1f2937; font-size: 14px;">Expert interviews or quotes for upcoming content</span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            I'd love to discuss what works best for you. Would you be open to a quick chat?
+        </p>
+
+        <!-- CTA Button -->
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="mailto:hello@desifirms.com.au?subject=Partnership%20Discussion"
+               style="display: inline-block; background: linear-gradient(135deg, #0093E9 0%, #80D0C7 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 10px; font-weight: 600; font-size: 16px; box-shadow: 0 8px 25px rgba(0, 147, 233, 0.25);">
+                Let's Chat →
+            </a>
+        </div>
+
+        <p style="color: #6b7280; font-size: 14px; text-align: center; margin: 20px 0 0 0;">
+            Or simply reply to this email!
+        </p>
+
+        <!-- Signature -->
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0;">
+                Looking forward to hearing from you,
+            </p>
+            <p style="color: #1f2937; font-size: 15px; font-weight: 600; margin: 10px 0 5px 0;">
+                Noushad
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0 0 5px 0;">
+                Desi Firms
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                📱 0424 538 777 &nbsp;|&nbsp; 🌐 <a href="https://desifirms.com.au" style="color: #0093E9; text-decoration: none;">desifirms.com.au</a>
+            </p>
+        </div>
+    </td>
+</tr>
+{% endblock %}
