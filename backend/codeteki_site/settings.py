@@ -616,10 +616,10 @@ UNFOLD = {
                 ],
             },
             # ============================================
-            # LEADS & CRM
+            # CHATBOT LEADS
             # ============================================
             {
-                "title": "Leads & CRM",
+                "title": "Chatbot Leads",
                 "separator": True,
                 "collapsible": True,
                 "items": [
