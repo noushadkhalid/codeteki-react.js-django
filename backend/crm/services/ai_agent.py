@@ -298,10 +298,22 @@ Respond in JSON format:
 
         # Get brand info for sender details
         brand = deal.pipeline.brand if deal.pipeline else None
-        sender_name = brand.from_name if brand else 'The Team'
+        sender_name = 'Noushad'
         sender_company = brand.name if brand else 'Codeteki'
         company_description = brand.ai_company_description if brand else 'a digital agency specializing in AI-powered web solutions and SEO services'
         value_proposition = brand.ai_value_proposition if brand else 'helping businesses grow their online presence through cutting-edge technology'
+
+        # Brand-specific signature
+        if brand and ('desi' in brand.name.lower() or 'desifirms' in brand.slug.lower()):
+            email_signature = """Noushad
+Desi Firms
+📱 0424 538 777
+🌐 https://desifirms.com.au/"""
+        else:
+            email_signature = """Noushad
+Codeteki Digital Services
+📱 0424 538 777
+🌐 https://codeteki.au/"""
 
         # Build email context
         email_context = {
@@ -356,12 +368,19 @@ Requirements:
 4. Include a soft call-to-action
 5. Don't be pushy or salesy
 6. If this is for backlink outreach, focus on mutual benefit
-7. Sign off with "{sender_name}" - DO NOT use placeholders like [Your Name]
+7. NEVER use placeholder text like [Your Name], [Contact], [Your Position] - use real values
+8. End with this EXACT signature (copy exactly, including emojis):
+
+Warm regards,
+
+{email_signature}
+
+CRITICAL: Copy the signature EXACTLY as shown above.
 
 Respond in JSON format:
 {{
     "subject": "Email subject line",
-    "body": "Email body text (sign off with Best regards, {sender_name})"
+    "body": "Email body text ending with the signature above"
 }}"""
 
         result = self.ai_engine.generate(
@@ -736,6 +755,55 @@ Include simple signup steps:
 6. Start listing properties
 Tone: Respectful, humble, we'd be honoured to have them join from the beginning''',
 
+            'agent_followup_1': '''a friendly first follow-up to a real estate agent who hasn't responded to our invitation.
+IMPORTANT: Desi Firms is a NEWLY LAUNCHED platform - NOT established, NOT "leading".
+Context: We sent an initial invitation a few days ago. This is a gentle reminder.
+Key points:
+- Acknowledge they're busy
+- Brief reminder about the FREE listing opportunity
+- Mention being part of something new from the beginning
+- No pressure, just checking if they had questions
+- Keep it short (under 100 words)
+Tone: Friendly, understanding, not pushy''',
+
+            'agent_followup_2': '''a second (final) follow-up to a real estate agent.
+IMPORTANT: Desi Firms is a NEWLY LAUNCHED platform - NOT established, NOT "leading".
+Context: We've reached out twice before with no response. This is our last attempt.
+Key points:
+- Acknowledge this is a final follow-up
+- Briefly restate the value (FREE listings, founding member status)
+- Respect their decision if not interested
+- Leave door open for future
+- Keep it very short (under 75 words)
+Tone: Respectful, brief, no pressure''',
+
+            'agent_responded': '''a thank you email after a real estate agent responds positively.
+Context: They showed interest in listing on Desi Firms.
+Key points:
+- Thank them for their response
+- Provide clear next steps for registration
+- Offer to help with any questions
+- Be warm and welcoming
+Tone: Excited, helpful, welcoming''',
+
+            'agent_registered': '''a welcome email after a real estate agent has registered on Desi Firms.
+Context: They've created an account and registered as an agent/agency.
+Key points:
+- Welcome them to the platform
+- Guide them on listing their first property
+- Mention available features
+- Offer support if needed
+Tone: Warm, helpful, encouraging''',
+
+            'agent_listing': '''a congratulations email after a real estate agent lists their first property.
+Context: They've successfully listed at least one property.
+Key points:
+- Congratulate them on their first listing
+- Share tips for getting more visibility
+- Mention upcoming features
+- Thank them for being a founding member
+Tone: Celebratory, supportive''',
+
             'free_listing': '''an email emphasizing the FREE property listing opportunity on Desi Firms.
 Context: NEW platform just launched. Focus on:
 - Zero cost, zero obligation
@@ -782,6 +850,20 @@ Context: NEW platform with a classifieds section for the South Asian community.
         }
         tone_desc = tone_instructions.get(tone, 'Be professional.')
 
+        # Brand-specific signatures
+        if 'desi' in brand_name.lower() or 'desifirms' in brand_name.lower():
+            email_signature = """Noushad
+Desi Firms
+📱 0424 538 777
+🌐 https://desifirms.com.au/"""
+            company_tag = "Desi Firms"
+        else:
+            email_signature = """Noushad
+Codeteki Digital Services
+📱 0424 538 777
+🌐 https://codeteki.au/"""
+            company_tag = "Codeteki"
+
         prompt = f"""Write {email_desc} with the following requirements:
 
 SENDER INFORMATION:
@@ -789,6 +871,9 @@ SENDER INFORMATION:
 - Website: {brand_website}
 - About Us: {brand_description}
 - Value Proposition: {value_proposition}
+- Sender Name: Noushad
+- Contact: 0424 538 777
+- Company Tag: {company_tag}
 
 PIPELINE CONTEXT:
 - Pipeline: {pipeline_name if pipeline_name else 'General'}
@@ -802,9 +887,11 @@ RECIPIENT INFORMATION:
 - Website: {recipient_website if recipient_website else 'Not specified'}
 
 SALUTATION:
-You MUST start the email body with exactly this placeholder: "{{{{SALUTATION}}}}"
-This placeholder will be automatically replaced with a personalized greeting for each recipient when the email is sent.
-Do NOT write an actual greeting like "Hi there," or "Hello" - use exactly {{{{SALUTATION}}}} as the first word.
+Start the email with ONLY the placeholder "{{{{SALUTATION}}}}" on its own line.
+Then add a blank line before the body content.
+DO NOT add any other greeting like "Hi", "Hello", "Dear" - the placeholder will be replaced with a personalized greeting.
+WRONG: "{{{{SALUTATION}}}} Dear John," or "Hi, I hope..."
+CORRECT: "{{{{SALUTATION}}}}\n\nI hope this message finds you well..."
 
 TONE & STYLE:
 {tone_desc}
@@ -812,14 +899,23 @@ TONE & STYLE:
 USER SUGGESTIONS/KEY POINTS TO INCLUDE:
 {suggestions if suggestions else 'No specific suggestions provided - write a general professional email.'}
 
-Requirements:
-1. IMPORTANT: Start the email body with exactly "{{{{SALUTATION}}}}" - this is a placeholder that gets personalized
-2. Keep it concise (under 150 words)
-3. Don't be pushy or salesy
-4. Include a clear but soft call-to-action
-5. Make it feel personalized, not templated
-6. If recipient company info is available, reference it naturally
-7. Sign off appropriately for the tone
+STRICT FORMATTING RULES:
+1. Start with "{{{{SALUTATION}}}}" on its OWN LINE, followed by a blank line
+2. The email body starts AFTER the blank line (NOT on same line as salutation)
+3. Keep it concise (under 150 words)
+4. Don't be pushy or salesy
+5. Include a clear but soft call-to-action
+6. Make it feel personalized, not templated
+7. If recipient company info is available, reference it naturally
+8. NEVER use placeholder text like [Your Name], [Contact], [Your Position], [Your Company] - always use real values
+9. NEVER write URLs in markdown format like [text](url) - write plain URLs
+10. End with this EXACT signature (copy exactly, including emojis):
+
+Warm regards,
+
+{email_signature}
+
+CRITICAL: Copy the signature EXACTLY as shown above. Do not modify, do not add brackets, do not use placeholders.
 
 Respond in JSON format:
 {{
@@ -854,24 +950,59 @@ Respond in JSON format:
             if output.endswith('```'):
                 output = output[:-3].strip()
 
+        parsed = None
+        import re
+
+        # Try direct JSON parse first
         try:
             parsed = json.loads(output)
         except json.JSONDecodeError:
-            # Try to find JSON object in the text
-            import re
-            json_match = re.search(r'\{[^{}]*"subject"[^{}]*"body"[^{}]*\}', output, re.DOTALL)
-            if json_match:
-                try:
-                    parsed = json.loads(json_match.group())
-                except json.JSONDecodeError:
-                    parsed = None
+            pass
 
-            if not parsed:
-                # Fallback: try to extract from text
-                lines = output.strip().split('\n')
-                subject = lines[0] if lines else 'Following up'
-                body = '\n'.join(lines[1:]) if len(lines) > 1 else output
+        # If direct parse failed, use regex extraction (handles multiline body)
+        if not parsed:
+            # Extract subject - look for "subject": "..."
+            subject_match = re.search(r'"subject"\s*:\s*"([^"]*)"', output)
+
+            # Extract body - find "body": " and then capture until the closing pattern
+            # The body ends with " followed by optional whitespace and }
+            body_start_match = re.search(r'"body"\s*:\s*"', output)
+
+            if subject_match and body_start_match:
+                subject = subject_match.group(1)
+
+                # Find the body content: start after "body": " and end before final "}
+                body_start = body_start_match.end()
+
+                # Find the end - last " before the final }
+                # Work backwards from the end
+                body_content = output[body_start:]
+
+                # Find the last occurrence of "} or "\n}
+                end_patterns = ['"\n}', '"}', '" }', '"\r\n}']
+                end_idx = -1
+                for pattern in end_patterns:
+                    idx = body_content.rfind(pattern)
+                    if idx > end_idx:
+                        end_idx = idx
+
+                if end_idx > 0:
+                    body = body_content[:end_idx]
+                else:
+                    # Fallback: just remove trailing characters
+                    body = body_content.rstrip().rstrip('}').rstrip().rstrip('"')
+
+                # Clean up escape sequences
+                body = body.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+
                 parsed = {'subject': subject, 'body': body}
+
+        if not parsed:
+            # Last resort: treat the whole output as body
+            lines = output.strip().split('\n')
+            subject = 'Follow Up' if lines else 'Hello'
+            body = output
+            parsed = {'subject': subject, 'body': body}
 
         return {
             'subject': parsed.get('subject', 'Hello'),

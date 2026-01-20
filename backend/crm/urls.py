@@ -34,6 +34,7 @@ from .views import (
     EmailTrackingPixelView,
     EmailReplyWebhookView,
     UnsubscribeWebhookView,
+    UnsubscribeView,
     # Dashboard views
     pipeline_dashboard,
     pipeline_board,
@@ -80,4 +81,7 @@ urlpatterns = [
     # Webhooks (for Zoho/email service callbacks)
     path('webhooks/reply/', EmailReplyWebhookView.as_view(), name='webhook-reply'),
     path('webhooks/unsubscribe/', UnsubscribeWebhookView.as_view(), name='webhook-unsubscribe'),
+
+    # Public unsubscribe page (clicked from emails)
+    path('unsubscribe/', UnsubscribeView.as_view(), name='unsubscribe'),
 ]

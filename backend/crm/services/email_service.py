@@ -205,8 +205,21 @@ class ZohoEmailService:
                 'error': f'Zoho Mail not configured{brand_info}. Configure Zoho credentials in Brand settings or environment variables.'
             }
 
+        # Check if recipient is unsubscribed
+        from crm.models import Contact
+        if Contact.objects.filter(email__iexact=to, is_unsubscribed=True).exists():
+            logger.info(f"Skipping email to {to} - recipient is unsubscribed")
+            return {
+                'success': False,
+                'message_id': None,
+                'error': f'Recipient {to} is unsubscribed and will not receive emails.'
+            }
+
         # Use provided from_name or default to brand/service from_name
         sender_name = from_name or self.from_name
+
+        # Add unsubscribe footer to email
+        body = self._add_unsubscribe_footer(body, to)
 
         # Add tracking pixel if tracking_id provided
         if tracking_id:
@@ -383,6 +396,36 @@ class ZohoEmailService:
                 return f"{before} {replacement}".strip()
 
         return company_part.title()
+
+    def _add_unsubscribe_footer(self, body: str, recipient_email: str) -> str:
+        """
+        Add unsubscribe footer to email body.
+
+        Args:
+            body: Original email body
+            recipient_email: Recipient's email address for generating unsubscribe link
+
+        Returns:
+            Email body with unsubscribe footer added
+        """
+        from crm.views import generate_unsubscribe_token
+
+        # Generate unsubscribe URL
+        token = generate_unsubscribe_token(recipient_email)
+        brand_slug = self.brand.slug if self.brand else 'desifirms'
+        base_url = 'https://codeteki.au'
+        unsubscribe_url = f"{base_url}/crm/unsubscribe/?email={recipient_email}&token={token}&brand={brand_slug}"
+
+        # Create footer (plain text format)
+        footer = f"""
+
+---
+If you no longer wish to receive these emails, you can unsubscribe here:
+{unsubscribe_url}
+
+This email was sent by Desi Firms. We respect your privacy."""
+
+        return body + footer
 
     def send_bulk(
         self,

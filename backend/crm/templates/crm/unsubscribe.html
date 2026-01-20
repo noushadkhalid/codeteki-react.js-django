@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unsubscribe - Desi Firms</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: 700;
+            color: #E53935;
+            margin-bottom: 8px;
+        }
+        .logo span {
+            color: #333;
+        }
+        h1 {
+            color: #333;
+            font-size: 24px;
+            margin: 20px 0 10px;
+        }
+        p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        .email-display {
+            background: #f5f5f5;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            color: #333;
+            margin: 20px 0;
+            word-break: break-all;
+        }
+        .btn {
+            display: inline-block;
+            padding: 14px 32px;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            margin: 10px 5px;
+        }
+        .btn-primary {
+            background: #E53935;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #C62828;
+        }
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: #4CAF50;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+        .success-icon svg {
+            width: 40px;
+            height: 40px;
+            fill: white;
+        }
+        .error-box {
+            background: #ffebee;
+            border: 1px solid #ef5350;
+            color: #c62828;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 80px;
+            margin-bottom: 16px;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        label {
+            display: block;
+            text-align: left;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        .note {
+            font-size: 13px;
+            color: #999;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">Desi <span>Firms</span></div>
+
+        {% if error %}
+            <div class="error-box">
+                {{ error }}
+            </div>
+            <p>Please contact us if you believe this is an error.</p>
+            <a href="https://www.desifirms.com.au" class="btn btn-secondary">Go to Website</a>
+
+        {% elif confirmed %}
+            <div class="success-icon">
+                <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            </div>
+            <h1>You've Been Unsubscribed</h1>
+            <p>We've removed <strong>{{ email }}</strong> from our mailing list. You won't receive any more emails from us.</p>
+            <p class="note">We're sorry to see you go. If you change your mind, you can always sign up again at our website.</p>
+            <a href="https://www.desifirms.com.au" class="btn btn-secondary">Visit Desi Firms</a>
+
+        {% else %}
+            <h1>Unsubscribe from Emails</h1>
+            <p>You're about to unsubscribe this email address from all Desi Firms communications:</p>
+
+            <div class="email-display">{{ email }}</div>
+
+            <form method="POST">
+                <input type="hidden" name="email" value="{{ email }}">
+                <input type="hidden" name="token" value="{{ token }}">
+                <input type="hidden" name="brand" value="{{ brand }}">
+
+                <label for="reason">Let us know why you're unsubscribing (optional):</label>
+                <textarea name="reason" id="reason" placeholder="Your feedback helps us improve..."></textarea>
+
+                <button type="submit" class="btn btn-primary">Confirm Unsubscribe</button>
+                <a href="https://www.desifirms.com.au" class="btn btn-secondary">Cancel</a>
+            </form>
+
+            <p class="note">After unsubscribing, you will no longer receive promotional emails from Desi Firms.</p>
+        {% endif %}
+    </div>
+</body>
+</html>

@@ -860,9 +860,12 @@ class GenerateAIEmailView(View):
 
         # Generate email with AI
         from crm.services.ai_agent import CRMAIAgent
-        ai_agent = CRMAIAgent()
+        import traceback
+        import logging
+        logger = logging.getLogger(__name__)
 
         try:
+            ai_agent = CRMAIAgent()
             result = ai_agent.compose_email_from_context(context)
 
             if result.get('success'):
@@ -872,12 +875,18 @@ class GenerateAIEmailView(View):
                     'body': result.get('body', ''),
                 })
             else:
+                error_msg = result.get('error', 'AI generation failed')
+                logger.error(f"AI email generation failed: {error_msg}")
                 return JsonResponse({
                     'success': False,
-                    'error': result.get('error', 'AI generation failed')
+                    'error': error_msg
                 }, status=500)
 
         except Exception as e:
+            error_trace = traceback.format_exc()
+            logger.error(f"AI email generation exception: {e}\n{error_trace}")
+            print(f"AI Email Generation Error: {e}")
+            print(error_trace)
             return JsonResponse({
                 'success': False,
                 'error': str(e)
@@ -996,3 +1005,138 @@ def move_deal_stage(request):
         return JsonResponse({'success': True, 'message': f'Moved to {stage.name}'})
     except (Deal.DoesNotExist, PipelineStage.DoesNotExist) as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+# =============================================================================
+# UNSUBSCRIBE / OPT-OUT HANDLING
+# =============================================================================
+
+import hashlib
+import hmac
+from django.conf import settings
+from django.shortcuts import render
+
+
+def generate_unsubscribe_token(email: str) -> str:
+    """Generate a secure token for unsubscribe link."""
+    secret = getattr(settings, 'SECRET_KEY', 'fallback-secret')
+    return hmac.new(
+        secret.encode(),
+        email.lower().encode(),
+        hashlib.sha256
+    ).hexdigest()[:32]
+
+
+def verify_unsubscribe_token(email: str, token: str) -> bool:
+    """Verify an unsubscribe token is valid."""
+    expected = generate_unsubscribe_token(email)
+    return hmac.compare_digest(expected, token)
+
+
+def get_unsubscribe_url(email: str, brand_slug: str = 'desifirms') -> str:
+    """Generate full unsubscribe URL for an email."""
+    token = generate_unsubscribe_token(email)
+    # Use production URL
+    base_url = 'https://codeteki.au'
+    return f"{base_url}/crm/unsubscribe/?email={email}&token={token}&brand={brand_slug}"
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class UnsubscribeView(View):
+    """
+    Handle email unsubscribe/opt-out requests.
+
+    GET: Show confirmation page
+    POST: Process unsubscribe
+    """
+
+    def get(self, request):
+        """Show unsubscribe confirmation page."""
+        email = request.GET.get('email', '')
+        token = request.GET.get('token', '')
+        brand_slug = request.GET.get('brand', 'desifirms')
+
+        # Verify token
+        if not email or not token or not verify_unsubscribe_token(email, token):
+            return render(request, 'crm/unsubscribe.html', {
+                'error': 'Invalid or expired unsubscribe link.',
+                'email': email,
+            })
+
+        return render(request, 'crm/unsubscribe.html', {
+            'email': email,
+            'token': token,
+            'brand': brand_slug,
+            'confirmed': False,
+        })
+
+    def post(self, request):
+        """Process unsubscribe request."""
+        email = request.POST.get('email', '')
+        token = request.POST.get('token', '')
+        brand_slug = request.POST.get('brand', 'desifirms')
+        reason = request.POST.get('reason', '')
+
+        # Verify token
+        if not email or not token or not verify_unsubscribe_token(email, token):
+            return render(request, 'crm/unsubscribe.html', {
+                'error': 'Invalid or expired unsubscribe link.',
+                'email': email,
+            })
+
+        # Find and unsubscribe contact(s)
+        contacts = Contact.objects.filter(email__iexact=email)
+
+        for contact in contacts:
+            contact.is_unsubscribed = True
+            contact.unsubscribed_at = timezone.now()
+            contact.unsubscribe_reason = reason or 'Clicked unsubscribe link'
+            contact.status = 'unsubscribed'
+            contact.save()
+
+            # Move all active deals to "Not Interested" stage
+            for deal in contact.deals.filter(status='active'):
+                not_interested_stage = deal.pipeline.stages.filter(
+                    name__icontains='not interested'
+                ).first()
+                if not_interested_stage:
+                    deal.current_stage = not_interested_stage
+                deal.status = 'lost'
+                deal.ai_notes = (deal.ai_notes or '') + f'\n[AUTO] Unsubscribed via link on {timezone.now().strftime("%Y-%m-%d")}'
+                deal.save()
+
+        # Also create/update contact if doesn't exist (track opt-out for future)
+        if not contacts.exists():
+            from crm.models import Brand
+            brand = Brand.objects.filter(slug=brand_slug).first()
+            Contact.objects.create(
+                email=email,
+                name=email.split('@')[0],
+                brand=brand,
+                is_unsubscribed=True,
+                unsubscribed_at=timezone.now(),
+                unsubscribe_reason=reason or 'Clicked unsubscribe link (no prior contact)',
+                status='unsubscribed',
+                source='unsubscribe_link',
+            )
+
+        return render(request, 'crm/unsubscribe.html', {
+            'email': email,
+            'confirmed': True,
+        })
+
+
+def check_can_email(email: str) -> dict:
+    """
+    Check if an email address can be contacted.
+    Returns {'can_email': bool, 'reason': str}
+    """
+    # Check if unsubscribed
+    contact = Contact.objects.filter(email__iexact=email, is_unsubscribed=True).first()
+    if contact:
+        return {
+            'can_email': False,
+            'reason': f'Unsubscribed on {contact.unsubscribed_at.strftime("%Y-%m-%d") if contact.unsubscribed_at else "unknown date"}',
+        }
+
+    return {'can_email': True, 'reason': ''}
