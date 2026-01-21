@@ -1239,27 +1239,25 @@ class EmailDraftAdmin(ModelAdmin):
                     if result.get('success'):
                         sent_count += 1
 
-                        # Get or create contact (atomic operation - no transaction issues)
-                        contact, created = Contact.objects.get_or_create(
-                            email__iexact=recipient_email,
+                        # Get or create contact using normalized email
+                        normalized_email = recipient_email.lower().strip()
+                        contact, created = Contact.objects.update_or_create(
+                            email=normalized_email,
                             defaults={
-                                'email': recipient_email.lower(),
                                 'brand': draft.brand,
                                 'name': recipient_name or extracted_name,
                                 'company': recipient_company,
                                 'website': recipient.get('website', ''),
                                 'status': 'contacted',
                                 'last_emailed_at': timezone.now(),
-                                'email_count': 1,
                                 'source': 'email_composer'
                             }
                         )
-                        if not created:
-                            # Update existing contact
-                            contact.last_emailed_at = timezone.now()
+                        if created:
+                            contact.email_count = 1
+                        else:
                             contact.email_count = (contact.email_count or 0) + 1
-                            contact.status = 'contacted'
-                            contact.save(update_fields=['last_emailed_at', 'email_count', 'status'])
+                        contact.save(update_fields=['email_count'])
 
                         # Create deal in pipeline at "Invited" stage
                         if contact:
@@ -1531,28 +1529,26 @@ class EmailDraftAdmin(ModelAdmin):
                 if result.get('success'):
                     sent_count += 1
 
-                    # Get or create contact (atomic operation - no transaction issues)
+                    # Get or create contact using normalized email
                     if not contact:
-                        contact, created = Contact.objects.get_or_create(
-                            email__iexact=recipient_email,
+                        normalized_email = recipient_email.lower().strip()
+                        contact, created = Contact.objects.update_or_create(
+                            email=normalized_email,
                             defaults={
                                 'brand': draft.brand,
-                                'email': recipient_email.lower(),
                                 'name': recipient_name or extracted_name,
                                 'company': recipient_company,
                                 'website': recipient.get('website', ''),
                                 'status': 'contacted',
                                 'last_emailed_at': timezone.now(),
-                                'email_count': 1,
                                 'source': 'email_composer'
                             }
                         )
-                        if not created:
-                            # Existing contact - update it
-                            contact.last_emailed_at = timezone.now()
+                        if created:
+                            contact.email_count = 1
+                        else:
                             contact.email_count = (contact.email_count or 0) + 1
-                            contact.status = 'contacted'
-                            contact.save(update_fields=['last_emailed_at', 'email_count', 'status'])
+                        contact.save(update_fields=['email_count'])
                     else:
                         # Update existing contact
                         contact.last_emailed_at = timezone.now()
