@@ -692,7 +692,17 @@ UNFOLD = {
                         "link": "/admin/crm/dashboard/",
                     },
                     {
-                        "title": "Contacts",
+                        "title": "Codeteki Contacts",
+                        "icon": "person",
+                        "link": reverse_lazy("admin:crm_codetekicontact_changelist"),
+                    },
+                    {
+                        "title": "Desi Firms Contacts",
+                        "icon": "people",
+                        "link": reverse_lazy("admin:crm_desifirmscontact_changelist"),
+                    },
+                    {
+                        "title": "All Contacts",
                         "icon": "contacts",
                         "link": reverse_lazy("admin:crm_contact_changelist"),
                     },
