@@ -159,9 +159,11 @@ class ContactAdmin(ModelAdmin):
 
     @display(description="Status", label=True)
     def status_badge(self, obj):
-        # If unsubscribed (globally or brand-specific), always show as danger
-        if obj.is_unsubscribed or obj.unsubscribed_brands:
-            return "UNSUBSCRIBED", "danger"
+        # If unsubscribed (globally or brand-specific), always show as danger with clear indicator
+        if obj.is_unsubscribed:
+            return "🚫 UNSUBSCRIBED", "danger"
+        elif obj.unsubscribed_brands and len(obj.unsubscribed_brands) > 0:
+            return "🚫 UNSUBSCRIBED", "danger"
 
         colors = {
             'new': 'info',
@@ -176,11 +178,11 @@ class ContactAdmin(ModelAdmin):
     @display(description="Unsubscribed", label=True)
     def is_unsubscribed_badge(self, obj):
         if obj.is_unsubscribed:
-            return "UNSUB ALL", "danger"
-        elif obj.unsubscribed_brands:
+            return "🚫 ALL BRANDS", "danger"
+        elif obj.unsubscribed_brands and len(obj.unsubscribed_brands) > 0:
             brands = ', '.join(obj.unsubscribed_brands).upper()
-            return f"UNSUB: {brands}", "danger"  # Red for visibility
-        return "Active", "success"
+            return f"🚫 {brands}", "danger"  # Red for visibility
+        return "✅ Active", "success"
 
     @display(description="Last Emailed")
     def last_emailed_display(self, obj):
