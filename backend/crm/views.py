@@ -1072,6 +1072,7 @@ class UnsubscribeView(View):
             return render(request, 'crm/unsubscribe.html', {
                 'error': 'Invalid or expired unsubscribe link.',
                 'email': email,
+                'brand': brand_slug,
             })
 
         return render(request, 'crm/unsubscribe.html', {
@@ -1093,38 +1094,37 @@ class UnsubscribeView(View):
             return render(request, 'crm/unsubscribe.html', {
                 'error': 'Invalid or expired unsubscribe link.',
                 'email': email,
+                'brand': brand_slug,
             })
 
-        # Find and unsubscribe contact(s)
-        contacts = Contact.objects.filter(email__iexact=email)
+        # Find and unsubscribe contact from this specific brand
+        contact = Contact.objects.filter(email__iexact=email).first()
 
-        for contact in contacts:
-            contact.is_unsubscribed = True
-            contact.unsubscribed_at = timezone.now()
-            contact.unsubscribe_reason = reason or 'Clicked unsubscribe link'
-            contact.status = 'unsubscribed'
-            contact.save()
+        if contact:
+            # Use brand-specific unsubscribe (doesn't affect other brands)
+            contact.unsubscribe_from_brand(brand_slug, reason or 'Clicked unsubscribe link')
 
-            # Move all active deals to "Not Interested" stage
+            # Move active deals to "Not Interested" - only for this brand's pipelines
             for deal in contact.deals.filter(status='active'):
-                not_interested_stage = deal.pipeline.stages.filter(
-                    name__icontains='not interested'
-                ).first()
-                if not_interested_stage:
-                    deal.current_stage = not_interested_stage
-                deal.status = 'lost'
-                deal.ai_notes = (deal.ai_notes or '') + f'\n[AUTO] Unsubscribed via link on {timezone.now().strftime("%Y-%m-%d")}'
-                deal.save()
-
-        # Also create/update contact if doesn't exist (track opt-out for future)
-        if not contacts.exists():
+                # Only affect deals from the same brand
+                if deal.pipeline.brand and deal.pipeline.brand.slug.lower() == brand_slug.lower():
+                    not_interested_stage = deal.pipeline.stages.filter(
+                        name__icontains='not interested'
+                    ).first()
+                    if not_interested_stage:
+                        deal.current_stage = not_interested_stage
+                    deal.status = 'lost'
+                    deal.ai_notes = (deal.ai_notes or '') + f'\n[AUTO] Unsubscribed from {brand_slug} via link on {timezone.now().strftime("%Y-%m-%d")}'
+                    deal.save()
+        else:
+            # Create contact record to track opt-out for future
             from crm.models import Brand
             brand = Brand.objects.filter(slug=brand_slug).first()
             Contact.objects.create(
                 email=email,
                 name=email.split('@')[0],
                 brand=brand,
-                is_unsubscribed=True,
+                unsubscribed_brands=[brand_slug.lower()],
                 unsubscribed_at=timezone.now(),
                 unsubscribe_reason=reason or 'Clicked unsubscribe link (no prior contact)',
                 status='unsubscribed',
@@ -1134,20 +1134,38 @@ class UnsubscribeView(View):
         return render(request, 'crm/unsubscribe.html', {
             'email': email,
             'confirmed': True,
+            'brand': brand_slug,
         })
 
 
-def check_can_email(email: str) -> dict:
+def check_can_email(email: str, brand_slug: str = None) -> dict:
     """
-    Check if an email address can be contacted.
-    Returns {'can_email': bool, 'reason': str}
+    Check if an email address can be contacted for a specific brand.
+
+    Args:
+        email: The email address to check
+        brand_slug: Optional brand to check against. If provided, checks brand-specific
+                   unsubscribe. If None, checks global unsubscribe only.
+
+    Returns:
+        {'can_email': bool, 'reason': str}
     """
-    # Check if unsubscribed
-    contact = Contact.objects.filter(email__iexact=email, is_unsubscribed=True).first()
-    if contact:
+    contact = Contact.objects.filter(email__iexact=email).first()
+    if not contact:
+        return {'can_email': True, 'reason': ''}
+
+    # Check global unsubscribe first
+    if contact.is_unsubscribed:
         return {
             'can_email': False,
-            'reason': f'Unsubscribed on {contact.unsubscribed_at.strftime("%Y-%m-%d") if contact.unsubscribed_at else "unknown date"}',
+            'reason': f'Globally unsubscribed on {contact.unsubscribed_at.strftime("%Y-%m-%d") if contact.unsubscribed_at else "unknown date"}',
+        }
+
+    # Check brand-specific unsubscribe
+    if brand_slug and contact.is_unsubscribed_from_brand(brand_slug):
+        return {
+            'can_email': False,
+            'reason': f'Unsubscribed from {brand_slug} on {contact.unsubscribed_at.strftime("%Y-%m-%d") if contact.unsubscribed_at else "unknown date"}',
         }
 
     return {'can_email': True, 'reason': ''}

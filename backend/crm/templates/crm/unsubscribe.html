@@ -13,7 +13,7 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             {% if brand == 'codeteki' %}
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            background: #f8f9fa;
             {% else %}
             background: linear-gradient(135deg, #0093E9 0%, #80D0C7 100%);
             {% endif %}
@@ -26,11 +26,16 @@
         .container {
             background: white;
             border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
             padding: 40px;
             max-width: 500px;
             width: 100%;
             text-align: center;
+        }
+        .logo-img {
+            max-width: 160px;
+            height: auto;
+            margin-bottom: 16px;
         }
         .logo {
             font-size: 28px;
@@ -43,25 +48,45 @@
         .logo-desifirms span {
             color: #333;
         }
-        .logo-codeteki {
-            color: #6366f1;
+        .brand-tag {
+            display: inline-block;
+            {% if brand == 'codeteki' %}
+            background: #fef9e7;
+            color: #92400e;
+            {% else %}
+            background: #e0f7fa;
+            color: #0077c0;
+            {% endif %}
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
         }
         h1 {
-            color: #333;
+            color: #1f2937;
             font-size: 24px;
             margin: 20px 0 10px;
         }
         p {
-            color: #666;
+            color: #4b5563;
             line-height: 1.6;
             margin-bottom: 20px;
         }
         .email-display {
-            background: #f5f5f5;
-            padding: 12px 20px;
+            {% if brand == 'codeteki' %}
+            background: #fafafa;
+            border: 1px solid #e5e7eb;
+            {% else %}
+            background: #e0f7fa;
+            border: 1px solid #b2ebf2;
+            {% endif %}
+            padding: 14px 20px;
             border-radius: 8px;
-            font-weight: 500;
-            color: #333;
+            font-weight: 600;
+            color: #1f2937;
             margin: 20px 0;
             word-break: break-all;
         }
@@ -69,7 +94,7 @@
             display: inline-block;
             padding: 14px 32px;
             font-size: 16px;
-            font-weight: 600;
+            font-weight: 700;
             text-decoration: none;
             border-radius: 8px;
             cursor: pointer;
@@ -79,30 +104,38 @@
         }
         .btn-primary {
             {% if brand == 'codeteki' %}
-            background: #6366f1;
+            background: #f9cd15;
+            color: #1f2937;
+            box-shadow: 0 4px 14px rgba(249, 205, 21, 0.4);
             {% else %}
             background: #0093E9;
-            {% endif %}
             color: white;
+            box-shadow: 0 4px 14px rgba(0, 147, 233, 0.3);
+            {% endif %}
         }
         .btn-primary:hover {
             {% if brand == 'codeteki' %}
-            background: #4f46e5;
+            background: #e6bc13;
+            transform: translateY(-1px);
             {% else %}
             background: #0077c0;
             {% endif %}
         }
         .btn-secondary {
             background: #f0f0f0;
-            color: #333;
+            color: #374151;
         }
         .btn-secondary:hover {
-            background: #e0e0e0;
+            background: #e5e5e5;
         }
         .success-icon {
             width: 80px;
             height: 80px;
+            {% if brand == 'codeteki' %}
+            background: #f9cd15;
+            {% else %}
             background: #4CAF50;
+            {% endif %}
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -112,12 +145,16 @@
         .success-icon svg {
             width: 40px;
             height: 40px;
+            {% if brand == 'codeteki' %}
+            fill: #1f2937;
+            {% else %}
             fill: white;
+            {% endif %}
         }
         .error-box {
-            background: #ffebee;
-            border: 1px solid #ef5350;
-            color: #c62828;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
             padding: 16px;
             border-radius: 8px;
             margin-bottom: 20px;
@@ -125,41 +162,52 @@
         textarea {
             width: 100%;
             padding: 12px;
-            border: 1px solid #ddd;
+            border: 1px solid #e5e7eb;
             border-radius: 8px;
             font-size: 14px;
             resize: vertical;
             min-height: 80px;
             margin-bottom: 16px;
+            font-family: inherit;
         }
         textarea:focus {
             outline: none;
             {% if brand == 'codeteki' %}
-            border-color: #6366f1;
+            border-color: #f9cd15;
+            box-shadow: 0 0 0 3px rgba(249, 205, 21, 0.2);
             {% else %}
             border-color: #0093E9;
+            box-shadow: 0 0 0 3px rgba(0, 147, 233, 0.2);
             {% endif %}
         }
         label {
             display: block;
             text-align: left;
             font-size: 14px;
-            color: #666;
+            color: #4b5563;
             margin-bottom: 8px;
+            font-weight: 500;
         }
         .note {
             font-size: 13px;
-            color: #999;
+            color: #9ca3af;
             margin-top: 20px;
+        }
+        .divider {
+            height: 1px;
+            background: #e5e7eb;
+            margin: 24px 0;
         }
     </style>
 </head>
 <body>
     <div class="container">
         {% if brand == 'codeteki' %}
-        <div class="logo logo-codeteki">Codeteki</div>
+        <img src="https://codeteki.au/static/images/navbar-logo.png" alt="Codeteki" class="logo-img">
+        <div class="brand-tag">AI-Powered Solutions</div>
         {% else %}
         <div class="logo logo-desifirms">Desi <span>Firms</span></div>
+        <div class="brand-tag">Business Directory</div>
         {% endif %}
 
         {% if error %}
@@ -180,10 +228,11 @@
             <h1>You've Been Unsubscribed</h1>
             <p>We've removed <strong>{{ email }}</strong> from our mailing list. You won't receive any more emails from us.</p>
             <p class="note">We're sorry to see you go. If you change your mind, you can always sign up again at our website.</p>
+            <div class="divider"></div>
             {% if brand == 'codeteki' %}
-            <a href="https://codeteki.au" class="btn btn-secondary">Visit Codeteki</a>
+            <a href="https://codeteki.au" class="btn btn-primary">Visit Codeteki</a>
             {% else %}
-            <a href="https://www.desifirms.com.au" class="btn btn-secondary">Visit Desi Firms</a>
+            <a href="https://www.desifirms.com.au" class="btn btn-primary">Visit Desi Firms</a>
             {% endif %}
 
         {% else %}

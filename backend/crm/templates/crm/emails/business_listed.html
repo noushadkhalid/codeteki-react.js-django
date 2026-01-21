@@ -1,0 +1,104 @@
+{% extends "crm/emails/base_desifirms.html" %}
+
+{% block title %}Your Business is Now Live!{% endblock %}
+{% block preheader %}{{ recipient_name }}, congratulations - {{ recipient_company }} is now on Desi Firms!{% endblock %}
+{% block subtitle %}Business Directory{% endblock %}
+
+{% block content %}
+<tr>
+    <td style="padding: 40px 30px;">
+        <!-- Celebration Icon -->
+        <div style="text-align: center; margin-bottom: 25px;">
+            <div style="width: 90px; height: 90px; background: linear-gradient(135deg, #fbbf24, #f59e0b); border-radius: 50%; margin: 0 auto; display: inline-block; line-height: 90px;">
+                <span style="font-size: 45px;">🚀</span>
+            </div>
+        </div>
+
+        <!-- Heading -->
+        <h1 style="color: #1f2937; font-size: 26px; font-weight: 700; text-align: center; margin: 0 0 10px 0;">
+            You're Live!
+        </h1>
+        <p style="color: #f59e0b; font-size: 16px; font-weight: 600; text-align: center; margin: 0 0 30px 0;">
+            {{ recipient_company }} is now on Desi Firms! 🎉
+        </p>
+
+        <!-- Greeting -->
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            Hi {{ recipient_name }},
+        </p>
+
+        <!-- Message -->
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            <strong>Fantastic news!</strong> Your business listing for <strong>{{ recipient_company }}</strong> is now live on Desi Firms. Customers can find you through our directory and search.
+        </p>
+
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            You're now part of Australia's growing South Asian business community. Here's how to make the most of your listing:
+        </p>
+
+        <!-- Tips Box -->
+        <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #fcd34d; border-radius: 12px; padding: 24px; margin: 0 0 25px 0;">
+            <h3 style="color: #92400e; font-size: 14px; font-weight: 600; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 1px;">
+                💡 Tips for Success
+            </h3>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #d97706; font-size: 16px; margin-right: 10px;">•</span>
+                        <span style="color: #1f2937; font-size: 14px;"><strong>Add more photos</strong> - Listings with photos get 3x more views</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #d97706; font-size: 16px; margin-right: 10px;">•</span>
+                        <span style="color: #1f2937; font-size: 14px;"><strong>Share your listing</strong> - Post on social media & WhatsApp</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #d97706; font-size: 16px; margin-right: 10px;">•</span>
+                        <span style="color: #1f2937; font-size: 14px;"><strong>Keep info updated</strong> - Accurate hours & contact details</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #d97706; font-size: 16px; margin-right: 10px;">•</span>
+                        <span style="color: #1f2937; font-size: 14px;"><strong>Respond to enquiries</strong> - Quick responses = happy customers</span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- CTA Buttons -->
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="https://www.desifirms.com.au/dashboard"
+               style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 10px; font-weight: 600; font-size: 16px; box-shadow: 0 8px 25px rgba(245, 158, 11, 0.25);">
+                View Your Listing →
+            </a>
+        </div>
+
+        <!-- Share Box -->
+        <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center;">
+            <p style="color: #374151; font-size: 14px; line-height: 1.6; margin: 0;">
+                🔗 <strong>Share your listing:</strong> Spread the word and let your customers know where to find you online!
+            </p>
+        </div>
+
+        <!-- Signature -->
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0;">
+                Wishing you great success,
+            </p>
+            <p style="color: #1f2937; font-size: 15px; font-weight: 600; margin: 10px 0 5px 0;">
+                Noushad
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0 0 5px 0;">
+                Desi Firms
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                📱 0424 538 777 &nbsp;|&nbsp; 🌐 <a href="https://desifirms.com.au" style="color: #0093E9; text-decoration: none;">desifirms.com.au</a>
+            </p>
+        </div>
+    </td>
+</tr>
+{% endblock %}

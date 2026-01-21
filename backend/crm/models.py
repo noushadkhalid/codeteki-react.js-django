@@ -95,7 +95,12 @@ class Contact(models.Model):
     # Email tracking & unsubscribe
     last_emailed_at = models.DateTimeField(null=True, blank=True, help_text="Last time we emailed this contact")
     email_count = models.IntegerField(default=0, help_text="Total emails sent to this contact")
-    is_unsubscribed = models.BooleanField(default=False, help_text="Contact has unsubscribed")
+    is_unsubscribed = models.BooleanField(default=False, help_text="Contact has unsubscribed from ALL brands")
+    unsubscribed_brands = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of brand slugs they've unsubscribed from (e.g., ['codeteki', 'desifirms'])"
+    )
     unsubscribed_at = models.DateTimeField(null=True, blank=True)
     unsubscribe_reason = models.TextField(blank=True, help_text="Why they unsubscribed")
 
@@ -136,6 +141,25 @@ class Contact(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.email})"
+
+    def is_unsubscribed_from_brand(self, brand_slug: str) -> bool:
+        """Check if contact has unsubscribed from a specific brand."""
+        if self.is_unsubscribed:
+            return True  # Globally unsubscribed
+        return brand_slug.lower() in [b.lower() for b in (self.unsubscribed_brands or [])]
+
+    def unsubscribe_from_brand(self, brand_slug: str, reason: str = ''):
+        """Unsubscribe contact from a specific brand."""
+        from django.utils import timezone
+        brand_slug = brand_slug.lower()
+        brands = self.unsubscribed_brands or []
+        if brand_slug not in [b.lower() for b in brands]:
+            brands.append(brand_slug)
+            self.unsubscribed_brands = brands
+        self.unsubscribed_at = timezone.now()
+        if reason:
+            self.unsubscribe_reason = reason
+        self.save()
 
 
 class Pipeline(models.Model):

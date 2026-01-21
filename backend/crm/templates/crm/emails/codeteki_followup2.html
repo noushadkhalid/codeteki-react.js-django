@@ -1,0 +1,68 @@
+{% extends "crm/emails/base_codeteki.html" %}
+
+{% block title %}Final Follow-Up | Codeteki{% endblock %}
+{% block preheader %}{{ recipient_name }}, last chance to explore our AI solutions{% endblock %}
+{% block subtitle %}AI-Powered Solutions{% endblock %}
+
+{% block content %}
+<tr>
+    <td style="padding: 40px 30px; background-color: #ffffff;">
+        <!-- Heading -->
+        <h1 style="color: #1f2937; font-size: 24px; font-weight: 700; text-align: center; margin: 0 0 25px 0;">
+            One Last Reach Out
+        </h1>
+
+        <!-- Greeting -->
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            Hi {{ recipient_name }},
+        </p>
+
+        <!-- Message -->
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            I've reached out a couple of times about how <strong style="color: #1f2937;">Codeteki</strong> could help <strong style="color: #1f2937;">{{ recipient_company }}</strong> with AI-powered solutions and web development.
+        </p>
+
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            I completely understand if now isn't the right time. But if you ever need help with:
+        </p>
+
+        <!-- Simple List -->
+        <div style="background: #fafafa; border-radius: 12px; padding: 20px 24px; margin: 0 0 25px 0; border: 1px solid #e5e7eb;">
+            <p style="color: #374151; font-size: 15px; line-height: 2; margin: 0;">
+                ⚡ AI chatbots & automation<br>
+                🌐 Website development & redesign<br>
+                📈 SEO & digital marketing<br>
+                🛠️ Custom software solutions
+            </p>
+        </div>
+
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            ...feel free to reach out anytime. The door is always open!
+        </p>
+
+        <!-- CTA Button -->
+        <div style="text-align: center; margin: 25px 0;">
+            <a href="https://codeteki.au/contact"
+               style="display: inline-block; background: #f9cd15; color: #1f2937; text-decoration: none; padding: 14px 35px; border-radius: 8px; font-weight: 700; font-size: 15px; box-shadow: 0 4px 14px rgba(249, 205, 21, 0.4);">
+                Let's Connect →
+            </a>
+        </div>
+
+        <!-- Signature -->
+        <div style="margin-top: 35px; padding-top: 25px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0;">
+                Wishing you success,
+            </p>
+            <p style="color: #1f2937; font-size: 15px; font-weight: 600; margin: 10px 0 5px 0;">
+                Noushad
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0 0 5px 0;">
+                Codeteki Digital Services
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                📱 0424 538 777 &nbsp;|&nbsp; 🌐 <a href="https://codeteki.au" style="color: #1f2937; text-decoration: none; font-weight: 500;">codeteki.au</a>
+            </p>
+        </div>
+    </td>
+</tr>
+{% endblock %}

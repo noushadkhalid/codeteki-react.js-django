@@ -28,6 +28,9 @@ EMAIL_TEMPLATES = {
             'directory_invitation': 'crm/emails/business_invitation.html',
             'directory_followup_1': 'crm/emails/business_followup1.html',
             'directory_followup_2': 'crm/emails/business_followup2.html',
+            'business_responded': 'crm/emails/business_responded.html',
+            'business_signedup': 'crm/emails/business_signedup.html',
+            'business_listed': 'crm/emails/business_listed.html',
         },
         'backlink': {
             'backlink_pitch': 'crm/emails/backlink_pitch.html',
@@ -41,6 +44,11 @@ EMAIL_TEMPLATES = {
         'sales': {
             'services_intro': 'crm/emails/codeteki_services.html',
             'sales_followup': 'crm/emails/codeteki_followup.html',
+            'sales_followup_2': 'crm/emails/codeteki_followup2.html',
+            'sales_responded': 'crm/emails/codeteki_responded.html',
+            'discovery_scheduled': 'crm/emails/codeteki_discovery.html',
+            'proposal_sent': 'crm/emails/codeteki_proposal.html',
+            'welcome_client': 'crm/emails/codeteki_welcome.html',
         },
         'backlink': {
             'backlink_pitch': 'crm/emails/codeteki_backlink.html',
@@ -58,16 +66,18 @@ STAGE_TO_EMAIL_TYPE = {
     'invitation sent': 'agent_invitation',
     'follow-up 1': 'agent_followup_1',
     'follow-up 2': 'agent_followup_2',
-    'responded': 'agent_responded',
-    'registered': 'agent_registered',
-    'listing': 'agent_listing',
     'not interested': None,  # No email sent
 
     # Desi Firms Business Directory Pipeline stages
-    'new lead': None,
-    'invitation sent': 'directory_invitation',
+    'business found': None,  # No email sent
+    'invited': 'directory_invitation',
     'follow up 1': 'directory_followup_1',
     'follow up 2': 'directory_followup_2',
+    'responded': 'business_responded',  # Used by both real estate and business
+    'signed up': 'business_signedup',
+    'registered': 'agent_registered',  # Real estate specific
+    'listing': 'agent_listing',  # Real estate specific
+    'listed': 'business_listed',  # Business specific
 
     # Backlink Pipeline stages
     'prospect identified': None,
@@ -77,11 +87,15 @@ STAGE_TO_EMAIL_TYPE = {
     'backlink secured': None,
 
     # Codeteki Sales Pipeline
-    'qualified lead': None,
-    'initial contact': 'services_intro',
-    'follow-up': 'sales_followup',
-    'proposal sent': None,
-    'won': None,
+    'lead found': None,
+    'intro sent': 'services_intro',
+    'follow up 1': 'sales_followup',
+    'follow up 2': 'sales_followup_2',
+    'responded': 'sales_responded',
+    'discovery call': 'discovery_scheduled',
+    'proposal sent': 'proposal_sent',
+    'negotiating': None,
+    'client': 'welcome_client',
     'lost': None,
 }
 
@@ -276,11 +290,19 @@ def create_simple_html_wrapper(
         gradient = 'linear-gradient(135deg, #0093E9 0%, #80D0C7 100%)'
         brand_name = 'Desi Firms'
         website = 'https://www.desifirms.com.au'
+        bg_color = '#f3f4f6'
+        card_bg = '#ffffff'
+        text_color = '#374151'
+        btn_text_color = '#ffffff'
     else:
-        primary_color = '#6366f1'
-        gradient = 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
+        primary_color = '#f9cd15'
+        gradient = '#ffffff'
         brand_name = 'Codeteki'
         website = 'https://codeteki.au'
+        bg_color = '#f8f9fa'
+        card_bg = '#ffffff'
+        text_color = '#4b5563'
+        btn_text_color = '#1f2937'
 
     return f'''<!DOCTYPE html>
 <html>
@@ -288,33 +310,33 @@ def create_simple_html_wrapper(
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f3f4f6;">
-    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: {bg_color};">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: {bg_color};">
         <tr>
             <td align="center" style="padding: 40px 20px;">
-                <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+                <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; background: {card_bg}; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
                     <!-- Header -->
                     <tr>
-                        <td style="background: {gradient}; padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
+                        <td style="background: {gradient}; padding: 30px; text-align: center; border-radius: 12px 12px 0 0; border-bottom: 3px solid {primary_color};">
                             <h1 style="color: #ffffff; font-size: 22px; margin: 0; font-weight: 700;">{brand_name}</h1>
                         </td>
                     </tr>
                     <!-- Body -->
                     <tr>
                         <td style="padding: 35px 30px;">
-                            <p style="color: #374151; font-size: 16px; line-height: 1.7; margin: 0 0 15px 0;">
+                            <p style="color: {text_color}; font-size: 16px; line-height: 1.7; margin: 0 0 15px 0;">
                                 {html_body}
                             </p>
                         </td>
                     </tr>
                     <!-- Footer -->
                     <tr>
-                        <td style="background: #f8fafc; padding: 25px 30px; border-top: 1px solid #e5e7eb; border-radius: 0 0 12px 12px; text-align: center;">
-                            <p style="color: #6b7280; font-size: 13px; margin: 0 0 10px 0;">
+                        <td style="background: {bg_color}; padding: 25px 30px; border-top: 1px solid #333333; border-radius: 0 0 12px 12px; text-align: center;">
+                            <p style="color: #888888; font-size: 13px; margin: 0 0 10px 0;">
                                 <a href="{website}" style="color: {primary_color}; text-decoration: none;">{website}</a>
                             </p>
-                            <p style="color: #9ca3af; font-size: 12px; margin: 0;">
-                                <a href="{unsubscribe_url}" style="color: #9ca3af; text-decoration: underline;">Unsubscribe</a>
+                            <p style="color: #666666; font-size: 12px; margin: 0;">
+                                <a href="{unsubscribe_url}" style="color: #666666; text-decoration: underline;">Unsubscribe</a>
                             </p>
                         </td>
                     </tr>

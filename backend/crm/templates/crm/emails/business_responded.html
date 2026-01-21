@@ -1,0 +1,95 @@
+{% extends "crm/emails/base_desifirms.html" %}
+
+{% block title %}Thank You for Your Interest | Desi Firms{% endblock %}
+{% block preheader %}{{ recipient_name }}, thank you for responding!{% endblock %}
+{% block subtitle %}Business Directory{% endblock %}
+
+{% block content %}
+<tr>
+    <td style="padding: 40px 30px;">
+        <!-- Icon -->
+        <div style="text-align: center; margin-bottom: 25px;">
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 50%; margin: 0 auto; display: inline-block; line-height: 80px;">
+                <span style="font-size: 40px;">🎉</span>
+            </div>
+        </div>
+
+        <!-- Heading -->
+        <h1 style="color: #1f2937; font-size: 24px; font-weight: 700; text-align: center; margin: 0 0 10px 0;">
+            Thank You for Responding!
+        </h1>
+        <p style="color: #059669; font-size: 16px; font-weight: 600; text-align: center; margin: 0 0 25px 0;">
+            We're excited to have you interested!
+        </p>
+
+        <!-- Greeting -->
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            Hi {{ recipient_name }},
+        </p>
+
+        <!-- Message -->
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            Thank you for getting back to us! We're thrilled that <strong>{{ recipient_company }}</strong> is interested in joining the Desi Firms Business Directory.
+        </p>
+
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            I'd be happy to answer any questions you have or walk you through the registration process. Feel free to reply to this email directly, or simply click the button below to get started.
+        </p>
+
+        <!-- Next Steps Box -->
+        <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border: 1px solid #6ee7b7; border-radius: 12px; padding: 24px; margin: 0 0 25px 0;">
+            <h3 style="color: #065f46; font-size: 14px; font-weight: 600; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 1px;">
+                📋 Next Steps
+            </h3>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #059669; font-size: 16px; margin-right: 10px;">1.</span>
+                        <span style="color: #1f2937; font-size: 14px;">Create your free account (takes 2 minutes)</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #059669; font-size: 16px; margin-right: 10px;">2.</span>
+                        <span style="color: #1f2937; font-size: 14px;">Add your business details and photos</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #059669; font-size: 16px; margin-right: 10px;">3.</span>
+                        <span style="color: #1f2937; font-size: 14px;">Go live and start connecting with customers!</span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- CTA Button -->
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="https://www.desifirms.com.au/register"
+               style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 10px; font-weight: 600; font-size: 16px; box-shadow: 0 8px 25px rgba(16, 185, 129, 0.25);">
+                Create Your Free Listing →
+            </a>
+        </div>
+
+        <p style="color: #6b7280; font-size: 14px; text-align: center; margin: 20px 0 0 0;">
+            Have questions? Just reply to this email!
+        </p>
+
+        <!-- Signature -->
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0;">
+                Looking forward to having you on board,
+            </p>
+            <p style="color: #1f2937; font-size: 15px; font-weight: 600; margin: 10px 0 5px 0;">
+                Noushad
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0 0 5px 0;">
+                Desi Firms
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                📱 0424 538 777 &nbsp;|&nbsp; 🌐 <a href="https://desifirms.com.au" style="color: #0093E9; text-decoration: none;">desifirms.com.au</a>
+            </p>
+        </div>
+    </td>
+</tr>
+{% endblock %}

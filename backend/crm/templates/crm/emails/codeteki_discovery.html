@@ -1,0 +1,90 @@
+{% extends "crm/emails/base_codeteki.html" %}
+
+{% block title %}Discovery Call Confirmed | Codeteki{% endblock %}
+{% block preheader %}{{ recipient_name }}, your discovery call is scheduled!{% endblock %}
+{% block subtitle %}AI-Powered Solutions{% endblock %}
+
+{% block content %}
+<tr>
+    <td style="padding: 40px 30px; background-color: #ffffff;">
+        <!-- Calendar Icon -->
+        <div style="text-align: center; margin-bottom: 20px;">
+            <span style="display: inline-block; background: #fef9e7; font-size: 40px; padding: 20px; border-radius: 50%;">📅</span>
+        </div>
+
+        <!-- Heading -->
+        <h1 style="color: #1f2937; font-size: 24px; font-weight: 700; text-align: center; margin: 0 0 8px 0;">
+            You're All Set!
+        </h1>
+        <p style="color: #16a34a; font-size: 15px; font-weight: 600; text-align: center; margin: 0 0 30px 0;">
+            Discovery Call Confirmed ✓
+        </p>
+
+        <!-- Greeting -->
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            Hi {{ recipient_name }},
+        </p>
+
+        <!-- Message -->
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            Thanks for scheduling a discovery call! I'm looking forward to learning more about <strong style="color: #1f2937;">{{ recipient_company }}</strong> and discussing how we can help you achieve your digital goals.
+        </p>
+
+        <!-- What to Prepare Box -->
+        <div style="background: #fafafa; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin: 0 0 20px 0;">
+            <h3 style="color: #1f2937; font-size: 14px; font-weight: 600; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 1px;">
+                📋 Quick Prep (Optional)
+            </h3>
+            <p style="color: #374151; font-size: 15px; line-height: 1.8; margin: 0;">
+                • Think about your top 2-3 business challenges<br>
+                • Any specific projects or ideas you have in mind<br>
+                • Questions about our services<br>
+                • Your ideal timeline for getting started
+            </p>
+        </div>
+
+        <!-- Call Agenda -->
+        <div style="background: #fef9e7; border-left: 4px solid #f9cd15; border-radius: 8px; padding: 20px 24px; margin: 0 0 25px 0;">
+            <h3 style="color: #1f2937; font-size: 14px; font-weight: 600; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 1px;">
+                What We'll Cover
+            </h3>
+            <p style="color: #374151; font-size: 15px; line-height: 1.8; margin: 0;">
+                🎯 Understanding your business and goals<br>
+                💡 Exploring potential solutions<br>
+                📊 Discussing budget and timeline<br>
+                ✅ Outlining clear next steps
+            </p>
+        </div>
+
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            The call is completely no-pressure. My goal is to understand if we're a good fit and provide value regardless of the outcome.
+        </p>
+
+        <!-- Contact Info -->
+        <div style="background: #fafafa; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center; border: 1px solid #e5e7eb;">
+            <p style="color: #6b7280; font-size: 14px; margin: 0 0 8px 0;">
+                Need to reschedule? No problem!
+            </p>
+            <p style="color: #1f2937; font-size: 15px; font-weight: 600; margin: 0;">
+                📧 Reply to this email or call <span style="color: #f9cd15;">0424 538 777</span>
+            </p>
+        </div>
+
+        <!-- Signature -->
+        <div style="margin-top: 35px; padding-top: 25px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0;">
+                Talk soon,
+            </p>
+            <p style="color: #1f2937; font-size: 15px; font-weight: 600; margin: 10px 0 5px 0;">
+                Noushad
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0 0 5px 0;">
+                Codeteki Digital Services
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                📱 0424 538 777 &nbsp;|&nbsp; 🌐 <a href="https://codeteki.au" style="color: #1f2937; text-decoration: none; font-weight: 500;">codeteki.au</a>
+            </p>
+        </div>
+    </td>
+</tr>
+{% endblock %}

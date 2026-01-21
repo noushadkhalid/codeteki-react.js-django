@@ -1,0 +1,125 @@
+{% extends "crm/emails/base_codeteki.html" %}
+
+{% block title %}Welcome to Codeteki! | Let's Build Something Great{% endblock %}
+{% block preheader %}{{ recipient_name }}, welcome aboard! We're thrilled to partner with {{ recipient_company }}{% endblock %}
+{% block subtitle %}AI-Powered Solutions{% endblock %}
+
+{% block content %}
+<tr>
+    <td style="padding: 40px 30px; background-color: #ffffff;">
+        <!-- Celebration Icon -->
+        <div style="text-align: center; margin-bottom: 20px;">
+            <span style="display: inline-block; background: #fef9e7; font-size: 45px; padding: 20px; border-radius: 50%;">🎉</span>
+        </div>
+
+        <!-- Heading -->
+        <h1 style="color: #1f2937; font-size: 26px; font-weight: 700; text-align: center; margin: 0 0 8px 0;">
+            Welcome to Codeteki!
+        </h1>
+        <p style="color: #16a34a; font-size: 15px; font-weight: 600; text-align: center; margin: 0 0 30px 0;">
+            We're Officially Partners 🤝
+        </p>
+
+        <!-- Greeting -->
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            Hi {{ recipient_name }},
+        </p>
+
+        <!-- Message -->
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            <strong style="color: #1f2937;">Welcome aboard!</strong> I'm thrilled to officially partner with <strong style="color: #1f2937;">{{ recipient_company }}</strong>. Thank you for trusting us with your digital transformation.
+        </p>
+
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            We're committed to delivering exceptional results and making this partnership a success. Here's what happens next:
+        </p>
+
+        <!-- What's Next Box -->
+        <div style="background: #fef9e7; border-left: 4px solid #f9cd15; border-radius: 8px; padding: 20px 24px; margin: 0 0 25px 0;">
+            <h3 style="color: #1f2937; font-size: 14px; font-weight: 600; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 1px;">
+                🚀 Your Onboarding Journey
+            </h3>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #f9cd15; font-size: 16px; font-weight: 700; margin-right: 10px;">1</span>
+                        <span style="color: #374151; font-size: 14px;"><strong>Kickoff Call</strong> - We'll schedule a kickoff to align on details</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #f9cd15; font-size: 16px; font-weight: 700; margin-right: 10px;">2</span>
+                        <span style="color: #374151; font-size: 14px;"><strong>Project Setup</strong> - Access, tools, and communication channels</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #f9cd15; font-size: 16px; font-weight: 700; margin-right: 10px;">3</span>
+                        <span style="color: #374151; font-size: 14px;"><strong>Development Begins</strong> - We start building your solution</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #f9cd15; font-size: 16px; font-weight: 700; margin-right: 10px;">4</span>
+                        <span style="color: #374151; font-size: 14px;"><strong>Regular Updates</strong> - Weekly progress reports and demos</span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- My Commitment Box -->
+        <div style="background: #fafafa; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin: 0 0 25px 0;">
+            <h3 style="color: #1f2937; font-size: 14px; font-weight: 600; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 1px;">
+                💛 My Commitment to You
+            </h3>
+            <p style="color: #374151; font-size: 15px; line-height: 1.8; margin: 0;">
+                ✓ Clear, honest communication<br>
+                ✓ On-time delivery (or better)<br>
+                ✓ Quality work you'll be proud of<br>
+                ✓ Support beyond the project
+            </p>
+        </div>
+
+        <!-- Direct Line -->
+        <div style="background: #fafafa; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center; border: 1px solid #e5e7eb;">
+            <p style="color: #6b7280; font-size: 14px; margin: 0 0 8px 0;">
+                Your Direct Line
+            </p>
+            <p style="color: #1f2937; font-size: 22px; font-weight: 700; margin: 0;">
+                📱 <span style="color: #f9cd15;">0424 538 777</span>
+            </p>
+            <p style="color: #9ca3af; font-size: 13px; margin: 10px 0 0 0;">
+                Call or text anytime for project questions
+            </p>
+        </div>
+
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            I'll be in touch shortly to schedule our kickoff call. In the meantime, feel free to reach out if you have any questions!
+        </p>
+
+        <!-- CTA Button -->
+        <div style="text-align: center; margin: 25px 0;">
+            <a href="https://codeteki.au"
+               style="display: inline-block; background: #f9cd15; color: #1f2937; text-decoration: none; padding: 14px 35px; border-radius: 8px; font-weight: 700; font-size: 15px; box-shadow: 0 4px 14px rgba(249, 205, 21, 0.4);">
+                Visit Codeteki →
+            </a>
+        </div>
+
+        <!-- Signature -->
+        <div style="margin-top: 35px; padding-top: 25px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0;">
+                Excited to get started,
+            </p>
+            <p style="color: #1f2937; font-size: 15px; font-weight: 600; margin: 10px 0 5px 0;">
+                Noushad
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0 0 5px 0;">
+                Codeteki Digital Services
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                📱 0424 538 777 &nbsp;|&nbsp; 🌐 <a href="https://codeteki.au" style="color: #1f2937; text-decoration: none; font-weight: 500;">codeteki.au</a>
+            </p>
+        </div>
+    </td>
+</tr>
+{% endblock %}

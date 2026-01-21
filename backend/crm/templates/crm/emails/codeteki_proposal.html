@@ -1,0 +1,100 @@
+{% extends "crm/emails/base_codeteki.html" %}
+
+{% block title %}Your Proposal is Ready | Codeteki{% endblock %}
+{% block preheader %}{{ recipient_name }}, here's your custom proposal for {{ recipient_company }}{% endblock %}
+{% block subtitle %}AI-Powered Solutions{% endblock %}
+
+{% block content %}
+<tr>
+    <td style="padding: 40px 30px; background-color: #ffffff;">
+        <!-- Document Icon -->
+        <div style="text-align: center; margin-bottom: 20px;">
+            <span style="display: inline-block; background: #fef9e7; font-size: 40px; padding: 20px; border-radius: 50%;">📄</span>
+        </div>
+
+        <!-- Heading -->
+        <h1 style="color: #1f2937; font-size: 24px; font-weight: 700; text-align: center; margin: 0 0 8px 0;">
+            Your Proposal is Ready!
+        </h1>
+        <p style="color: #6b7280; font-size: 15px; text-align: center; margin: 0 0 30px 0;">
+            Custom Quote for <strong style="color: #1f2937;">{{ recipient_company }}</strong>
+        </p>
+
+        <!-- Greeting -->
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            Hi {{ recipient_name }},
+        </p>
+
+        <!-- Message -->
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            Thank you for a great discovery call! Based on our conversation, I've put together a proposal tailored specifically for <strong style="color: #1f2937;">{{ recipient_company }}</strong>.
+        </p>
+
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            The proposal includes everything we discussed, along with clear timelines, deliverables, and investment details.
+        </p>
+
+        <!-- What's Included Box -->
+        <div style="background: #fef9e7; border-left: 4px solid #f9cd15; border-radius: 8px; padding: 20px 24px; margin: 0 0 25px 0;">
+            <h3 style="color: #1f2937; font-size: 14px; font-weight: 600; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 1px;">
+                📋 What's in the Proposal
+            </h3>
+            <p style="color: #374151; font-size: 15px; line-height: 1.8; margin: 0;">
+                ✓ Project scope and deliverables<br>
+                ✓ Timeline and milestones<br>
+                ✓ Investment breakdown<br>
+                ✓ Payment terms and options<br>
+                ✓ What happens next
+            </p>
+        </div>
+
+        <!-- CTA Button -->
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="https://codeteki.au/contact"
+               style="display: inline-block; background: #f9cd15; color: #1f2937; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 700; font-size: 16px; box-shadow: 0 4px 14px rgba(249, 205, 21, 0.4);">
+                Review Proposal →
+            </a>
+        </div>
+
+        <!-- Next Steps -->
+        <div style="background: #fafafa; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin: 25px 0;">
+            <h3 style="color: #1f2937; font-size: 14px; font-weight: 600; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 1px;">
+                🚀 Next Steps
+            </h3>
+            <p style="color: #374151; font-size: 15px; line-height: 1.8; margin: 0;">
+                1. Review the proposal at your convenience<br>
+                2. Let me know if you have any questions<br>
+                3. When ready, we can discuss and finalize<br>
+                4. Sign off and we begin!
+            </p>
+        </div>
+
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            I'm happy to hop on a quick call to walk you through the proposal or answer any questions. No pressure at all – take your time to review.
+        </p>
+
+        <!-- Questions Box -->
+        <div style="background: #fafafa; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center; border: 1px solid #e5e7eb;">
+            <p style="color: #1f2937; font-size: 15px; margin: 0;">
+                Questions? Just reply to this email or call <strong style="color: #f9cd15;">0424 538 777</strong>
+            </p>
+        </div>
+
+        <!-- Signature -->
+        <div style="margin-top: 35px; padding-top: 25px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0;">
+                Looking forward to working together,
+            </p>
+            <p style="color: #1f2937; font-size: 15px; font-weight: 600; margin: 10px 0 5px 0;">
+                Noushad
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0 0 5px 0;">
+                Codeteki Digital Services
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                📱 0424 538 777 &nbsp;|&nbsp; 🌐 <a href="https://codeteki.au" style="color: #1f2937; text-decoration: none; font-weight: 500;">codeteki.au</a>
+            </p>
+        </div>
+    </td>
+</tr>
+{% endblock %}

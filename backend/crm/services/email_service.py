@@ -205,15 +205,25 @@ class ZohoEmailService:
                 'error': f'Zoho Mail not configured{brand_info}. Configure Zoho credentials in Brand settings or environment variables.'
             }
 
-        # Check if recipient is unsubscribed
+        # Check if recipient is unsubscribed (brand-specific)
         from crm.models import Contact
-        if Contact.objects.filter(email__iexact=to, is_unsubscribed=True).exists():
-            logger.info(f"Skipping email to {to} - recipient is unsubscribed")
-            return {
-                'success': False,
-                'message_id': None,
-                'error': f'Recipient {to} is unsubscribed and will not receive emails.'
-            }
+        contact = Contact.objects.filter(email__iexact=to).first()
+        if contact:
+            brand_slug = self.brand.slug if self.brand else None
+            if contact.is_unsubscribed:
+                logger.info(f"Skipping email to {to} - recipient is globally unsubscribed")
+                return {
+                    'success': False,
+                    'message_id': None,
+                    'error': f'Recipient {to} is unsubscribed and will not receive emails.'
+                }
+            elif brand_slug and contact.is_unsubscribed_from_brand(brand_slug):
+                logger.info(f"Skipping email to {to} - recipient is unsubscribed from {brand_slug}")
+                return {
+                    'success': False,
+                    'message_id': None,
+                    'error': f'Recipient {to} is unsubscribed from {brand_slug} emails.'
+                }
 
         # Use provided from_name or default to brand/service from_name
         sender_name = from_name or self.from_name

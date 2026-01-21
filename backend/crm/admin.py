@@ -138,9 +138,9 @@ class ContactAdmin(ModelAdmin):
             'description': 'Auto-updated when emails are sent'
         }),
         ('Unsubscribe', {
-            'fields': ('is_unsubscribed', 'unsubscribed_at', 'unsubscribe_reason'),
+            'fields': ('is_unsubscribed', 'unsubscribed_brands', 'unsubscribed_at', 'unsubscribe_reason'),
             'classes': ['collapse'],
-            'description': 'Unsubscribed contacts will not receive emails'
+            'description': 'Brand-specific unsubscribes. Global unsubscribe blocks all brands.'
         }),
         ('Classification', {
             'fields': ('tags', 'domain_authority', 'ai_score'),
@@ -170,7 +170,10 @@ class ContactAdmin(ModelAdmin):
     @display(description="Unsubscribed", label=True)
     def is_unsubscribed_badge(self, obj):
         if obj.is_unsubscribed:
-            return "Unsubscribed", "danger"
+            return "All Brands", "danger"
+        elif obj.unsubscribed_brands:
+            brands = ', '.join(obj.unsubscribed_brands)
+            return f"From: {brands}", "warning"
         return "Active", "success"
 
     @display(description="Last Emailed")
