@@ -1116,13 +1116,13 @@ class EmailDraftAdmin(ModelAdmin):
                 recipient_email = recipient['email']
                 contact = recipient.get('contact')
 
-                # Get or find contact
+                # Get or find contact (case-insensitive email lookup)
                 if not contact:
-                    contact = Contact.objects.filter(email=recipient_email).first()
+                    contact = Contact.objects.filter(email__iexact=recipient_email).first()
 
                 # Check unsubscribed (global OR brand-specific)
+                brand_slug = draft.brand.slug if draft.brand else None
                 if contact:
-                    brand_slug = draft.brand.slug if draft.brand else None
                     if contact.is_unsubscribed or contact.is_unsubscribed_from_brand(brand_slug):
                         total_blocked += 1
                         continue
@@ -1143,7 +1143,8 @@ class EmailDraftAdmin(ModelAdmin):
                     'name': recipient.get('name', ''),
                     'company': recipient.get('company', ''),
                     'website': recipient.get('website', ''),
-                    'contact': contact
+                    'contact': contact,
+                    'brand_slug': brand_slug,  # Pass brand for later use
                 })
 
             if not valid_recipients:
@@ -1221,19 +1222,28 @@ class EmailDraftAdmin(ModelAdmin):
                     if result.get('success'):
                         sent_count += 1
 
-                        # Create contact if doesn't exist
+                        # Get or create contact (case-insensitive lookup)
+                        contact = Contact.objects.filter(email__iexact=recipient_email).first()
                         if not contact:
-                            contact = Contact.objects.create(
-                                brand=draft.brand,
-                                email=recipient_email,
-                                name=recipient_name or extracted_name,  # Use extracted name if no name provided
-                                company=recipient_company,
-                                website=recipient.get('website', ''),
-                                status='contacted',
-                                last_emailed_at=timezone.now(),
-                                email_count=1,
-                                source='email_composer'
-                            )
+                            try:
+                                contact = Contact.objects.create(
+                                    email=recipient_email.lower(),  # Normalize to lowercase
+                                    brand=draft.brand,
+                                    name=recipient_name or extracted_name,
+                                    company=recipient_company,
+                                    website=recipient.get('website', ''),
+                                    status='contacted',
+                                    last_emailed_at=timezone.now(),
+                                    email_count=1,
+                                    source='email_composer'
+                                )
+                            except Exception:
+                                # If creation fails, try to get existing contact
+                                contact = Contact.objects.filter(email__iexact=recipient_email).first()
+                                if contact:
+                                    contact.last_emailed_at = timezone.now()
+                                    contact.email_count = (contact.email_count or 0) + 1
+                                    contact.save(update_fields=['last_emailed_at', 'email_count'])
                         else:
                             # Update existing contact
                             contact.last_emailed_at = timezone.now()
@@ -1242,17 +1252,18 @@ class EmailDraftAdmin(ModelAdmin):
                             contact.save(update_fields=['last_emailed_at', 'email_count', 'status'])
 
                         # Create deal in pipeline at "Invited" stage
-                        Deal.objects.create(
-                            contact=contact,
-                            pipeline=draft.pipeline,
-                            current_stage=invited_stage,
-                            status='active',
-                            emails_sent=1,
-                            last_contact_date=timezone.now(),
-                            next_action_date=timezone.now() + timezone.timedelta(days=invited_stage.days_until_followup or 3),
-                            ai_notes=f"First contact via Email Composer\nSubject: {subject}"
-                        )
-                        total_deals += 1
+                        if contact:
+                            Deal.objects.create(
+                                contact=contact,
+                                pipeline=draft.pipeline,
+                                current_stage=invited_stage,
+                                status='active',
+                                emails_sent=1,
+                                last_contact_date=timezone.now(),
+                                next_action_date=timezone.now() + timezone.timedelta(days=invited_stage.days_until_followup or 3),
+                                ai_notes=f"First contact via Email Composer\nSubject: {subject}"
+                            )
+                            total_deals += 1
                     else:
                         failed_count += 1
 
@@ -1404,9 +1415,9 @@ class EmailDraftAdmin(ModelAdmin):
             recipient_email = recipient['email']
             contact = recipient.get('contact')
 
-            # Get or find contact
+            # Get or find contact (case-insensitive lookup)
             if not contact:
-                contact = Contact.objects.filter(email=recipient_email).first()
+                contact = Contact.objects.filter(email__iexact=recipient_email).first()
 
             # Check unsubscribed (global OR brand-specific)
             if contact:
@@ -1512,17 +1523,26 @@ class EmailDraftAdmin(ModelAdmin):
 
                     # Create contact if doesn't exist
                     if not contact:
-                        contact = Contact.objects.create(
-                            brand=draft.brand,
-                            email=recipient_email,
-                            name=recipient_name or extracted_name,  # Use extracted name if no name provided
-                            company=recipient_company,
-                            website=recipient.get('website', ''),
-                            status='contacted',
-                            last_emailed_at=timezone.now(),
-                            email_count=1,
-                            source='email_composer'
-                        )
+                        try:
+                            contact = Contact.objects.create(
+                                brand=draft.brand,
+                                email=recipient_email,
+                                name=recipient_name or extracted_name,  # Use extracted name if no name provided
+                                company=recipient_company,
+                                website=recipient.get('website', ''),
+                                status='contacted',
+                                last_emailed_at=timezone.now(),
+                                email_count=1,
+                                source='email_composer'
+                            )
+                        except Exception:
+                            # Contact may exist with different case - fetch it
+                            contact = Contact.objects.filter(email__iexact=recipient_email).first()
+                            if contact:
+                                contact.last_emailed_at = timezone.now()
+                                contact.email_count = (contact.email_count or 0) + 1
+                                contact.status = 'contacted'
+                                contact.save(update_fields=['last_emailed_at', 'email_count', 'status'])
                     else:
                         # Update existing contact
                         contact.last_emailed_at = timezone.now()

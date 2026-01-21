@@ -304,8 +304,8 @@ class ContactImporter:
 
         data['email'] = email
 
-        # Check for duplicate
-        existing = Contact.objects.filter(email=email).first()
+        # Check for duplicate (case-insensitive)
+        existing = Contact.objects.filter(email__iexact=email).first()
         if existing:
             logger.debug(f"Skipping duplicate email: {email}")
             return 'skipped'
