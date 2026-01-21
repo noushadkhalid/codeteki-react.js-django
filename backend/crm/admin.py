@@ -172,10 +172,10 @@ class ContactAdmin(ModelAdmin):
     @display(description="Unsubscribed", label=True)
     def is_unsubscribed_badge(self, obj):
         if obj.is_unsubscribed:
-            return "All Brands", "danger"
+            return "UNSUB ALL", "danger"
         elif obj.unsubscribed_brands:
-            brands = ', '.join(obj.unsubscribed_brands)
-            return f"From: {brands}", "warning"
+            brands = ', '.join(obj.unsubscribed_brands).upper()
+            return f"UNSUB: {brands}", "danger"  # Red for visibility
         return "Active", "success"
 
     @display(description="Last Emailed")
@@ -1093,20 +1093,6 @@ class EmailDraftAdmin(ModelAdmin):
                 self.message_user(request, f"⚠️ {draft}: No content - generate first", messages.WARNING)
                 continue
 
-            # Wrap in styled HTML template
-            from crm.services.email_templates import get_styled_email
-            styled_email = get_styled_email(
-                brand_slug=draft.brand.slug if draft.brand else 'desifirms',
-                pipeline_type=draft.pipeline.pipeline_type if draft.pipeline else 'business',
-                email_type='directory_invitation',  # Default for email composer
-                recipient_name='there',  # Generic for bulk send
-                recipient_email='recipient@example.com',  # Placeholder, each recipient gets this
-                recipient_company='',
-                subject=subject,
-                body=body_text,
-            )
-            body = styled_email['html']
-
             # Get all recipients and filter
             all_recipients = draft.get_all_recipients()
             if not all_recipients:
@@ -1157,8 +1143,9 @@ class EmailDraftAdmin(ModelAdmin):
                 )
                 continue
 
-            # Send using BCC - single API call
+            # Send individually with per-recipient styled HTML
             email_service = ZohoEmailService(brand=draft.brand)
+            from crm.services.email_templates import get_styled_email
 
             # Check if Zoho is configured
             if not email_service.enabled:
@@ -1170,32 +1157,48 @@ class EmailDraftAdmin(ModelAdmin):
                 )
                 continue
 
-            recipient_emails = [r['email'] for r in valid_recipients]
+            sent_count = 0
+            failed_count = 0
 
             try:
-                result = email_service.send_bulk(
-                    recipients=recipient_emails,
-                    subject=subject,
-                    body=body,
-                    from_name=draft.brand.from_name
-                )
+                # Send to each recipient individually with personalized unsubscribe link
+                for recipient in valid_recipients:
+                    contact = recipient.get('contact')
+                    recipient_email = recipient['email']
+                    recipient_name = recipient.get('name', '')
+                    recipient_company = recipient.get('company', '')
 
-                if result.get('success'):
-                    sent_count = result.get('sent_count', 0)
-                    failed_count = result.get('failed_count', 0)
+                    # Generate styled HTML with correct recipient email for unsubscribe link
+                    styled_email = get_styled_email(
+                        brand_slug=draft.brand.slug if draft.brand else 'desifirms',
+                        pipeline_type=draft.pipeline.pipeline_type if draft.pipeline else 'business',
+                        email_type=draft.email_type or 'directory_invitation',
+                        recipient_name=recipient_name.split()[0] if recipient_name else 'there',
+                        recipient_email=recipient_email,  # Correct email for unsubscribe!
+                        recipient_company=recipient_company,
+                        subject=subject,
+                        body=body_text,
+                    )
+                    html_body = styled_email['html']
 
-                    # Create/update contacts and deals for all valid recipients
-                    for recipient in valid_recipients:
-                        contact = recipient.get('contact')
-                        recipient_email = recipient['email']
+                    # Send email
+                    result = email_service.send(
+                        to=recipient_email,
+                        subject=subject,
+                        body=html_body,
+                        from_name=draft.brand.from_name
+                    )
+
+                    if result.get('success'):
+                        sent_count += 1
 
                         # Create contact if doesn't exist
                         if not contact:
                             contact = Contact.objects.create(
                                 brand=draft.brand,
                                 email=recipient_email,
-                                name=recipient['name'],
-                                company=recipient.get('company', ''),
+                                name=recipient_name,
+                                company=recipient_company,
                                 website=recipient.get('website', ''),
                                 status='contacted',
                                 last_emailed_at=timezone.now(),
@@ -1221,26 +1224,23 @@ class EmailDraftAdmin(ModelAdmin):
                             ai_notes=f"First contact via Email Composer\nSubject: {subject}"
                         )
                         total_deals += 1
+                    else:
+                        failed_count += 1
 
-                    total_sent += sent_count
+                total_sent += sent_count
 
-                    # Update draft tracking
-                    draft.sent_count = (draft.sent_count or 0) + sent_count
-                    draft.deals_created = (draft.deals_created or 0) + len(valid_recipients)
-                    draft.is_sent = True
-                    draft.sent_at = timezone.now()
-                    draft.save(update_fields=['sent_count', 'deals_created', 'is_sent', 'sent_at'])
+                # Update draft tracking
+                draft.sent_count = (draft.sent_count or 0) + sent_count
+                draft.deals_created = (draft.deals_created or 0) + total_deals
+                draft.is_sent = True
+                draft.sent_at = timezone.now()
+                draft.save(update_fields=['sent_count', 'deals_created', 'is_sent', 'sent_at'])
 
-                    msg = f"✅ {draft}: Sent {sent_count} emails"
-                    if failed_count > 0:
-                        msg += f" ({failed_count} failed)"
-                    self.message_user(request, msg, messages.SUCCESS)
-                else:
-                    self.message_user(
-                        request,
-                        f"❌ {draft}: {result.get('error', 'Send failed')}",
-                        messages.ERROR
-                    )
+                msg = f"✅ {draft}: Sent {sent_count} emails"
+                if failed_count > 0:
+                    msg += f" ({failed_count} failed)"
+                self.message_user(request, msg, messages.SUCCESS)
+
             except Exception as e:
                 self.message_user(request, f"❌ {draft}: {str(e)}", messages.ERROR)
 
@@ -1360,20 +1360,6 @@ class EmailDraftAdmin(ModelAdmin):
             self.message_user(request, f"⚠️ No content - generate or write email first", messages.WARNING)
             return HttpResponseRedirect(request.path)
 
-        # Wrap in styled HTML template
-        from crm.services.email_templates import get_styled_email
-        styled_email = get_styled_email(
-            brand_slug=draft.brand.slug if draft.brand else 'desifirms',
-            pipeline_type=draft.pipeline.pipeline_type if draft.pipeline else 'business',
-            email_type=draft.email_type or 'directory_invitation',
-            recipient_name='there',  # Generic for bulk send
-            recipient_email='recipient@example.com',  # Placeholder
-            recipient_company='',
-            subject=subject,
-            body=body_text,
-        )
-        body = styled_email['html']
-
         # Get all recipients and filter
         all_recipients = draft.get_all_recipients()
         if not all_recipients:
@@ -1425,8 +1411,9 @@ class EmailDraftAdmin(ModelAdmin):
             )
             return HttpResponseRedirect(request.path)
 
-        # Send using BCC - single API call
+        # Send individually with per-recipient styled HTML
         email_service = ZohoEmailService(brand=draft.brand)
+        from crm.services.email_templates import get_styled_email
 
         # Check if Zoho is configured
         if not email_service.enabled:
@@ -1438,33 +1425,49 @@ class EmailDraftAdmin(ModelAdmin):
             )
             return HttpResponseRedirect(request.path)
 
-        recipient_emails = [r['email'] for r in valid_recipients]
+        sent_count = 0
+        failed_count = 0
+        total_deals = 0
 
         try:
-            result = email_service.send_bulk(
-                recipients=recipient_emails,
-                subject=subject,
-                body=body,
-                from_name=draft.brand.from_name
-            )
+            # Send to each recipient individually with personalized unsubscribe link
+            for recipient in valid_recipients:
+                contact = recipient.get('contact')
+                recipient_email = recipient['email']
+                recipient_name = recipient.get('name', '')
+                recipient_company = recipient.get('company', '')
 
-            if result.get('success'):
-                sent_count = result.get('sent_count', 0)
-                failed_count = result.get('failed_count', 0)
-                total_deals = 0
+                # Generate styled HTML with correct recipient email for unsubscribe link
+                styled_email = get_styled_email(
+                    brand_slug=draft.brand.slug if draft.brand else 'desifirms',
+                    pipeline_type=draft.pipeline.pipeline_type if draft.pipeline else 'business',
+                    email_type=draft.email_type or 'directory_invitation',
+                    recipient_name=recipient_name.split()[0] if recipient_name else 'there',
+                    recipient_email=recipient_email,  # Correct email for unsubscribe!
+                    recipient_company=recipient_company,
+                    subject=subject,
+                    body=body_text,
+                )
+                html_body = styled_email['html']
 
-                # Create/update contacts and deals for all valid recipients
-                for recipient in valid_recipients:
-                    contact = recipient.get('contact')
-                    recipient_email = recipient['email']
+                # Send email
+                result = email_service.send(
+                    to=recipient_email,
+                    subject=subject,
+                    body=html_body,
+                    from_name=draft.brand.from_name
+                )
+
+                if result.get('success'):
+                    sent_count += 1
 
                     # Create contact if doesn't exist
                     if not contact:
                         contact = Contact.objects.create(
                             brand=draft.brand,
                             email=recipient_email,
-                            name=recipient['name'],
-                            company=recipient.get('company', ''),
+                            name=recipient_name,
+                            company=recipient_company,
                             website=recipient.get('website', ''),
                             status='contacted',
                             last_emailed_at=timezone.now(),
@@ -1490,24 +1493,21 @@ class EmailDraftAdmin(ModelAdmin):
                         ai_notes=f"First contact via Email Composer\nSubject: {subject}"
                     )
                     total_deals += 1
+                else:
+                    failed_count += 1
 
-                # Update draft tracking
-                draft.sent_count = (draft.sent_count or 0) + sent_count
-                draft.deals_created = (draft.deals_created or 0) + total_deals
-                draft.is_sent = True
-                draft.sent_at = timezone.now()
-                draft.save(update_fields=['sent_count', 'deals_created', 'is_sent', 'sent_at'])
+            # Update draft tracking
+            draft.sent_count = (draft.sent_count or 0) + sent_count
+            draft.deals_created = (draft.deals_created or 0) + total_deals
+            draft.is_sent = True
+            draft.sent_at = timezone.now()
+            draft.save(update_fields=['sent_count', 'deals_created', 'is_sent', 'sent_at'])
 
-                msg = f"✅ Sent {sent_count} emails! {total_deals} deals created in {draft.pipeline.name}"
-                if failed_count > 0:
-                    msg += f" ({failed_count} failed)"
-                self.message_user(request, msg, messages.SUCCESS)
-            else:
-                self.message_user(
-                    request,
-                    f"❌ Send failed: {result.get('error', 'Unknown error')}",
-                    messages.ERROR
-                )
+            msg = f"✅ Sent {sent_count} emails! {total_deals} deals created in {draft.pipeline.name}"
+            if failed_count > 0:
+                msg += f" ({failed_count} failed)"
+            self.message_user(request, msg, messages.SUCCESS)
+
         except Exception as e:
             self.message_user(request, f"❌ Error: {str(e)}", messages.ERROR)
 
