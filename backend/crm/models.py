@@ -161,6 +161,61 @@ class Contact(models.Model):
             self.unsubscribe_reason = reason
         self.save()
 
+    @staticmethod
+    def normalize_email(email: str) -> str:
+        """
+        Extract and normalize email from various formats.
+        Handles: "Name <email@example.com>", "email@example.com", etc.
+        """
+        import re
+        if not email:
+            return ''
+        email = email.strip()
+        # Extract email from "Name <email>" format
+        match = re.search(r'<([^>]+)>', email)
+        if match:
+            email = match.group(1)
+        # Remove any remaining whitespace and lowercase
+        return email.strip().lower()
+
+    def save(self, *args, **kwargs):
+        """Normalize email before saving."""
+        if self.email:
+            self.email = self.normalize_email(self.email)
+        super().save(*args, **kwargs)
+
+
+class CodetekiContactManager(models.Manager):
+    """Manager that filters to Codeteki brand only."""
+    def get_queryset(self):
+        return super().get_queryset().filter(brand__slug='codeteki')
+
+
+class DesiFirmsContactManager(models.Manager):
+    """Manager that filters to Desi Firms brand only."""
+    def get_queryset(self):
+        return super().get_queryset().filter(brand__slug='desifirms')
+
+
+class CodetekiContact(Contact):
+    """Proxy model for Codeteki contacts - separate admin view."""
+    objects = CodetekiContactManager()
+
+    class Meta:
+        proxy = True
+        verbose_name = 'Codeteki Contact'
+        verbose_name_plural = 'Codeteki Contacts'
+
+
+class DesiFirmsContact(Contact):
+    """Proxy model for Desi Firms contacts - separate admin view."""
+    objects = DesiFirmsContactManager()
+
+    class Meta:
+        proxy = True
+        verbose_name = 'Desi Firms Contact'
+        verbose_name_plural = 'Desi Firms Contacts'
+
 
 class Pipeline(models.Model):
     """Different workflows for lead acquisition and outreach."""

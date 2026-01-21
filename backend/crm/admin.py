@@ -13,6 +13,8 @@ from unfold.decorators import action, display
 from .models import (
     Brand,
     Contact,
+    CodetekiContact,
+    DesiFirmsContact,
     Pipeline,
     PipelineStage,
     Deal,
@@ -202,6 +204,44 @@ class ContactAdmin(ModelAdmin):
         self.message_user(request, f"Resubscribed {updated} contact(s).")
 
     actions = ['mark_unsubscribed', 'resubscribe']
+
+
+# =============================================================================
+# BRAND-SPECIFIC CONTACT ADMINS (Separate Views)
+# =============================================================================
+
+@admin.register(CodetekiContact)
+class CodetekiContactAdmin(ContactAdmin):
+    """Codeteki-only contacts view."""
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(brand__slug='codeteki')
+
+    def save_model(self, request, obj, form, change):
+        """Auto-set brand to Codeteki for new contacts."""
+        if not change:  # New object
+            try:
+                obj.brand = Brand.objects.get(slug='codeteki')
+            except Brand.DoesNotExist:
+                pass
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(DesiFirmsContact)
+class DesiFirmsContactAdmin(ContactAdmin):
+    """Desi Firms-only contacts view."""
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(brand__slug='desifirms')
+
+    def save_model(self, request, obj, form, change):
+        """Auto-set brand to Desi Firms for new contacts."""
+        if not change:  # New object
+            try:
+                obj.brand = Brand.objects.get(slug='desifirms')
+            except Brand.DoesNotExist:
+                pass
+        super().save_model(request, obj, form, change)
 
 
 # =============================================================================

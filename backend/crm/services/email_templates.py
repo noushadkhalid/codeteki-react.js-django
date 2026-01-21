@@ -240,12 +240,18 @@ def get_styled_email(
     Returns:
         Dict with 'html' and 'plain' versions of the email
     """
+    # Convert plain text body to HTML (preserve paragraphs and line breaks)
+    body_html = body.replace('\n\n', '</p><p style="margin: 0 0 15px 0;">').replace('\n', '<br>')
+    if body_html and not body_html.startswith('<p'):
+        body_html = f'<p style="margin: 0 0 15px 0;">{body_html}</p>'
+
     context = {
         'recipient_name': recipient_name,
         'recipient_email': recipient_email,
         'recipient_company': recipient_company or 'your business',
         'subject': subject,
         'body_text': body,
+        'body_html': body_html,  # HTML-formatted version for templates
         **extra_context
     }
 
