@@ -1120,10 +1120,12 @@ class EmailDraftAdmin(ModelAdmin):
                 if not contact:
                     contact = Contact.objects.filter(email=recipient_email).first()
 
-                # Check unsubscribed
-                if contact and contact.is_unsubscribed:
-                    total_blocked += 1
-                    continue
+                # Check unsubscribed (global OR brand-specific)
+                if contact:
+                    brand_slug = draft.brand.slug if draft.brand else None
+                    if contact.is_unsubscribed or contact.is_unsubscribed_from_brand(brand_slug):
+                        total_blocked += 1
+                        continue
 
                 # Check if already in active pipeline
                 if contact:
@@ -1406,10 +1408,12 @@ class EmailDraftAdmin(ModelAdmin):
             if not contact:
                 contact = Contact.objects.filter(email=recipient_email).first()
 
-            # Check unsubscribed
-            if contact and contact.is_unsubscribed:
-                total_blocked += 1
-                continue
+            # Check unsubscribed (global OR brand-specific)
+            if contact:
+                brand_slug = draft.brand.slug if draft.brand else None
+                if contact.is_unsubscribed or contact.is_unsubscribed_from_brand(brand_slug):
+                    total_blocked += 1
+                    continue
 
             # Check if already in active pipeline
             if contact:
