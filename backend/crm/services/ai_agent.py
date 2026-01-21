@@ -837,7 +837,11 @@ Context: NEW platform with a classifieds section for the South Asian community.
             # Generic
             'invitation': 'a professional invitation email',
             'followup': 'a professional follow-up email',
-            'custom': 'a professional email based on the user suggestions',
+            'custom': '''a professional email STRICTLY following the user's suggestions below.
+CRITICAL: The user has provided specific content/points they want in this email.
+Your email MUST incorporate ALL the user's suggestions and key points.
+DO NOT write a generic email - use the exact content/direction provided by the user.
+The user's suggestions are your PRIMARY guide for this email.''',
         }
         email_desc = email_type_descriptions.get(email_type, 'a professional email')
 

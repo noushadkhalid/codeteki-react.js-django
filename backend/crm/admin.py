@@ -1008,10 +1008,13 @@ class EmailDraftAdmin(ModelAdmin):
                     'recipient_name': recipient_name,
                     'recipient_company': recipient_company or '',
                     'recipient_website': recipient_website or '',
+                    'recipient_email': draft.contact.email if draft.contact else draft.recipient_email or '',
                     'brand_name': draft.brand.name,
                     'brand_website': draft.brand.website,
                     'brand_description': draft.brand.ai_company_description or '',
                     'value_proposition': draft.brand.ai_value_proposition or '',
+                    'pipeline_type': draft.pipeline.pipeline_type if draft.pipeline else '',
+                    'pipeline_name': draft.pipeline.name if draft.pipeline else '',
                 }
 
                 result = ai_agent.compose_email_from_context(context)
