@@ -1130,12 +1130,19 @@ class EmailDraftAdmin(ModelAdmin):
             contacts_to_update = []
 
             for recipient in all_recipients:
-                recipient_email = recipient['email']
+                # Normalize email immediately for consistent lookups
+                recipient_email = Contact.normalize_email(recipient['email'])
+                if not recipient_email:
+                    continue
+
                 contact = recipient.get('contact')
 
-                # Get or find contact (case-insensitive email lookup)
+                # Get or find contact using normalized email
                 if not contact:
-                    contact = Contact.objects.filter(email__iexact=recipient_email).first()
+                    contact = Contact.objects.filter(email=recipient_email).first()
+                    # Fallback to case-insensitive for old data
+                    if not contact:
+                        contact = Contact.objects.filter(email__iexact=recipient_email).first()
 
                 # Check unsubscribed (global OR brand-specific)
                 brand_slug = draft.brand.slug if draft.brand else None
@@ -1154,14 +1161,14 @@ class EmailDraftAdmin(ModelAdmin):
                         total_in_pipeline += 1
                         continue
 
-                # Valid recipient
+                # Valid recipient - pass contact if found
                 valid_recipients.append({
                     'email': recipient_email,
                     'name': recipient.get('name', ''),
                     'company': recipient.get('company', ''),
                     'website': recipient.get('website', ''),
                     'contact': contact,
-                    'brand_slug': brand_slug,  # Pass brand for later use
+                    'brand_slug': brand_slug,
                 })
 
             if not valid_recipients:
@@ -1239,25 +1246,41 @@ class EmailDraftAdmin(ModelAdmin):
                     if result.get('success'):
                         sent_count += 1
 
-                        # Get or create contact using normalized email
-                        normalized_email = recipient_email.lower().strip()
-                        contact, created = Contact.objects.update_or_create(
-                            email=normalized_email,
-                            defaults={
-                                'brand': draft.brand,
-                                'name': recipient_name or extracted_name,
-                                'company': recipient_company,
-                                'website': recipient.get('website', ''),
-                                'status': 'contacted',
-                                'last_emailed_at': timezone.now(),
-                                'source': 'email_composer'
-                            }
-                        )
-                        if created:
-                            contact.email_count = 1
+                        # Get or create contact - email is already normalized from earlier
+                        if not contact:
+                            # Try to find with case-insensitive search (handles old data)
+                            contact = Contact.objects.filter(email__iexact=recipient_email).first()
+
+                        if not contact:
+                            # Create new contact using savepoint to handle UNIQUE errors
+                            from django.db import transaction
+                            try:
+                                with transaction.atomic():
+                                    contact = Contact.objects.create(
+                                        email=recipient_email,  # Already normalized
+                                        brand=draft.brand,
+                                        name=recipient_name or extracted_name,
+                                        company=recipient_company,
+                                        website=recipient.get('website', ''),
+                                        status='contacted',
+                                        last_emailed_at=timezone.now(),
+                                        email_count=1,
+                                        source='email_composer'
+                                    )
+                            except Exception:
+                                # If create fails, contact must exist - fetch it
+                                contact = Contact.objects.filter(email__iexact=recipient_email).first()
+                                if contact:
+                                    contact.last_emailed_at = timezone.now()
+                                    contact.email_count = (contact.email_count or 0) + 1
+                                    contact.status = 'contacted'
+                                    contact.save(update_fields=['last_emailed_at', 'email_count', 'status'])
                         else:
+                            # Update existing contact
+                            contact.last_emailed_at = timezone.now()
                             contact.email_count = (contact.email_count or 0) + 1
-                        contact.save(update_fields=['email_count'])
+                            contact.status = 'contacted'
+                            contact.save(update_fields=['last_emailed_at', 'email_count', 'status'])
 
                         # Create deal in pipeline at "Invited" stage
                         if contact:
@@ -1420,16 +1443,20 @@ class EmailDraftAdmin(ModelAdmin):
         total_in_pipeline = 0
 
         for recipient in all_recipients:
-            recipient_email = recipient['email']
+            # Normalize email immediately for consistent lookups
+            recipient_email = Contact.normalize_email(recipient['email'])
+            if not recipient_email:
+                continue
+
             contact = recipient.get('contact')
 
-            # Get or find contact (case-insensitive lookup)
+            # Get or find contact using normalized email (exact match on lowercase)
             if not contact:
-                contact = Contact.objects.filter(email__iexact=recipient_email).first()
+                contact = Contact.objects.filter(email=recipient_email).first()
 
             # Check unsubscribed (global OR brand-specific)
+            brand_slug = draft.brand.slug if draft.brand else None
             if contact:
-                brand_slug = draft.brand.slug if draft.brand else None
                 if contact.is_unsubscribed or contact.is_unsubscribed_from_brand(brand_slug):
                     total_blocked += 1
                     continue
@@ -1444,13 +1471,13 @@ class EmailDraftAdmin(ModelAdmin):
                     total_in_pipeline += 1
                     continue
 
-            # Valid recipient
+            # Valid recipient - pass contact if found
             valid_recipients.append({
                 'email': recipient_email,
                 'name': recipient.get('name', ''),
                 'company': recipient.get('company', ''),
                 'website': recipient.get('website', ''),
-                'contact': contact
+                'contact': contact  # Will be used later to avoid duplicate creation
             })
 
         if not valid_recipients:
@@ -1529,26 +1556,35 @@ class EmailDraftAdmin(ModelAdmin):
                 if result.get('success'):
                     sent_count += 1
 
-                    # Get or create contact using normalized email
+                    # Get or create contact - email is already normalized from earlier
                     if not contact:
-                        normalized_email = recipient_email.lower().strip()
-                        contact, created = Contact.objects.update_or_create(
-                            email=normalized_email,
-                            defaults={
-                                'brand': draft.brand,
-                                'name': recipient_name or extracted_name,
-                                'company': recipient_company,
-                                'website': recipient.get('website', ''),
-                                'status': 'contacted',
-                                'last_emailed_at': timezone.now(),
-                                'source': 'email_composer'
-                            }
-                        )
-                        if created:
-                            contact.email_count = 1
-                        else:
-                            contact.email_count = (contact.email_count or 0) + 1
-                        contact.save(update_fields=['email_count'])
+                        # Try to find with case-insensitive search first (handles old non-normalized data)
+                        contact = Contact.objects.filter(email__iexact=recipient_email).first()
+
+                    if not contact:
+                        # Create new contact using savepoint to handle UNIQUE errors gracefully
+                        from django.db import transaction
+                        try:
+                            with transaction.atomic():
+                                contact = Contact.objects.create(
+                                    email=recipient_email,  # Already normalized
+                                    brand=draft.brand,
+                                    name=recipient_name or extracted_name,
+                                    company=recipient_company,
+                                    website=recipient.get('website', ''),
+                                    status='contacted',
+                                    last_emailed_at=timezone.now(),
+                                    email_count=1,
+                                    source='email_composer'
+                                )
+                        except Exception:
+                            # If create fails, contact must exist - fetch it
+                            contact = Contact.objects.filter(email__iexact=recipient_email).first()
+                            if contact:
+                                contact.last_emailed_at = timezone.now()
+                                contact.email_count = (contact.email_count or 0) + 1
+                                contact.status = 'contacted'
+                                contact.save(update_fields=['last_emailed_at', 'email_count', 'status'])
                     else:
                         # Update existing contact
                         contact.last_emailed_at = timezone.now()
@@ -1556,18 +1592,19 @@ class EmailDraftAdmin(ModelAdmin):
                         contact.status = 'contacted'
                         contact.save(update_fields=['last_emailed_at', 'email_count', 'status'])
 
-                    # Create deal in pipeline at "Invited" stage
-                    Deal.objects.create(
-                        contact=contact,
-                        pipeline=draft.pipeline,
-                        current_stage=invited_stage,
-                        status='active',
-                        emails_sent=1,
-                        last_contact_date=timezone.now(),
-                        next_action_date=timezone.now() + timezone.timedelta(days=invited_stage.days_until_followup or 3),
-                        ai_notes=f"First contact via Email Composer\nSubject: {subject}"
-                    )
-                    total_deals += 1
+                    # Create deal in pipeline at "Invited" stage - only if we have a contact
+                    if contact:
+                        Deal.objects.create(
+                            contact=contact,
+                            pipeline=draft.pipeline,
+                            current_stage=invited_stage,
+                            status='active',
+                            emails_sent=1,
+                            last_contact_date=timezone.now(),
+                            next_action_date=timezone.now() + timezone.timedelta(days=invited_stage.days_until_followup or 3),
+                            ai_notes=f"First contact via Email Composer\nSubject: {subject}"
+                        )
+                        total_deals += 1
                 else:
                     failed_count += 1
 
