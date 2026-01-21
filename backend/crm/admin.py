@@ -1222,29 +1222,22 @@ class EmailDraftAdmin(ModelAdmin):
                     if result.get('success'):
                         sent_count += 1
 
-                        # Get or create contact (case-insensitive lookup)
-                        contact = Contact.objects.filter(email__iexact=recipient_email).first()
-                        if not contact:
-                            try:
-                                contact = Contact.objects.create(
-                                    email=recipient_email.lower(),  # Normalize to lowercase
-                                    brand=draft.brand,
-                                    name=recipient_name or extracted_name,
-                                    company=recipient_company,
-                                    website=recipient.get('website', ''),
-                                    status='contacted',
-                                    last_emailed_at=timezone.now(),
-                                    email_count=1,
-                                    source='email_composer'
-                                )
-                            except Exception:
-                                # If creation fails, try to get existing contact
-                                contact = Contact.objects.filter(email__iexact=recipient_email).first()
-                                if contact:
-                                    contact.last_emailed_at = timezone.now()
-                                    contact.email_count = (contact.email_count or 0) + 1
-                                    contact.save(update_fields=['last_emailed_at', 'email_count'])
-                        else:
+                        # Get or create contact (atomic operation - no transaction issues)
+                        contact, created = Contact.objects.get_or_create(
+                            email__iexact=recipient_email,
+                            defaults={
+                                'email': recipient_email.lower(),
+                                'brand': draft.brand,
+                                'name': recipient_name or extracted_name,
+                                'company': recipient_company,
+                                'website': recipient.get('website', ''),
+                                'status': 'contacted',
+                                'last_emailed_at': timezone.now(),
+                                'email_count': 1,
+                                'source': 'email_composer'
+                            }
+                        )
+                        if not created:
                             # Update existing contact
                             contact.last_emailed_at = timezone.now()
                             contact.email_count = (contact.email_count or 0) + 1
@@ -1521,28 +1514,28 @@ class EmailDraftAdmin(ModelAdmin):
                 if result.get('success'):
                     sent_count += 1
 
-                    # Create contact if doesn't exist
+                    # Get or create contact (atomic operation - no transaction issues)
                     if not contact:
-                        try:
-                            contact = Contact.objects.create(
-                                brand=draft.brand,
-                                email=recipient_email,
-                                name=recipient_name or extracted_name,  # Use extracted name if no name provided
-                                company=recipient_company,
-                                website=recipient.get('website', ''),
-                                status='contacted',
-                                last_emailed_at=timezone.now(),
-                                email_count=1,
-                                source='email_composer'
-                            )
-                        except Exception:
-                            # Contact may exist with different case - fetch it
-                            contact = Contact.objects.filter(email__iexact=recipient_email).first()
-                            if contact:
-                                contact.last_emailed_at = timezone.now()
-                                contact.email_count = (contact.email_count or 0) + 1
-                                contact.status = 'contacted'
-                                contact.save(update_fields=['last_emailed_at', 'email_count', 'status'])
+                        contact, created = Contact.objects.get_or_create(
+                            email__iexact=recipient_email,
+                            defaults={
+                                'brand': draft.brand,
+                                'email': recipient_email.lower(),
+                                'name': recipient_name or extracted_name,
+                                'company': recipient_company,
+                                'website': recipient.get('website', ''),
+                                'status': 'contacted',
+                                'last_emailed_at': timezone.now(),
+                                'email_count': 1,
+                                'source': 'email_composer'
+                            }
+                        )
+                        if not created:
+                            # Existing contact - update it
+                            contact.last_emailed_at = timezone.now()
+                            contact.email_count = (contact.email_count or 0) + 1
+                            contact.status = 'contacted'
+                            contact.save(update_fields=['last_emailed_at', 'email_count', 'status'])
                     else:
                         # Update existing contact
                         contact.last_emailed_at = timezone.now()
