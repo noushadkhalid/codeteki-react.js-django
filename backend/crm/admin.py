@@ -1169,28 +1169,36 @@ class EmailDraftAdmin(ModelAdmin):
 
             try:
                 # Send to each recipient individually with personalized unsubscribe link
+                from crm.services.ai_agent import CRMAIAgent
+                ai_agent = CRMAIAgent()
+
                 for recipient in valid_recipients:
                     contact = recipient.get('contact')
                     recipient_email = recipient['email']
                     recipient_name = recipient.get('name', '')
                     recipient_company = recipient.get('company', '')
 
-                    # Generate smart salutation
-                    first_name = recipient_name.split()[0] if recipient_name else ''
-                    if first_name:
-                        salutation = f"Hi {first_name},"
-                    else:
-                        salutation = "Hi there,"
+                    # Generate smart salutation (extracts name from email like john.smith@company.com → "Hi John,")
+                    salutation = ai_agent.get_smart_salutation(
+                        email=recipient_email,
+                        name=recipient_name,
+                        company=recipient_company
+                    )
 
                     # Replace {{SALUTATION}} placeholder in body
                     personalized_body = body_text.replace('{{SALUTATION}}', salutation)
+
+                    # Extract first name for template (from salutation like "Hi John," → "John")
+                    extracted_name = salutation.replace('Hi ', '').replace(',', '').strip() if salutation.startswith('Hi ') else 'there'
+                    if ' Team' in extracted_name:
+                        extracted_name = 'there'  # Don't use "Company Team" as name
 
                     # Generate styled HTML with correct recipient email for unsubscribe link
                     styled_email = get_styled_email(
                         brand_slug=draft.brand.slug if draft.brand else 'desifirms',
                         pipeline_type=draft.pipeline.pipeline_type if draft.pipeline else 'business',
                         email_type=draft.email_type or 'directory_invitation',
-                        recipient_name=first_name or 'there',
+                        recipient_name=extracted_name,
                         recipient_email=recipient_email,  # Correct email for unsubscribe!
                         recipient_company=recipient_company,
                         subject=subject,
@@ -1214,7 +1222,7 @@ class EmailDraftAdmin(ModelAdmin):
                             contact = Contact.objects.create(
                                 brand=draft.brand,
                                 email=recipient_email,
-                                name=recipient_name,
+                                name=recipient_name or extracted_name,  # Use extracted name if no name provided
                                 company=recipient_company,
                                 website=recipient.get('website', ''),
                                 status='contacted',
@@ -1448,28 +1456,36 @@ class EmailDraftAdmin(ModelAdmin):
 
         try:
             # Send to each recipient individually with personalized unsubscribe link
+            from crm.services.ai_agent import CRMAIAgent
+            ai_agent = CRMAIAgent()
+
             for recipient in valid_recipients:
                 contact = recipient.get('contact')
                 recipient_email = recipient['email']
                 recipient_name = recipient.get('name', '')
                 recipient_company = recipient.get('company', '')
 
-                # Generate smart salutation
-                first_name = recipient_name.split()[0] if recipient_name else ''
-                if first_name:
-                    salutation = f"Hi {first_name},"
-                else:
-                    salutation = "Hi there,"
+                # Generate smart salutation (extracts name from email like john.smith@company.com → "Hi John,")
+                salutation = ai_agent.get_smart_salutation(
+                    email=recipient_email,
+                    name=recipient_name,
+                    company=recipient_company
+                )
 
                 # Replace {{SALUTATION}} placeholder in body
                 personalized_body = body_text.replace('{{SALUTATION}}', salutation)
+
+                # Extract first name for template (from salutation like "Hi John," → "John")
+                extracted_name = salutation.replace('Hi ', '').replace(',', '').strip() if salutation.startswith('Hi ') else 'there'
+                if ' Team' in extracted_name:
+                    extracted_name = 'there'  # Don't use "Company Team" as name
 
                 # Generate styled HTML with correct recipient email for unsubscribe link
                 styled_email = get_styled_email(
                     brand_slug=draft.brand.slug if draft.brand else 'desifirms',
                     pipeline_type=draft.pipeline.pipeline_type if draft.pipeline else 'business',
                     email_type=draft.email_type or 'directory_invitation',
-                    recipient_name=first_name or 'there',
+                    recipient_name=extracted_name,
                     recipient_email=recipient_email,  # Correct email for unsubscribe!
                     recipient_company=recipient_company,
                     subject=subject,
@@ -1493,7 +1509,7 @@ class EmailDraftAdmin(ModelAdmin):
                         contact = Contact.objects.create(
                             brand=draft.brand,
                             email=recipient_email,
-                            name=recipient_name,
+                            name=recipient_name or extracted_name,  # Use extracted name if no name provided
                             company=recipient_company,
                             website=recipient.get('website', ''),
                             status='contacted',
