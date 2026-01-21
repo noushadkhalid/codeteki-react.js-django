@@ -975,6 +975,21 @@ def pipeline_board(request, pipeline_id):
     total_won = Deal.objects.filter(pipeline=pipeline, status='won').count()
     total_lost = Deal.objects.filter(pipeline=pipeline, status='lost').count()
 
+    # Lost deals grouped by reason
+    lost_deals = Deal.objects.filter(
+        pipeline=pipeline,
+        status='lost'
+    ).select_related('contact').order_by('-updated_at')[:50]
+
+    lost_by_reason = {}
+    for deal in lost_deals:
+        reason = deal.lost_reason or 'other'
+        reason_display = dict(Deal._meta.get_field('lost_reason').choices).get(reason, reason.replace('_', ' ').title())
+        if reason not in lost_by_reason:
+            lost_by_reason[reason] = {'display': reason_display, 'deals': [], 'count': 0}
+        lost_by_reason[reason]['deals'].append(deal)
+        lost_by_reason[reason]['count'] += 1
+
     # Get admin context for Unfold sidebar
     context = {
         **admin.site.each_context(request),
@@ -984,6 +999,7 @@ def pipeline_board(request, pipeline_id):
         'total_active': total_active,
         'total_won': total_won,
         'total_lost': total_lost,
+        'lost_by_reason': lost_by_reason,
         'today': timezone.now().date(),
     }
     return render(request, 'admin/crm/pipeline_board.html', context)
@@ -1104,7 +1120,7 @@ class UnsubscribeView(View):
             # Use brand-specific unsubscribe (doesn't affect other brands)
             contact.unsubscribe_from_brand(brand_slug, reason or 'Clicked unsubscribe link')
 
-            # Move active deals to "Not Interested" - only for this brand's pipelines
+            # Move active deals to "Lost" with reason - only for this brand's pipelines
             for deal in contact.deals.filter(status='active'):
                 # Only affect deals from the same brand
                 if deal.pipeline.brand and deal.pipeline.brand.slug.lower() == brand_slug.lower():
@@ -1114,6 +1130,7 @@ class UnsubscribeView(View):
                     if not_interested_stage:
                         deal.current_stage = not_interested_stage
                     deal.status = 'lost'
+                    deal.lost_reason = 'unsubscribed'
                     deal.ai_notes = (deal.ai_notes or '') + f'\n[AUTO] Unsubscribed from {brand_slug} via link on {timezone.now().strftime("%Y-%m-%d")}'
                     deal.save()
         else:

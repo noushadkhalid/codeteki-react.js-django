@@ -85,5 +85,42 @@
         </div>
         {% endfor %}
     </div>
+
+    <!-- Lost Deals Section -->
+    {% if lost_by_reason %}
+    <div style="margin-top: 32px;">
+        <h2 style="font-size: 18px; font-weight: 600; color: #374151; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+            <svg width="20" height="20" fill="none" stroke="#dc2626" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+            Lost Deals ({{ total_lost }})
+        </h2>
+        <div style="display: flex; gap: 16px; overflow-x: auto; padding-bottom: 16px;">
+            {% for reason, data in lost_by_reason.items %}
+            <div style="min-width: 280px; max-width: 280px; background: #fef2f2; border-radius: 10px; border: 1px solid #fecaca; display: flex; flex-direction: column;">
+                <!-- Column Header -->
+                <div style="padding: 14px 16px; border-bottom: 1px solid #fecaca; display: flex; justify-content: space-between; align-items: center; background: white; border-radius: 10px 10px 0 0;">
+                    <span style="font-weight: 600; color: #dc2626; font-size: 14px;">
+                        {% if reason == 'unsubscribed' %}🚫{% elif reason == 'no_response' %}😶{% elif reason == 'not_interested' %}👎{% else %}❌{% endif %}
+                        {{ data.display }}
+                    </span>
+                    <span style="background: #dc2626; color: white; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;">{{ data.count }}</span>
+                </div>
+
+                <!-- Cards Container -->
+                <div style="padding: 12px; flex: 1; overflow-y: auto; max-height: 300px;">
+                    {% for deal in data.deals %}
+                    <a href="{% url 'admin:crm_deal_change' deal.id %}" style="display: block; background: white; border-radius: 8px; padding: 12px; margin-bottom: 8px; text-decoration: none; border: 1px solid #fecaca; border-left: 3px solid #dc2626; transition: all 0.15s; opacity: 0.85;"
+                       onmouseover="this.style.opacity='1';"
+                       onmouseout="this.style.opacity='0.85';">
+                        <div style="font-weight: 600; color: #374151; margin-bottom: 2px; font-size: 13px;">{{ deal.contact.name|default:"No Name" }}</div>
+                        <div style="color: #9ca3af; font-size: 11px; word-break: break-all;">{{ deal.contact.email }}</div>
+                        <div style="color: #9ca3af; font-size: 10px; margin-top: 4px;">{{ deal.updated_at|date:"M j, Y" }}</div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

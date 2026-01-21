@@ -303,6 +303,22 @@ class Deal(models.Model):
         related_name='deals'
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    lost_reason = models.CharField(
+        max_length=50,
+        blank=True,
+        choices=[
+            ('', 'N/A'),
+            ('unsubscribed', 'Unsubscribed'),
+            ('no_response', 'No Response'),
+            ('not_interested', 'Not Interested'),
+            ('competitor', 'Chose Competitor'),
+            ('budget', 'Budget Issues'),
+            ('timing', 'Bad Timing'),
+            ('invalid_email', 'Invalid Email'),
+            ('other', 'Other'),
+        ],
+        help_text="Reason for losing the deal"
+    )
     ai_notes = models.TextField(blank=True, help_text="AI observations and analysis")
     next_action_date = models.DateTimeField(null=True, blank=True)
     value = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)

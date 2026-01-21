@@ -303,12 +303,13 @@ class DealAdmin(ModelAdmin):
         'pipeline',
         'current_stage_display',
         'status_badge',
+        'lost_reason_display',
         'next_action_date',
         'emails_sent',
         'value_display',
         'created_at',
     ]
-    list_filter = ['pipeline', 'current_stage', 'status', 'created_at']
+    list_filter = ['pipeline', 'current_stage', 'status', 'lost_reason', 'created_at']
     search_fields = ['contact__name', 'contact__email', 'contact__company']
     readonly_fields = ['id', 'created_at', 'updated_at', 'stage_entered_at', 'emails_sent']
     inlines = [DealActivityInline, EmailLogInline]
@@ -316,7 +317,7 @@ class DealAdmin(ModelAdmin):
 
     fieldsets = (
         ('Deal Information', {
-            'fields': ('contact', 'pipeline', 'current_stage', 'status', 'value')
+            'fields': ('contact', 'pipeline', 'current_stage', 'status', 'lost_reason', 'value')
         }),
         ('AI & Automation', {
             'fields': ('ai_notes', 'next_action_date')
@@ -350,6 +351,22 @@ class DealAdmin(ModelAdmin):
             'paused': 'warning',
         }
         return obj.get_status_display(), colors.get(obj.status, 'info')
+
+    @display(description="Lost Reason", label=True)
+    def lost_reason_display(self, obj):
+        if obj.status != 'lost' or not obj.lost_reason:
+            return "-", "default"
+        reason_colors = {
+            'unsubscribed': 'danger',
+            'no_response': 'warning',
+            'not_interested': 'warning',
+            'competitor': 'info',
+            'budget': 'info',
+            'timing': 'info',
+            'invalid_email': 'danger',
+            'other': 'default',
+        }
+        return obj.get_lost_reason_display(), reason_colors.get(obj.lost_reason, 'default')
 
     @display(description="Value")
     def value_display(self, obj):
