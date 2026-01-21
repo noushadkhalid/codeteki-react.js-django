@@ -159,6 +159,10 @@ class ContactAdmin(ModelAdmin):
 
     @display(description="Status", label=True)
     def status_badge(self, obj):
+        # If unsubscribed (globally or brand-specific), always show as danger
+        if obj.is_unsubscribed or obj.unsubscribed_brands:
+            return "UNSUBSCRIBED", "danger"
+
         colors = {
             'new': 'info',
             'contacted': 'warning',
@@ -1168,16 +1172,26 @@ class EmailDraftAdmin(ModelAdmin):
                     recipient_name = recipient.get('name', '')
                     recipient_company = recipient.get('company', '')
 
+                    # Generate smart salutation
+                    first_name = recipient_name.split()[0] if recipient_name else ''
+                    if first_name:
+                        salutation = f"Hi {first_name},"
+                    else:
+                        salutation = "Hi there,"
+
+                    # Replace {{SALUTATION}} placeholder in body
+                    personalized_body = body_text.replace('{{SALUTATION}}', salutation)
+
                     # Generate styled HTML with correct recipient email for unsubscribe link
                     styled_email = get_styled_email(
                         brand_slug=draft.brand.slug if draft.brand else 'desifirms',
                         pipeline_type=draft.pipeline.pipeline_type if draft.pipeline else 'business',
                         email_type=draft.email_type or 'directory_invitation',
-                        recipient_name=recipient_name.split()[0] if recipient_name else 'there',
+                        recipient_name=first_name or 'there',
                         recipient_email=recipient_email,  # Correct email for unsubscribe!
                         recipient_company=recipient_company,
                         subject=subject,
-                        body=body_text,
+                        body=personalized_body,  # Use personalized body with salutation
                     )
                     html_body = styled_email['html']
 
@@ -1437,16 +1451,26 @@ class EmailDraftAdmin(ModelAdmin):
                 recipient_name = recipient.get('name', '')
                 recipient_company = recipient.get('company', '')
 
+                # Generate smart salutation
+                first_name = recipient_name.split()[0] if recipient_name else ''
+                if first_name:
+                    salutation = f"Hi {first_name},"
+                else:
+                    salutation = "Hi there,"
+
+                # Replace {{SALUTATION}} placeholder in body
+                personalized_body = body_text.replace('{{SALUTATION}}', salutation)
+
                 # Generate styled HTML with correct recipient email for unsubscribe link
                 styled_email = get_styled_email(
                     brand_slug=draft.brand.slug if draft.brand else 'desifirms',
                     pipeline_type=draft.pipeline.pipeline_type if draft.pipeline else 'business',
                     email_type=draft.email_type or 'directory_invitation',
-                    recipient_name=recipient_name.split()[0] if recipient_name else 'there',
+                    recipient_name=first_name or 'there',
                     recipient_email=recipient_email,  # Correct email for unsubscribe!
                     recipient_company=recipient_company,
                     subject=subject,
-                    body=body_text,
+                    body=personalized_body,  # Use personalized body with salutation
                 )
                 html_body = styled_email['html']
 
