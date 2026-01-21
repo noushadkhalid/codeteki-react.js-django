@@ -108,17 +108,19 @@ def queue_deal_email(self, deal_id: str, email_type: str = 'followup'):
     from crm.models import Deal, EmailLog, DealActivity
     from crm.services.ai_agent import CRMAIAgent
     from crm.services.email_service import get_email_service
+    from crm.services.email_templates import get_styled_email, get_pipeline_type_from_name
 
     logger.info(f"Queuing email for deal {deal_id}, type: {email_type}")
 
     try:
-        deal = Deal.objects.select_related('contact', 'pipeline', 'current_stage').get(id=deal_id)
+        deal = Deal.objects.select_related('contact', 'pipeline', 'pipeline__brand', 'current_stage').get(id=deal_id)
     except Deal.DoesNotExist:
         logger.error(f"Deal {deal_id} not found")
         return {'success': False, 'error': 'Deal not found'}
 
     ai_agent = CRMAIAgent()
-    email_service = get_email_service()
+    brand = deal.pipeline.brand if deal.pipeline else None
+    email_service = get_email_service(brand)
 
     # Compose email using AI
     email_result = ai_agent.compose_email(deal, context={'email_type': email_type})
@@ -127,20 +129,38 @@ def queue_deal_email(self, deal_id: str, email_type: str = 'followup'):
         logger.error(f"Failed to compose email for deal {deal_id}")
         return {'success': False, 'error': 'Email composition failed'}
 
-    # Create email log entry
+    # Wrap in styled HTML template
+    brand_slug = brand.slug if brand else 'desifirms'
+    pipeline_type = deal.pipeline.pipeline_type if deal.pipeline else 'sales'
+    contact = deal.contact
+
+    styled_email = get_styled_email(
+        brand_slug=brand_slug,
+        pipeline_type=pipeline_type,
+        email_type=email_type,
+        recipient_name=contact.name.split()[0] if contact.name else 'there',
+        recipient_email=contact.email,
+        recipient_company=contact.company,
+        subject=email_result['subject'],
+        body=email_result['body'],
+    )
+
+    html_body = styled_email['html']
+
+    # Create email log entry (store plain text for reference)
     email_log = EmailLog.objects.create(
         deal=deal,
         subject=email_result['subject'],
-        body=email_result['body'],
+        body=email_result['body'],  # Store plain text version
         to_email=deal.contact.email,
         ai_generated=True
     )
 
-    # Send email
+    # Send styled HTML email
     send_result = email_service.send(
         to=deal.contact.email,
         subject=email_result['subject'],
-        body=email_result['body'],
+        body=html_body,  # Send HTML version
         tracking_id=str(email_log.tracking_id)
     )
 
@@ -178,10 +198,10 @@ def send_scheduled_emails(self):
     """
     from crm.models import EmailLog, DealActivity
     from crm.services.email_service import get_email_service
+    from crm.services.email_templates import get_styled_email
 
     logger.info("Starting send_scheduled_emails task")
 
-    email_service = get_email_service()
     sent = 0
     errors = 0
 
@@ -189,14 +209,36 @@ def send_scheduled_emails(self):
     unsent_emails = EmailLog.objects.filter(
         sent_at__isnull=True,
         created_at__gte=timezone.now() - timedelta(hours=24)
-    ).select_related('deal', 'deal__contact')[:20]
+    ).select_related('deal', 'deal__contact', 'deal__pipeline', 'deal__pipeline__brand')[:20]
 
     for email_log in unsent_emails:
         try:
+            deal = email_log.deal
+            contact = deal.contact if deal else None
+            brand = deal.pipeline.brand if deal and deal.pipeline else None
+            email_service = get_email_service(brand)
+
+            # Wrap plain text body in styled HTML template
+            brand_slug = brand.slug if brand else 'desifirms'
+            pipeline_type = deal.pipeline.pipeline_type if deal and deal.pipeline else 'sales'
+
+            styled_email = get_styled_email(
+                brand_slug=brand_slug,
+                pipeline_type=pipeline_type,
+                email_type='followup',  # Default type for scheduled emails
+                recipient_name=contact.name.split()[0] if contact and contact.name else 'there',
+                recipient_email=email_log.to_email,
+                recipient_company=contact.company if contact else '',
+                subject=email_log.subject,
+                body=email_log.body,
+            )
+
+            html_body = styled_email['html']
+
             result = email_service.send(
                 to=email_log.to_email,
                 subject=email_log.subject,
-                body=email_log.body,
+                body=html_body,  # Send styled HTML
                 tracking_id=str(email_log.tracking_id)
             )
 

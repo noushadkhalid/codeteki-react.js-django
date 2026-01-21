@@ -1087,11 +1087,25 @@ class EmailDraftAdmin(ModelAdmin):
 
             # Get email content
             subject = draft.final_subject or draft.generated_subject
-            body = draft.final_body or draft.generated_body
+            body_text = draft.final_body or draft.generated_body
 
-            if not subject or not body:
+            if not subject or not body_text:
                 self.message_user(request, f"⚠️ {draft}: No content - generate first", messages.WARNING)
                 continue
+
+            # Wrap in styled HTML template
+            from crm.services.email_templates import get_styled_email
+            styled_email = get_styled_email(
+                brand_slug=draft.brand.slug if draft.brand else 'desifirms',
+                pipeline_type=draft.pipeline.pipeline_type if draft.pipeline else 'business',
+                email_type='directory_invitation',  # Default for email composer
+                recipient_name='there',  # Generic for bulk send
+                recipient_email='recipient@example.com',  # Placeholder, each recipient gets this
+                recipient_company='',
+                subject=subject,
+                body=body_text,
+            )
+            body = styled_email['html']
 
             # Get all recipients and filter
             all_recipients = draft.get_all_recipients()
@@ -1340,11 +1354,25 @@ class EmailDraftAdmin(ModelAdmin):
 
         # Get email content
         subject = draft.final_subject or draft.generated_subject
-        body = draft.final_body or draft.generated_body
+        body_text = draft.final_body or draft.generated_body
 
-        if not subject or not body:
+        if not subject or not body_text:
             self.message_user(request, f"⚠️ No content - generate or write email first", messages.WARNING)
             return HttpResponseRedirect(request.path)
+
+        # Wrap in styled HTML template
+        from crm.services.email_templates import get_styled_email
+        styled_email = get_styled_email(
+            brand_slug=draft.brand.slug if draft.brand else 'desifirms',
+            pipeline_type=draft.pipeline.pipeline_type if draft.pipeline else 'business',
+            email_type=draft.email_type or 'directory_invitation',
+            recipient_name='there',  # Generic for bulk send
+            recipient_email='recipient@example.com',  # Placeholder
+            recipient_company='',
+            subject=subject,
+            body=body_text,
+        )
+        body = styled_email['html']
 
         # Get all recipients and filter
         all_recipients = draft.get_all_recipients()
