@@ -337,12 +337,15 @@ def create_simple_html_wrapper(
                     </tr>
                     <!-- Footer -->
                     <tr>
-                        <td style="background: {bg_color}; padding: 25px 30px; border-top: 1px solid #333333; border-radius: 0 0 12px 12px; text-align: center;">
+                        <td style="background: {bg_color}; padding: 25px 30px; border-top: 1px solid #e5e7eb; border-radius: 0 0 12px 12px; text-align: center;">
                             <p style="color: #888888; font-size: 13px; margin: 0 0 10px 0;">
                                 <a href="{website}" style="color: {primary_color}; text-decoration: none;">{website}</a>
                             </p>
-                            <p style="color: #666666; font-size: 12px; margin: 0;">
+                            <p style="color: #666666; font-size: 12px; margin: 0 0 15px 0;">
                                 <a href="{unsubscribe_url}" style="color: #666666; text-decoration: underline;">Unsubscribe</a>
+                            </p>
+                            <p style="color: #9ca3af; font-size: 11px; margin: 0; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+                                Powered by <a href="https://codeteki.au/?utm_source=crm_email&utm_medium=email&utm_campaign=powered_by" style="color: #f9cd15; text-decoration: none; font-weight: 600;">Codeteki Digital Services</a>
                             </p>
                         </td>
                     </tr>
