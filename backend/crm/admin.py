@@ -54,8 +54,8 @@ class BrandAdmin(ModelAdmin):
             'classes': ['collapse']
         }),
         ('AI Configuration', {
-            'fields': ('ai_company_description', 'ai_value_proposition', 'backlink_content_types'),
-            'description': 'These are used to personalize AI-generated emails and pitches'
+            'fields': ('ai_company_description', 'ai_value_proposition', 'ai_business_updates', 'ai_target_context', 'ai_approach_style', 'backlink_content_types'),
+            'description': 'These are used to personalize AI-generated emails. Business updates and target context help AI write context-aware emails.'
         }),
     )
 
@@ -209,7 +209,65 @@ class ContactAdmin(ModelAdmin):
         )
         self.message_user(request, f"Resubscribed {updated} contact(s).")
 
-    actions = ['mark_unsubscribed', 'resubscribe']
+    @action(description="📊 Add to Pipeline (Follow-up Stage)")
+    def add_to_pipeline_followup(self, request, queryset):
+        """Add contacts to their brand's default pipeline at Follow-up stage (for already-contacted)."""
+        from crm.models import Pipeline, Deal
+        from django.utils import timezone
+
+        created = 0
+        skipped = 0
+
+        for contact in queryset:
+            # Skip if unsubscribed
+            if contact.is_unsubscribed:
+                skipped += 1
+                continue
+
+            # Find pipeline for this contact's brand
+            brand = contact.brand
+            if not brand:
+                skipped += 1
+                continue
+
+            pipeline = Pipeline.objects.filter(brand=brand, is_active=True).first()
+            if not pipeline:
+                skipped += 1
+                continue
+
+            # Check if already in this pipeline
+            existing = Deal.objects.filter(contact=contact, pipeline=pipeline, status='active').exists()
+            if existing:
+                skipped += 1
+                continue
+
+            # Find "Follow Up" or second stage
+            followup_stage = pipeline.stages.filter(name__icontains='follow').first()
+            if not followup_stage:
+                # Get second stage (skip Invited/first)
+                followup_stage = pipeline.stages.order_by('order')[1:2].first()
+            if not followup_stage:
+                followup_stage = pipeline.stages.first()
+
+            if followup_stage:
+                Deal.objects.create(
+                    contact=contact,
+                    pipeline=pipeline,
+                    current_stage=followup_stage,
+                    status='active',
+                    emails_sent=1,  # Assume already contacted
+                    last_contact_date=timezone.now(),
+                    next_action_date=timezone.now() + timezone.timedelta(days=followup_stage.days_until_followup or 3),
+                    ai_notes="Added manually to pipeline at follow-up stage (already contacted)"
+                )
+                created += 1
+
+        self.message_user(
+            request,
+            f"✅ Created {created} deals in pipeline. Skipped {skipped} (unsubscribed/existing/no pipeline)."
+        )
+
+    actions = ['mark_unsubscribed', 'resubscribe', 'add_to_pipeline_followup']
 
 
 # =============================================================================
@@ -1034,6 +1092,10 @@ class EmailDraftAdmin(ModelAdmin):
                     'value_proposition': draft.brand.ai_value_proposition or '',
                     'pipeline_type': draft.pipeline.pipeline_type if draft.pipeline else '',
                     'pipeline_name': draft.pipeline.name if draft.pipeline else '',
+                    # New context fields for smarter AI
+                    'business_updates': draft.brand.ai_business_updates or '',
+                    'target_context': draft.brand.ai_target_context or '',
+                    'approach_style': draft.brand.ai_approach_style or 'problem_solving',
                 }
 
                 result = ai_agent.compose_email_from_context(context)

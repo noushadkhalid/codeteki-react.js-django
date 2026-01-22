@@ -40,6 +40,26 @@ class Brand(models.Model):
         blank=True,
         help_text="Value proposition for outreach emails"
     )
+    ai_business_updates = models.TextField(
+        blank=True,
+        help_text="Recent updates AI should mention (e.g., 'NEW: Image search, real estate section. Pricing: Free plan, Standard $9.99, Premium $14.99, yearly savings')"
+    )
+    ai_target_context = models.TextField(
+        blank=True,
+        help_text="Target audience context (e.g., '20+ existing customers need to know about revamp, new features, better pricing')"
+    )
+    ai_approach_style = models.CharField(
+        max_length=50,
+        blank=True,
+        default='problem_solving',
+        choices=[
+            ('problem_solving', 'Problem-Solving (focus on solving their problems)'),
+            ('value_driven', 'Value-Driven (highlight benefits and value)'),
+            ('relationship', 'Relationship-First (build connection before pitching)'),
+            ('direct', 'Direct (clear and to the point)'),
+        ],
+        help_text="AI email writing approach style"
+    )
     backlink_content_types = models.JSONField(
         default=list,
         blank=True,
@@ -838,6 +858,11 @@ class EmailDraft(models.Model):
             ('partnership_intro', 'Partnership Introduction'),
             ('collaboration', 'Collaboration Proposal'),
             ('partnership_followup', 'Partnership Follow-up'),
+            # Re-engagement / Existing Customers
+            ('existing_customer_update', 'Existing Customer Update'),
+            ('win_back', 'Win-back Email'),
+            ('feature_announcement', 'New Feature Announcement'),
+            ('pricing_update', 'Pricing Update'),
             # Generic
             ('invitation', 'General Invitation'),
             ('followup', 'General Follow-up'),

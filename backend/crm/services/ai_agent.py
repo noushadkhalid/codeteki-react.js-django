@@ -33,16 +33,27 @@ class CRMAIAgent:
         'bookings', 'reservations', 'press', 'media', 'partner', 'partners', 'enquire'
     }
 
-    SYSTEM_PROMPT = """You are an expert sales and outreach AI assistant for Codeteki, a digital agency specializing in AI-powered web solutions and SEO services.
+    SYSTEM_PROMPT = """You are an expert personal assistant specializing in business communication and relationship building.
 
-Your role is to help automate and optimize sales and backlink outreach campaigns by:
-- Analyzing deals and recommending next actions
-- Writing personalized, professional outreach emails
-- Classifying incoming email replies
-- Scoring leads based on available information
+Your PRIMARY approach is PROBLEM-SOLVING, not selling:
+- Understand the recipient's likely challenges and pain points
+- Position offerings as solutions to their problems
+- Focus on value and benefits, not features
+- Build genuine relationships through helpful communication
 
-Always maintain a professional yet friendly tone. Focus on providing value to prospects.
-Never be pushy or spammy. Build genuine relationships."""
+Your role is to:
+- Write personalized, relevant emails that resonate with recipients
+- Adapt tone and style based on industry, audience, and context
+- Create emails that feel personal, not templated
+- Focus on the recipient's perspective, not the sender's
+
+CRITICAL RULES:
+1. NEVER be pushy or salesy - be helpful and valuable
+2. ALWAYS personalize based on available context
+3. Focus on THEIR problems, not YOUR services
+4. Use conversational, human language
+5. Keep emails concise and scannable
+6. Include clear but soft calls-to-action"""
 
     def __init__(self):
         self.ai_engine = AIContentEngine()
@@ -685,6 +696,10 @@ Respond in JSON format:
         brand_website = context.get('brand_website', '')
         brand_description = context.get('brand_description', 'a digital agency')
         value_proposition = context.get('value_proposition', '')
+        # New context fields for smarter AI
+        business_updates = context.get('business_updates', '')  # Recent news/updates to mention
+        target_context = context.get('target_context', '')  # Who we're targeting and why
+        approach_style = context.get('approach_style', 'problem_solving')  # How to approach
 
         # Generate smart salutation based on email/name/company
         smart_salutation = self.get_smart_salutation(
@@ -834,6 +849,46 @@ Context: NEW platform with a classifieds section for the South Asian community.
             'collaboration': 'a collaboration proposal email. Detail specific ways to work together',
             'partnership_followup': 'a follow-up to a partnership proposal. Check interest, offer to discuss further',
 
+            # Re-engagement / Existing Customers
+            'existing_customer_update': '''a re-engagement email to an EXISTING customer/user who registered before recent platform updates.
+CONTEXT: This person already knows us and has used our platform before. We've made significant improvements.
+Key approach:
+- Acknowledge they're a valued existing user
+- Highlight what's NEW since they last used the platform
+- Use BUSINESS_UPDATES context if provided (new features, pricing changes, etc.)
+- Make them feel special - early adopters get priority
+- Invite them to check out the improvements
+- NO hard sell - they already trust us
+Tone: Warm, appreciative, exciting news to share''',
+
+            'win_back': '''a win-back email to re-engage someone who hasn't been active.
+CONTEXT: They registered but haven't engaged recently.
+Key approach:
+- Acknowledge it's been a while
+- Share what's improved/new
+- Offer help if they had issues before
+- Make it easy to return
+- Optional: special offer for returning
+Tone: Friendly, helpful, not guilt-tripping''',
+
+            'feature_announcement': '''an announcement email about new features or updates.
+CONTEXT: Exciting news to share with existing users/contacts.
+Key approach:
+- Lead with the benefit, not the feature
+- Explain how it helps THEM
+- Use BUSINESS_UPDATES context for specifics
+- Clear CTA to try it out
+Tone: Excited but not over-the-top''',
+
+            'pricing_update': '''an email about pricing changes (usually good news - reductions/free tiers).
+CONTEXT: We've changed our pricing to be more accessible.
+Key approach:
+- Lead with the benefit (savings, free access, etc.)
+- Be transparent about changes
+- Highlight what they get at each tier
+- If applicable, grandfather existing customers
+Tone: Transparent, positive, appreciative''',
+
             # Generic
             'invitation': 'a professional invitation email',
             'followup': 'a professional follow-up email',
@@ -868,7 +923,38 @@ Codeteki Digital Services
 🌐 https://codeteki.au/"""
             company_tag = "Codeteki"
 
+        # Build approach instructions based on style
+        approach_instructions = {
+            'problem_solving': '''APPROACH: Problem-Solving Focus
+- Identify likely pain points/challenges the recipient faces
+- Position our offering as a SOLUTION, not a product
+- Frame everything from THEIR perspective
+- Ask questions that show you understand their situation
+- Don't sell - help them solve a problem''',
+            'value_driven': '''APPROACH: Value-Driven Focus
+- Lead with benefits and outcomes
+- Quantify value where possible
+- Show ROI or clear advantages
+- Focus on what they GAIN, not what we offer
+- Make the value proposition crystal clear''',
+            'relationship': '''APPROACH: Relationship-First Focus
+- Build rapport and connection first
+- Show genuine interest in them
+- Find common ground or shared values
+- Don't pitch in first email - establish relationship
+- Be human, warm, and authentic''',
+            'direct': '''APPROACH: Direct Communication
+- Get to the point quickly
+- Respect their time
+- Clear, concise messaging
+- Obvious CTA
+- No fluff or pleasantries'''
+        }
+        approach_desc = approach_instructions.get(approach_style, approach_instructions['problem_solving'])
+
         prompt = f"""Write {email_desc} with the following requirements:
+
+{approach_desc}
 
 SENDER INFORMATION:
 - Company: {brand_name}
@@ -879,6 +965,12 @@ SENDER INFORMATION:
 - Contact: 0424 538 777
 - Company Tag: {company_tag}
 
+{f'''BUSINESS UPDATES (use these naturally if relevant):
+{business_updates}
+''' if business_updates else ''}
+{f'''TARGET CONTEXT (understand who we're reaching):
+{target_context}
+''' if target_context else ''}
 PIPELINE CONTEXT:
 - Pipeline: {pipeline_name if pipeline_name else 'General'}
 - Category: {pipeline_type if pipeline_type else 'General outreach'}
@@ -901,7 +993,7 @@ TONE & STYLE:
 {tone_desc}
 
 USER SUGGESTIONS/KEY POINTS TO INCLUDE:
-{suggestions if suggestions else 'No specific suggestions provided - write a general professional email.'}
+{suggestions if suggestions else 'No specific suggestions provided - use the context above to write an appropriate email.'}
 
 STRICT FORMATTING RULES:
 1. Start with "{{{{SALUTATION}}}}" on its OWN LINE, followed by a blank line
