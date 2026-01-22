@@ -33,27 +33,35 @@ class CRMAIAgent:
         'bookings', 'reservations', 'press', 'media', 'partner', 'partners', 'enquire'
     }
 
-    SYSTEM_PROMPT = """You are an expert personal assistant specializing in business communication and relationship building.
+    SYSTEM_PROMPT = """You are an expert personal assistant specializing in business communication for two Australian brands:
 
-Your PRIMARY approach is PROBLEM-SOLVING, not selling:
-- Understand the recipient's likely challenges and pain points
-- Position offerings as solutions to their problems
-- Focus on value and benefits, not features
-- Build genuine relationships through helpful communication
+**DESI FIRMS** (desifirms.com.au):
+- Community platform for South Asian businesses in Australia
+- FREE business directory - list your business FREE FOREVER
+- NEW features: Image search, Real Estate section, Events, Classifieds
+- Target: South Asian business owners, real estate agents, event organizers
+- Tone: Warm, community-focused, inviting them to join/grow together
+- Key message: "List your business FREE forever" - never mention specific prices
 
-Your role is to:
-- Write personalized, relevant emails that resonate with recipients
-- Adapt tone and style based on industry, audience, and context
-- Create emails that feel personal, not templated
-- Focus on the recipient's perspective, not the sender's
+**CODETEKI** (codeteki.au):
+- Digital agency offering AI-powered web solutions, SEO, development
+- Target: Businesses needing websites, SEO, AI automation
+- Tone: Professional, tech-savvy, solution-oriented
+- Key message: Help businesses grow with modern technology
+
+YOUR APPROACH:
+- PRIMARY: Problem-solving (understand their challenges, offer solutions)
+- Focus on THEIR perspective, not yours
+- Be helpful and valuable, never pushy
+- Write like a human, not a template
+- Keep emails concise and scannable
 
 CRITICAL RULES:
-1. NEVER be pushy or salesy - be helpful and valuable
-2. ALWAYS personalize based on available context
-3. Focus on THEIR problems, not YOUR services
-4. Use conversational, human language
-5. Keep emails concise and scannable
-6. Include clear but soft calls-to-action"""
+1. NEVER mention specific prices in emails (say "FREE" or "affordable plans")
+2. NEVER be salesy - be genuinely helpful
+3. ALWAYS adapt tone based on brand and recipient
+4. Personalize based on available context
+5. Include soft but clear calls-to-action"""
 
     def __init__(self):
         self.ai_engine = AIContentEngine()
@@ -853,41 +861,43 @@ Context: NEW platform with a classifieds section for the South Asian community.
             'existing_customer_update': '''a re-engagement email to an EXISTING customer/user who registered before recent platform updates.
 CONTEXT: This person already knows us and has used our platform before. We've made significant improvements.
 Key approach:
-- Acknowledge they're a valued existing user
-- Highlight what's NEW since they last used the platform
-- Use BUSINESS_UPDATES context if provided (new features, pricing changes, etc.)
-- Make them feel special - early adopters get priority
+- Acknowledge they're a valued existing user/early supporter
+- Highlight what's NEW since they last visited (new features, improvements)
+- For Desi Firms: mention image search, real estate section, events - still FREE forever
+- Make them feel special - they were here from the beginning
 - Invite them to check out the improvements
-- NO hard sell - they already trust us
+- NO prices mentioned - just "still FREE" or "even better now"
 Tone: Warm, appreciative, exciting news to share''',
 
             'win_back': '''a win-back email to re-engage someone who hasn't been active.
 CONTEXT: They registered but haven't engaged recently.
 Key approach:
-- Acknowledge it's been a while
-- Share what's improved/new
-- Offer help if they had issues before
-- Make it easy to return
-- Optional: special offer for returning
-Tone: Friendly, helpful, not guilt-tripping''',
+- Acknowledge it's been a while (without guilt)
+- Share what's improved/new since they left
+- Ask if they had any issues we can help with
+- Make it easy to come back - no barriers
+- Emphasize it's still FREE (for Desi Firms)
+Tone: Friendly, helpful, understanding''',
 
             'feature_announcement': '''an announcement email about new features or updates.
 CONTEXT: Exciting news to share with existing users/contacts.
 Key approach:
-- Lead with the benefit, not the feature
-- Explain how it helps THEM
-- Use BUSINESS_UPDATES context for specifics
+- Lead with how this helps THEM (problem it solves)
+- Explain the new feature in simple terms
+- For Desi Firms: image search helps customers find them, real estate expands reach
 - Clear CTA to try it out
-Tone: Excited but not over-the-top''',
+- No prices - focus on value
+Tone: Excited but genuine''',
 
-            'pricing_update': '''an email about pricing changes (usually good news - reductions/free tiers).
-CONTEXT: We've changed our pricing to be more accessible.
+            'pricing_update': '''an email about platform improvements and accessibility.
+CONTEXT: We've made the platform more accessible.
 Key approach:
-- Lead with the benefit (savings, free access, etc.)
-- Be transparent about changes
-- Highlight what they get at each tier
-- If applicable, grandfather existing customers
-Tone: Transparent, positive, appreciative''',
+- Focus on accessibility and value, NOT specific prices
+- For Desi Firms: "List your business FREE forever" - that's the message
+- Mention there are optional premium features for those who want more
+- Don't list price tiers - just say "affordable" or "free to start"
+- Emphasize no obligation, no credit card required
+Tone: Welcoming, no-pressure''',
 
             # Generic
             'invitation': 'a professional invitation email',
@@ -923,32 +933,36 @@ Codeteki Digital Services
 🌐 https://codeteki.au/"""
             company_tag = "Codeteki"
 
-        # Build approach instructions based on style
+        # Build approach instructions based on style (problem_solving is default and recommended)
         approach_instructions = {
-            'problem_solving': '''APPROACH: Problem-Solving Focus
-- Identify likely pain points/challenges the recipient faces
-- Position our offering as a SOLUTION, not a product
-- Frame everything from THEIR perspective
-- Ask questions that show you understand their situation
-- Don't sell - help them solve a problem''',
-            'value_driven': '''APPROACH: Value-Driven Focus
-- Lead with benefits and outcomes
-- Quantify value where possible
-- Show ROI or clear advantages
+            'problem_solving': '''APPROACH: Problem-Solving (RECOMMENDED DEFAULT)
+- Think about what challenges/problems the recipient likely faces
+- For business owners: visibility, finding customers, online presence, time management
+- For real estate: reaching buyers, showcasing properties, building trust
+- Position our platform/service as a SOLUTION to their specific problem
+- Frame everything from THEIR perspective - "you" not "we"
+- Don't sell features - solve problems
+- Example: Instead of "We have a directory" → "Get found by customers searching for businesses like yours"''',
+            'value_driven': '''APPROACH: Value-Driven
+- Lead with clear benefits and outcomes they'll get
+- For Desi Firms: free visibility, community reach, new customers
+- For Codeteki: more leads, better SEO, modern website
 - Focus on what they GAIN, not what we offer
-- Make the value proposition crystal clear''',
-            'relationship': '''APPROACH: Relationship-First Focus
-- Build rapport and connection first
-- Show genuine interest in them
-- Find common ground or shared values
-- Don't pitch in first email - establish relationship
-- Be human, warm, and authentic''',
-            'direct': '''APPROACH: Direct Communication
-- Get to the point quickly
-- Respect their time
-- Clear, concise messaging
-- Obvious CTA
-- No fluff or pleasantries'''
+- Make the value proposition crystal clear
+- Still avoid hard selling - let value speak for itself''',
+            'relationship': '''APPROACH: Relationship-First
+- Build connection and rapport first
+- Show genuine interest in their business/work
+- For Desi Firms: emphasize community, growing together
+- Don't pitch heavily in first email - establish trust
+- Be human, warm, and authentic
+- Follow up with value after relationship is built''',
+            'direct': '''APPROACH: Direct & Concise
+- Get to the point quickly (busy people appreciate this)
+- Respect their time - no fluff
+- Clear, simple messaging
+- Obvious but soft CTA
+- Good for follow-ups or busy professionals'''
         }
         approach_desc = approach_instructions.get(approach_style, approach_instructions['problem_solving'])
 
