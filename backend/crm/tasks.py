@@ -104,11 +104,18 @@ def queue_deal_email(self, deal_id: str, email_type: str = 'followup'):
     """
     Queue an email to be sent for a deal.
     Called by process_pending_deals or manually.
+
+    For Desi Firms emails with pre-designed templates, uses the template directly.
+    For other emails, uses AI to generate content.
     """
     from crm.models import Deal, EmailLog, DealActivity
-    from crm.services.ai_agent import CRMAIAgent
     from crm.services.email_service import get_email_service
-    from crm.services.email_templates import get_styled_email, get_pipeline_type_from_name
+    from crm.services.email_templates import (
+        get_styled_email, get_pipeline_type_from_name,
+        get_template_for_email, get_email_type_for_stage
+    )
+    from crm.views import get_unsubscribe_url
+    from django.template.loader import render_to_string
 
     logger.info(f"Queuing email for deal {deal_id}, type: {email_type}")
 
@@ -118,42 +125,88 @@ def queue_deal_email(self, deal_id: str, email_type: str = 'followup'):
         logger.error(f"Deal {deal_id} not found")
         return {'success': False, 'error': 'Deal not found'}
 
-    ai_agent = CRMAIAgent()
     brand = deal.pipeline.brand if deal.pipeline else None
     email_service = get_email_service(brand)
-
-    # Compose email using AI
-    email_result = ai_agent.compose_email(deal, context={'email_type': email_type})
-
-    if not email_result.get('success'):
-        logger.error(f"Failed to compose email for deal {deal_id}")
-        return {'success': False, 'error': 'Email composition failed'}
-
-    # Wrap in styled HTML template
-    brand_slug = brand.slug if brand else 'desifirms'
-    pipeline_type = deal.pipeline.pipeline_type if deal.pipeline else 'sales'
     contact = deal.contact
 
-    styled_email = get_styled_email(
-        brand_slug=brand_slug,
-        pipeline_type=pipeline_type,
-        email_type=email_type,
-        recipient_name=contact.name.split()[0] if contact.name else 'there',
-        recipient_email=contact.email,
-        recipient_company=contact.company,
-        subject=email_result['subject'],
-        body=email_result['body'],
-    )
+    # Determine brand and pipeline info
+    brand_slug = brand.slug if brand else 'desifirms'
+    pipeline_type = deal.pipeline.pipeline_type if deal.pipeline else 'sales'
 
-    html_body = styled_email['html']
+    # Get the appropriate email type based on current stage
+    stage_name = deal.current_stage.name if deal.current_stage else 'follow_up'
+    template_email_type = get_email_type_for_stage(stage_name) or 'agent_followup_1'
 
-    # Create email log entry (store plain text for reference)
+    # Get recipient info
+    recipient_name = contact.name.split()[0] if contact.name else 'there'
+    recipient_company = contact.company or 'your business'
+
+    # Check if we have a pre-designed template
+    template_path = get_template_for_email(brand_slug, pipeline_type, template_email_type)
+
+    if template_path and 'generic' not in template_path:
+        # USE PRE-DESIGNED TEMPLATE - no AI needed!
+        logger.info(f"Using pre-designed template: {template_path}")
+
+        context = {
+            'recipient_name': recipient_name,
+            'recipient_email': contact.email,
+            'recipient_company': recipient_company,
+            'unsubscribe_url': get_unsubscribe_url(contact.email, brand_slug),
+            'current_year': timezone.now().year,
+            'brand_slug': brand_slug,
+        }
+
+        html_body = render_to_string(template_path, context)
+
+        # Get subject based on email type
+        subject_map = {
+            'agent_invitation': f"Join Desi Firms Real Estate as a Founding Member",
+            'agent_followup_1': f"Just checking in - free listing opportunity",
+            'agent_followup_2': f"Final reminder - free real estate listing",
+            'directory_invitation': f"List {recipient_company} on Desi Firms - FREE",
+            'directory_followup_1': f"Quick follow-up - free business listing",
+            'directory_followup_2': f"Final reminder - free listing opportunity",
+        }
+        subject = subject_map.get(template_email_type, 'Following up')
+        plain_body = f"(Pre-designed template: {template_email_type})"
+        ai_generated = False
+
+    else:
+        # No pre-designed template - use AI generation
+        logger.info(f"No pre-designed template, using AI generation")
+        from crm.services.ai_agent import CRMAIAgent
+        ai_agent = CRMAIAgent()
+
+        email_result = ai_agent.compose_email(deal, context={'email_type': email_type})
+
+        if not email_result.get('success'):
+            logger.error(f"Failed to compose email for deal {deal_id}")
+            return {'success': False, 'error': 'Email composition failed'}
+
+        styled_email = get_styled_email(
+            brand_slug=brand_slug,
+            pipeline_type=pipeline_type,
+            email_type=email_type,
+            recipient_name=recipient_name,
+            recipient_email=contact.email,
+            recipient_company=contact.company,
+            subject=email_result['subject'],
+            body=email_result['body'],
+        )
+
+        html_body = styled_email['html']
+        subject = email_result['subject']
+        plain_body = email_result['body']
+        ai_generated = True
+
+    # Create email log entry
     email_log = EmailLog.objects.create(
         deal=deal,
-        subject=email_result['subject'],
-        body=email_result['body'],  # Store plain text version
+        subject=subject,
+        body=plain_body,
         to_email=deal.contact.email,
-        ai_generated=True
+        ai_generated=ai_generated
     )
 
     # Send styled HTML email

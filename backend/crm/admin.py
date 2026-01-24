@@ -646,40 +646,89 @@ class DealAdmin(ModelAdmin):
             return
 
         # Generate styled preview for first deal
-        from crm.services.email_templates import get_styled_email, get_email_type_for_stage, get_pipeline_type_from_name
-        ai_agent = CRMAIAgent()
+        from crm.services.email_templates import (
+            get_styled_email, get_email_type_for_stage, get_pipeline_type_from_name,
+            get_template_for_email, render_email_html
+        )
+        from crm.views import get_unsubscribe_url
         preview_deal = queryset.first()
         preview_email = None
 
         if preview_deal:
             try:
-                # Get AI-generated content
-                email_result = ai_agent.compose_email(preview_deal, context={'email_type': 'followup'})
-                if email_result.get('success'):
-                    # Get the styled HTML template
-                    brand_slug = preview_deal.pipeline.brand.slug if preview_deal.pipeline and preview_deal.pipeline.brand else 'desifirms'
-                    pipeline_type = get_pipeline_type_from_name(preview_deal.pipeline.name) if preview_deal.pipeline else 'realestate'
-                    stage_name = preview_deal.current_stage.name if preview_deal.current_stage else 'follow_up'
-                    email_type = get_email_type_for_stage(stage_name) or 'agent_followup_1'
+                # Determine brand and pipeline info
+                brand_slug = preview_deal.pipeline.brand.slug if preview_deal.pipeline and preview_deal.pipeline.brand else 'desifirms'
+                pipeline_type = get_pipeline_type_from_name(preview_deal.pipeline.name) if preview_deal.pipeline else 'realestate'
+                stage_name = preview_deal.current_stage.name if preview_deal.current_stage else 'follow_up'
+                email_type = get_email_type_for_stage(stage_name) or 'agent_followup_1'
 
-                    styled = get_styled_email(
-                        brand_slug=brand_slug,
-                        pipeline_type=pipeline_type,
-                        email_type=email_type,
-                        recipient_name=preview_deal.contact.name.split()[0] if preview_deal.contact.name else 'there',
-                        recipient_email=preview_deal.contact.email,
-                        recipient_company=preview_deal.contact.company or '',
-                        subject=email_result['subject'],
-                        body=email_result['body'],
-                    )
+                # Get recipient info
+                recipient_name = preview_deal.contact.name.split()[0] if preview_deal.contact.name else 'there'
+                recipient_email = preview_deal.contact.email
+                recipient_company = preview_deal.contact.company or 'your business'
+
+                # Check if we have a pre-designed template for this email type
+                template_path = get_template_for_email(brand_slug, pipeline_type, email_type)
+
+                if template_path and 'generic' not in template_path:
+                    # USE PRE-DESIGNED TEMPLATE - no AI needed!
+                    # These templates have hardcoded beautiful content
+                    from django.template.loader import render_to_string
+                    from django.utils import timezone
+
+                    context = {
+                        'recipient_name': recipient_name,
+                        'recipient_email': recipient_email,
+                        'recipient_company': recipient_company,
+                        'unsubscribe_url': get_unsubscribe_url(recipient_email, brand_slug),
+                        'current_year': timezone.now().year,
+                        'brand_slug': brand_slug,
+                    }
+
+                    html_content = render_to_string(template_path, context)
+
+                    # Get subject from template name
+                    subject_map = {
+                        'agent_invitation': f"Join Desi Firms Real Estate as a Founding Member",
+                        'agent_followup_1': f"Just checking in - free listing opportunity",
+                        'agent_followup_2': f"Final reminder - free real estate listing",
+                        'directory_invitation': f"List {recipient_company} on Desi Firms - FREE",
+                        'directory_followup_1': f"Quick follow-up - free business listing",
+                        'directory_followup_2': f"Final reminder - free listing opportunity",
+                    }
+                    subject = subject_map.get(email_type, 'Following up')
 
                     preview_email = {
-                        'subject': email_result['subject'],
-                        'body': email_result['body'],
-                        'html': styled.get('html', ''),
+                        'subject': subject,
+                        'body': '(Using pre-designed template - see preview below)',
+                        'html': html_content,
                         'contact': preview_deal.contact.name,
                         'email': preview_deal.contact.email,
+                        'using_template': True,
                     }
+                else:
+                    # No pre-designed template - use AI generation
+                    ai_agent = CRMAIAgent()
+                    email_result = ai_agent.compose_email(preview_deal, context={'email_type': 'followup'})
+                    if email_result.get('success'):
+                        styled = get_styled_email(
+                            brand_slug=brand_slug,
+                            pipeline_type=pipeline_type,
+                            email_type=email_type,
+                            recipient_name=recipient_name,
+                            recipient_email=recipient_email,
+                            recipient_company=recipient_company,
+                            subject=email_result['subject'],
+                            body=email_result['body'],
+                        )
+
+                        preview_email = {
+                            'subject': email_result['subject'],
+                            'body': email_result['body'],
+                            'html': styled.get('html', ''),
+                            'contact': preview_deal.contact.name,
+                            'email': preview_deal.contact.email,
+                        }
             except Exception as e:
                 preview_email = {'error': str(e)}
 
