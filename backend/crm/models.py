@@ -102,7 +102,7 @@ class Contact(models.Model):
         help_text="Which brand this contact belongs to"
     )
     email = models.EmailField(unique=True)
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, blank=True, help_text="Leave blank to auto-extract from email/domain")
     company = models.CharField(max_length=255, blank=True)
     website = models.URLField(blank=True)
     domain_authority = models.IntegerField(null=True, blank=True, help_text="Domain Authority score 0-100")
