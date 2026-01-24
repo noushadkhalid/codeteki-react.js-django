@@ -37,7 +37,14 @@ pip install -r requirements.txt --quiet
 echo -e "\n${YELLOW}Running migrations...${NC}"
 python manage.py migrate --noinput
 
+echo -e "\n${YELLOW}Building frontend...${NC}"
+cd $PROJECT_DIR/frontend
+npm install --silent
+npm run build
+echo -e "${GREEN}✓ Frontend built${NC}"
+
 echo -e "\n${YELLOW}Collecting static files...${NC}"
+cd $BACKEND_DIR
 python manage.py collectstatic --noinput --verbosity 0
 
 # ============================================
