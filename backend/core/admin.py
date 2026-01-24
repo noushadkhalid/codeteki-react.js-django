@@ -77,7 +77,7 @@ from .models import (
     KnowledgeCategory, KnowledgeArticle, KnowledgeFAQ,
 
     # Blog & Content
-    BlogCategory, BlogPost,
+    BlogCategory, BlogPost, BlogGenerationJob,
 
     # Pricing
     PricingPlan, PricingFeature,
@@ -1942,6 +1942,165 @@ class BlogPostAdmin(ModelAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('blog_category', 'source_cluster')
+
+
+@admin.register(BlogGenerationJob)
+class BlogGenerationJobAdmin(ModelAdmin):
+    """
+    AI Blog Generation Jobs - Upload CSVs and generate human-like blog posts.
+
+    Workflow:
+    1. Create job with CSV upload or manual topics
+    2. Run "Scan CSV" to detect type and extract topics
+    3. Run "Generate Blogs" to create draft posts
+    """
+
+    list_display = ('name', 'source_type', 'status_badge', 'detected_type', 'generated_count', 'created_at')
+    list_filter = ('status', 'source_type', 'auto_publish', 'writing_style')
+    search_fields = ('name',)
+    ordering = ('-created_at',)
+    date_hierarchy = 'created_at'
+    readonly_fields = ('status', 'detected_type', 'scan_results_display', 'generated_count', 'error_message', 'created_at', 'updated_at')
+
+    fieldsets = (
+        ('📝 Job Details', {
+            'fields': ('name', 'status'),
+            'description': 'Name your job and track its status'
+        }),
+        ('📤 Data Source', {
+            'fields': ('source_type', 'csv_file', 'manual_topics'),
+            'description': 'Upload a CSV or enter topics manually'
+        }),
+        ('⚙️ Generation Settings', {
+            'fields': ('target_word_count', 'writing_style', 'include_services', 'target_category', 'max_posts', 'auto_publish'),
+            'description': 'Configure how blog posts are generated'
+        }),
+        ('🔍 Scan Results', {
+            'fields': ('detected_type', 'scan_results_display'),
+            'classes': ('collapse',),
+            'description': 'Results from scanning the uploaded data'
+        }),
+        ('📊 Results', {
+            'fields': ('generated_count', 'error_message'),
+            'classes': ('collapse',),
+            'description': 'Generation results and any errors'
+        }),
+        ('⏰ Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',),
+        }),
+    )
+
+    actions = ['scan_csv', 'generate_blogs', 'preview_topics']
+
+    @display(description='Status', label={
+        'pending': 'info',
+        'scanning': 'warning',
+        'generating': 'warning',
+        'completed': 'success',
+        'failed': 'danger',
+    })
+    def status_badge(self, obj):
+        return obj.status
+
+    def scan_results_display(self, obj):
+        """Display scan results as formatted JSON."""
+        if not obj.scan_results:
+            return "No scan results yet. Run 'Scan CSV' action first."
+
+        results = obj.scan_results
+        topics = results.get('suggested_topics', [])
+
+        html = f"""
+        <div style="font-family: monospace; font-size: 12px;">
+            <p><strong>Detected Type:</strong> {results.get('detected_type', 'Unknown')}</p>
+            <p><strong>Row Count:</strong> {results.get('row_count', 0)}</p>
+            <p><strong>Headers:</strong> {', '.join(results.get('headers', []))}</p>
+            <p><strong>Topics Found:</strong> {len(topics)}</p>
+            <details>
+                <summary style="cursor: pointer; color: #2563eb;">View First 10 Topics</summary>
+                <ul style="margin-top: 10px;">
+        """
+        for topic in topics[:10]:
+            intent = topic.get('intent', 'informational')
+            volume = topic.get('search_volume', '-')
+            html += f"<li><strong>{topic['topic'][:80]}...</strong> (Intent: {intent}, Volume: {volume})</li>"
+        html += "</ul></details></div>"
+
+        return format_html(html)
+
+    scan_results_display.short_description = "Scan Results"
+
+    @action(description="🔍 Scan CSV - Detect type and extract topics")
+    def scan_csv(self, request, queryset):
+        """Scan uploaded CSV files to detect type and extract topics."""
+        from .services.blog_generator import BlogGenerationProcessor
+
+        for job in queryset:
+            try:
+                processor = BlogGenerationProcessor(job)
+                results = processor.scan()
+                topics_count = len(results.get('suggested_topics', []))
+                self.message_user(
+                    request,
+                    f"✅ Scanned '{job.name}': Detected type '{results['detected_type']}', found {topics_count} topics",
+                    messages.SUCCESS
+                )
+            except Exception as e:
+                self.message_user(
+                    request,
+                    f"❌ Error scanning '{job.name}': {str(e)}",
+                    messages.ERROR
+                )
+
+    @action(description="✨ Generate Blogs - Create posts from topics")
+    def generate_blogs(self, request, queryset):
+        """Generate blog posts from scanned topics."""
+        from .services.blog_generator import BlogGenerationProcessor
+
+        for job in queryset:
+            if not job.scan_results.get('suggested_topics'):
+                self.message_user(
+                    request,
+                    f"⚠️ '{job.name}' has no topics. Run 'Scan CSV' first.",
+                    messages.WARNING
+                )
+                continue
+
+            try:
+                processor = BlogGenerationProcessor(job)
+                posts = processor.generate()
+                self.message_user(
+                    request,
+                    f"✅ Generated {len(posts)} blog posts from '{job.name}'",
+                    messages.SUCCESS
+                )
+            except Exception as e:
+                self.message_user(
+                    request,
+                    f"❌ Error generating blogs for '{job.name}': {str(e)}",
+                    messages.ERROR
+                )
+
+    @action(description="👀 Preview Topics - See what will be generated")
+    def preview_topics(self, request, queryset):
+        """Preview the topics that will be used for generation."""
+        for job in queryset:
+            topics = job.scan_results.get('suggested_topics', [])
+            if not topics:
+                self.message_user(
+                    request,
+                    f"⚠️ '{job.name}' has no topics. Run 'Scan CSV' first.",
+                    messages.WARNING
+                )
+                continue
+
+            preview = ', '.join([t['topic'][:50] for t in topics[:job.max_posts]])
+            self.message_user(
+                request,
+                f"📝 '{job.name}' will generate {min(len(topics), job.max_posts)} posts: {preview}...",
+                messages.INFO
+            )
 
 
 # =============================================================================

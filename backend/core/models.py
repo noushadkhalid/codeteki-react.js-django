@@ -2,6 +2,7 @@ import uuid
 
 from django.db import models
 from django.utils import timezone
+from django.utils.text import slugify
 from ckeditor.fields import RichTextField
 
 from .fields import WebPImageField, OptimizedImageField, ThumbnailImageField
@@ -1110,6 +1111,156 @@ class BlogPost(TimestampedModel):
     def keyword_list(self):
         """Return list of secondary keywords."""
         return [kw.strip() for kw in (self.secondary_keywords or "").split(",") if kw.strip()]
+
+
+class BlogGenerationJob(TimestampedModel):
+    """
+    AI Blog Generation Jobs.
+
+    Handles CSV uploads from Ubersuggest, competitor analysis, backlink opportunities,
+    or manual topic entry. Smart scans data and generates human-like blog posts.
+    """
+
+    SOURCE_CSV_KEYWORDS = 'csv_keywords'
+    SOURCE_CSV_PROMPTS = 'csv_prompts'
+    SOURCE_CSV_COMPETITORS = 'csv_competitors'
+    SOURCE_CSV_BACKLINKS = 'csv_backlinks'
+    SOURCE_MANUAL_TOPICS = 'manual_topics'
+    SOURCE_AUTO_DETECT = 'auto_detect'
+
+    SOURCE_CHOICES = [
+        (SOURCE_AUTO_DETECT, '🔍 Auto-Detect CSV Type'),
+        (SOURCE_CSV_PROMPTS, '💡 Prompt Ideas CSV'),
+        (SOURCE_CSV_KEYWORDS, '🔑 Keywords CSV'),
+        (SOURCE_CSV_COMPETITORS, '🏆 Competitor Keywords'),
+        (SOURCE_CSV_BACKLINKS, '🔗 Backlink Opportunities'),
+        (SOURCE_MANUAL_TOPICS, '✏️ Manual Topics'),
+    ]
+
+    STATUS_PENDING = 'pending'
+    STATUS_SCANNING = 'scanning'
+    STATUS_GENERATING = 'generating'
+    STATUS_COMPLETED = 'completed'
+    STATUS_FAILED = 'failed'
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_SCANNING, 'Scanning Data'),
+        (STATUS_GENERATING, 'Generating Content'),
+        (STATUS_COMPLETED, 'Completed'),
+        (STATUS_FAILED, 'Failed'),
+    ]
+
+    STYLE_CONVERSATIONAL = 'conversational'
+    STYLE_PROFESSIONAL = 'professional'
+    STYLE_TECHNICAL = 'technical'
+    STYLE_CASUAL = 'casual'
+
+    STYLE_CHOICES = [
+        (STYLE_CONVERSATIONAL, 'Conversational (Recommended)'),
+        (STYLE_PROFESSIONAL, 'Professional'),
+        (STYLE_TECHNICAL, 'Technical/Expert'),
+        (STYLE_CASUAL, 'Casual/Friendly'),
+    ]
+
+    # Job identification
+    name = models.CharField(
+        max_length=255,
+        help_text="Descriptive name for this job (e.g., 'AI Website Builders - Jan 2025')"
+    )
+
+    # Source configuration
+    source_type = models.CharField(
+        max_length=50,
+        choices=SOURCE_CHOICES,
+        default=SOURCE_AUTO_DETECT,
+        help_text="Type of data source. 'Auto-Detect' will analyze the CSV structure."
+    )
+    csv_file = models.FileField(
+        upload_to='blog/generation/',
+        blank=True,
+        null=True,
+        help_text="Upload CSV file from Ubersuggest, competitor analysis, or any keyword data"
+    )
+    manual_topics = models.TextField(
+        blank=True,
+        help_text="Enter topics manually, one per line. Used when source is 'Manual Topics'"
+    )
+
+    # Generation settings
+    target_word_count = models.PositiveIntegerField(
+        default=1500,
+        help_text="Target word count for each blog post (1000-2500 recommended)"
+    )
+    writing_style = models.CharField(
+        max_length=50,
+        choices=STYLE_CHOICES,
+        default=STYLE_CONVERSATIONAL,
+        help_text="Writing style affects tone and structure"
+    )
+    include_services = models.BooleanField(
+        default=True,
+        help_text="Naturally mention relevant Codeteki services in the content"
+    )
+    auto_publish = models.BooleanField(
+        default=False,
+        help_text="Automatically publish generated posts (otherwise saved as drafts)"
+    )
+    target_category = models.ForeignKey(
+        'BlogCategory',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Category for generated blog posts"
+    )
+    max_posts = models.PositiveIntegerField(
+        default=5,
+        help_text="Maximum number of posts to generate from this job"
+    )
+
+    # Scan results
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING
+    )
+    detected_type = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Auto-detected CSV type after scanning"
+    )
+    scan_results = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Detected columns, sample data, and extracted topics"
+    )
+    selected_topics = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Topics selected for blog generation"
+    )
+
+    # Results
+    generated_count = models.PositiveIntegerField(default=0)
+    error_message = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Blog Generation Job'
+        verbose_name_plural = 'Blog Generation Jobs'
+
+    def __str__(self):
+        return f"{self.name} ({self.get_status_display()})"
+
+    def get_generated_posts(self):
+        """Return BlogPosts generated by this job."""
+        return BlogPost.objects.filter(
+            ai_generated=True,
+            source_cluster__isnull=True,  # Not from SEO clusters
+            created_at__gte=self.created_at
+        ).filter(
+            slug__startswith=slugify(self.name)[:20] if self.name else ''
+        )
 
 
 class SEODataUpload(TimestampedModel):
