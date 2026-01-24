@@ -276,7 +276,38 @@ class ContactAdmin(ModelAdmin):
 
 @admin.register(CodetekiContact)
 class CodetekiContactAdmin(ContactAdmin):
-    """Codeteki-only contacts view."""
+    """Codeteki-only contacts view - brand auto-selected."""
+
+    # Remove brand from fieldsets - it's auto-set
+    fieldsets = (
+        ('Contact Information', {
+            'fields': ('name', 'email', 'company', 'website')
+        }),
+        ('Status', {
+            'fields': ('status', 'contact_type', 'source'),
+            'description': 'Track outreach progress'
+        }),
+        ('Email History', {
+            'fields': ('email_count', 'last_emailed_at'),
+            'description': 'Auto-updated when emails are sent'
+        }),
+        ('Unsubscribe', {
+            'fields': ('is_unsubscribed', 'unsubscribed_brands', 'unsubscribed_at', 'unsubscribe_reason'),
+            'classes': ['collapse'],
+            'description': 'Brand-specific unsubscribes. Global unsubscribe blocks all brands.'
+        }),
+        ('Classification', {
+            'fields': ('tags', 'domain_authority', 'ai_score'),
+            'classes': ['collapse']
+        }),
+        ('Notes', {
+            'fields': ('notes',)
+        }),
+        ('Metadata', {
+            'fields': ('id', 'created_at', 'updated_at'),
+            'classes': ['collapse']
+        }),
+    )
 
     def get_queryset(self, request):
         return super().get_queryset(request).filter(brand__slug='codeteki')
@@ -293,7 +324,38 @@ class CodetekiContactAdmin(ContactAdmin):
 
 @admin.register(DesiFirmsContact)
 class DesiFirmsContactAdmin(ContactAdmin):
-    """Desi Firms-only contacts view."""
+    """Desi Firms-only contacts view - brand auto-selected."""
+
+    # Remove brand from fieldsets - it's auto-set
+    fieldsets = (
+        ('Contact Information', {
+            'fields': ('name', 'email', 'company', 'website')
+        }),
+        ('Status', {
+            'fields': ('status', 'contact_type', 'source'),
+            'description': 'Track outreach progress'
+        }),
+        ('Email History', {
+            'fields': ('email_count', 'last_emailed_at'),
+            'description': 'Auto-updated when emails are sent'
+        }),
+        ('Unsubscribe', {
+            'fields': ('is_unsubscribed', 'unsubscribed_brands', 'unsubscribed_at', 'unsubscribe_reason'),
+            'classes': ['collapse'],
+            'description': 'Brand-specific unsubscribes. Global unsubscribe blocks all brands.'
+        }),
+        ('Classification', {
+            'fields': ('tags', 'domain_authority', 'ai_score'),
+            'classes': ['collapse']
+        }),
+        ('Notes', {
+            'fields': ('notes',)
+        }),
+        ('Metadata', {
+            'fields': ('id', 'created_at', 'updated_at'),
+            'classes': ['collapse']
+        }),
+    )
 
     def get_queryset(self, request):
         return super().get_queryset(request).filter(brand__slug='desifirms')
