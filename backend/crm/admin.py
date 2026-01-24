@@ -658,9 +658,9 @@ class DealAdmin(ModelAdmin):
             try:
                 # Determine brand and pipeline info
                 brand_slug = preview_deal.pipeline.brand.slug if preview_deal.pipeline and preview_deal.pipeline.brand else 'desifirms'
-                pipeline_type = get_pipeline_type_from_name(preview_deal.pipeline.name) if preview_deal.pipeline else 'realestate'
+                pipeline_type = preview_deal.pipeline.pipeline_type if preview_deal.pipeline else 'realestate'
                 stage_name = preview_deal.current_stage.name if preview_deal.current_stage else 'follow_up'
-                email_type = get_email_type_for_stage(stage_name) or 'agent_followup_1'
+                email_type = get_email_type_for_stage(stage_name, pipeline_type) or 'agent_followup_1'
 
                 # Get recipient info
                 recipient_name = preview_deal.contact.name.split()[0] if preview_deal.contact.name else 'there'

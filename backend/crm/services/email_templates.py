@@ -60,57 +60,86 @@ EMAIL_TEMPLATES = {
 
 
 # Maps pipeline stage names to email template types
+# NOTE: Stage names are lowercased before lookup, so use lowercase keys
 STAGE_TO_EMAIL_TYPE = {
-    # Desi Firms Real Estate Pipeline stages
-    'identified': None,  # No email sent
-    'invitation sent': 'agent_invitation',
-    'follow-up 1': 'agent_followup_1',
-    'follow-up 2': 'agent_followup_2',
-    'not interested': None,  # No email sent
+    # Desi Firms Real Estate Pipeline stages (from seed_crm_pipelines.py)
+    'agent found': None,  # No email sent - just queue
+    'invited': 'agent_invitation',  # Initial invitation email
+    'follow up 1': 'agent_followup_1',  # First follow-up
+    'follow up 2': 'agent_followup_2',  # Second follow-up
+    'responded': 'agent_responded',  # They replied
+    'registered': 'agent_registered',  # They signed up
+    'listing properties': 'agent_listing',  # They're listing!
+    'not interested': None,  # Archive
 
     # Desi Firms Business Directory Pipeline stages
     'business found': None,  # No email sent
-    'invited': 'directory_invitation',
-    'follow up 1': 'directory_followup_1',
+    'follow up 1': 'directory_followup_1',  # Note: same key, context determines template
     'follow up 2': 'directory_followup_2',
-    'responded': 'business_responded',  # Used by both real estate and business
     'signed up': 'business_signedup',
-    'registered': 'agent_registered',  # Real estate specific
-    'listing': 'agent_listing',  # Real estate specific
-    'listed': 'business_listed',  # Business specific
+    'listed': 'business_listed',
 
     # Backlink Pipeline stages
-    'prospect identified': None,
-    'initial outreach': 'backlink_pitch',
-    'follow-up sent': 'backlink_followup',
-    'negotiating': None,
-    'backlink secured': None,
+    'target found': None,
+    'pitch sent': 'backlink_pitch',
+    'link placed': None,
+    'rejected': None,
 
     # Codeteki Sales Pipeline
-    'lead found': None,
+    'prospect found': None,
     'intro sent': 'services_intro',
-    'follow up 1': 'sales_followup',
-    'follow up 2': 'sales_followup_2',
-    'responded': 'sales_responded',
     'discovery call': 'discovery_scheduled',
     'proposal sent': 'proposal_sent',
-    'negotiating': None,
     'client': 'welcome_client',
     'lost': None,
+
+    # Legacy/Alternative stage names (for backwards compatibility)
+    'invitation sent': 'agent_invitation',
+    'follow-up 1': 'agent_followup_1',
+    'follow-up 2': 'agent_followup_2',
 }
 
 
-def get_email_type_for_stage(stage_name: str) -> Optional[str]:
+def get_email_type_for_stage(stage_name: str, pipeline_type: str = None) -> Optional[str]:
     """
     Get the email type for a given pipeline stage.
 
     Args:
         stage_name: Name of the pipeline stage
+        pipeline_type: Type of pipeline (realestate, business, etc.) for context
 
     Returns:
         Email type string or None if no email should be sent
     """
-    return STAGE_TO_EMAIL_TYPE.get(stage_name.lower())
+    stage_lower = stage_name.lower()
+
+    # Context-aware mapping for stages shared across pipelines
+    if pipeline_type == 'realestate':
+        real_estate_map = {
+            'invited': 'agent_invitation',
+            'follow up 1': 'agent_followup_1',
+            'follow up 2': 'agent_followup_2',
+            'responded': 'agent_responded',
+            'registered': 'agent_registered',
+            'listing properties': 'agent_listing',
+        }
+        if stage_lower in real_estate_map:
+            return real_estate_map[stage_lower]
+
+    elif pipeline_type == 'business':
+        business_map = {
+            'invited': 'directory_invitation',
+            'follow up 1': 'directory_followup_1',
+            'follow up 2': 'directory_followup_2',
+            'responded': 'business_responded',
+            'signed up': 'business_signedup',
+            'listed': 'business_listed',
+        }
+        if stage_lower in business_map:
+            return business_map[stage_lower]
+
+    # Fall back to generic mapping
+    return STAGE_TO_EMAIL_TYPE.get(stage_lower)
 
 
 def get_pipeline_type_from_name(pipeline_name: str) -> str:
