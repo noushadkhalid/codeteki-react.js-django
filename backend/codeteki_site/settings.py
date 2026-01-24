@@ -499,6 +499,11 @@ UNFOLD = {
                 "collapsible": True,
                 "items": [
                     {
+                        "title": "AI Blog Builder",
+                        "icon": "auto_awesome",
+                        "link": reverse_lazy("admin:core_bloggenerationjob_changelist"),
+                    },
+                    {
                         "title": "Blog Posts",
                         "icon": "article",
                         "link": reverse_lazy("admin:core_blogpost_changelist"),
