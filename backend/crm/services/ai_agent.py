@@ -36,32 +36,41 @@ class CRMAIAgent:
     SYSTEM_PROMPT = """You are an expert personal assistant specializing in business communication for two Australian brands:
 
 **DESI FIRMS** (desifirms.com.au):
-- Community platform for South Asian businesses in Australia
-- FREE business directory - list your business FREE FOREVER
-- NEW features: Image search, Real Estate section, Events, Classifieds
-- Target: South Asian business owners, real estate agents, event organizers
-- Tone: Warm, community-focused, inviting them to join/grow together
-- Key message: "List your business FREE forever" - never mention specific prices
+CRITICAL: Desi Firms is a BRAND NEW platform that has JUST LAUNCHED. We are NOT established.
+- NEW community platform for South Asian businesses in Australia - JUST LAUNCHED
+- We are BUILDING this platform and inviting businesses to JOIN from the beginning
+- FREE directory - no fees, no credit card, no obligation
+- Tone: Humble, warm, inviting them to be FOUNDING MEMBERS
+- Key message: "We're building something new, and we'd love for you to be part of it"
+- NEVER pretend we're established or can "help with their challenges" - we're ASKING them to join
+- NEVER say "we understand your challenges" or "we can help you" - be HUMBLE
+- Real Estate section: Just launched, inviting agents to be founding members
 
 **CODETEKI** (codeteki.au):
-- Digital agency offering AI-powered web solutions, SEO, development
+- Established digital agency offering AI-powered web solutions, SEO, development
 - Target: Businesses needing websites, SEO, AI automation
 - Tone: Professional, tech-savvy, solution-oriented
 - Key message: Help businesses grow with modern technology
 
-YOUR APPROACH:
-- PRIMARY: Problem-solving (understand their challenges, offer solutions)
-- Focus on THEIR perspective, not yours
-- Be helpful and valuable, never pushy
-- Write like a human, not a template
-- Keep emails concise and scannable
+YOUR APPROACH FOR DESI FIRMS:
+- Be HUMBLE - we're a new platform asking for their cooperation
+- Emphasize: FREE, founding member, building together, part of from beginning
+- NEVER sound like we're doing them a favor - THEY would be adding value to US
+- Say things like: "We'd be honored to have you" NOT "We can help you"
+- Keep it genuine, friendly, and non-pushy
+
+YOUR APPROACH FOR CODETEKI:
+- Problem-solving (understand their challenges, offer solutions)
+- Professional and confident
+- Focus on their perspective and needs
 
 CRITICAL RULES:
 1. NEVER mention specific prices in emails (say "FREE" or "affordable plans")
 2. NEVER be salesy - be genuinely helpful
-3. ALWAYS adapt tone based on brand and recipient
+3. For Desi Firms: NEVER pretend to be established - we are NEW and BUILDING
 4. Personalize based on available context
-5. Include soft but clear calls-to-action"""
+5. Include soft but clear calls-to-action
+6. NEVER use phrases like "I hope this finds you well" - too generic"""
 
     def __init__(self):
         self.ai_engine = AIContentEngine()
@@ -357,20 +366,72 @@ Codeteki Digital Services
         else:
             email_type = f"follow-up #{deal.emails_sent}"
 
-        prompt = f"""Write a professional {email_type} email for this {deal.pipeline.pipeline_type} campaign.
+        # Brand-specific instructions
+        is_desi_firms = brand and ('desi' in brand.name.lower() or 'desifirms' in brand.slug.lower())
+        is_real_estate = deal.pipeline.pipeline_type == 'real_estate'
 
-SENDER INFORMATION (this is who is sending the email):
+        if is_desi_firms and is_real_estate:
+            brand_instructions = """
+CRITICAL BRAND CONTEXT - DESI FIRMS REAL ESTATE:
+Desi Firms is a BRAND NEW platform that has JUST LAUNCHED. We are NOT established.
+
+TONE & MESSAGING RULES:
+- We are HUMBLY INVITING them to join as FOUNDING MEMBERS
+- We are BUILDING something new for the South Asian community
+- THEY would add value to US, not the other way around
+- Completely FREE - no fees, no credit card, no obligation
+- NEVER say "I hope this finds you well" - too generic
+- NEVER say "we understand your challenges" - too presumptuous
+- NEVER say "we can help you" - we're ASKING for their cooperation
+- NEVER pretend to be an established platform
+
+GOOD PHRASES TO USE:
+- "We've just launched a dedicated real estate section..."
+- "We're building something new for the South Asian community..."
+- "We'd love for [Company] to be part of it from the beginning"
+- "We'd be honored to have you as a founding member"
+- "It's completely FREE - no subscription, no credit card"
+- "Just checking in about the free listing opportunity"
+
+BAD PHRASES - NEVER USE:
+- "I hope this message finds you well"
+- "We understand your challenges"
+- "We can help you reach your target audience"
+- "Our platform offers tools to help you"
+- Any language that sounds like we're established or doing them a favor
+
+FOR FOLLOW-UPS:
+- Keep it short (under 80 words)
+- Acknowledge they're busy
+- Gentle reminder about the FREE opportunity
+- No pressure, just checking if they had questions"""
+        elif is_desi_firms:
+            brand_instructions = """
+CRITICAL BRAND CONTEXT - DESI FIRMS:
+Desi Firms is a NEW platform, not established. We're inviting businesses to JOIN from the beginning.
+- Tone: Humble, warm, community-focused
+- Emphasize: FREE listing, founding member opportunity, building together
+- NEVER pretend to be established or say "we can help you"
+- Be genuine and inviting, not salesy"""
+        else:
+            brand_instructions = """
+BRAND CONTEXT - CODETEKI:
+Professional digital agency offering AI-powered solutions.
+- Tone: Professional, confident, solution-oriented
+- Focus on their challenges and how we can help
+- Be helpful and valuable, not pushy"""
+
+        prompt = f"""Write a professional {email_type} email for this {deal.pipeline.pipeline_type} campaign.
+{brand_instructions}
+
+SENDER INFORMATION:
 - Sender Name: {sender_name}
 - Company: {sender_company}
-- About Us: {company_description}
-- Value Proposition: {value_proposition}
 
 RECIPIENT INFORMATION:
 - Name: {contact.name}
 - Company: {contact.company or 'Unknown'}
 - Website: {contact.website or 'Not available'}
-- Domain Authority: {contact.domain_authority or 'Unknown'}
-- Contact Type: {contact.get_contact_type_display()}
 
 CAMPAIGN CONTEXT:
 - Pipeline: {deal.pipeline.name}
@@ -381,25 +442,26 @@ CAMPAIGN CONTEXT:
 {f'TEMPLATE TO PERSONALIZE:{chr(10)}{template}' if template else ''}
 
 Requirements:
-1. Keep it concise (under 150 words for initial, under 100 for follow-ups)
-2. Be professional but friendly
-3. Provide clear value proposition
-4. Include a soft call-to-action
-5. Don't be pushy or salesy
-6. If this is for backlink outreach, focus on mutual benefit
-7. NEVER use placeholder text like [Your Name], [Contact], [Your Position] - use real values
-8. End with this EXACT signature (copy exactly, including emojis):
+1. Keep it concise (under 100 words for initial, under 80 for follow-ups)
+2. Follow the brand tone guidelines above STRICTLY
+3. Include a soft call-to-action
+4. Don't be pushy or salesy
+5. NEVER use placeholder text like [Your Name], [Contact], [Your Position] - use real values
+6. End with this EXACT signature (copy exactly, including emojis) - DO NOT DUPLICATE:
 
 Warm regards,
 
 {email_signature}
 
-CRITICAL: Copy the signature EXACTLY as shown above.
+CRITICAL:
+- Copy the signature EXACTLY as shown above - ONLY ONCE at the end
+- DO NOT add a second signature
+- DO NOT add anything after the signature
 
 Respond in JSON format:
 {{
     "subject": "Email subject line",
-    "body": "Email body text ending with the signature above"
+    "body": "Email body text ending with the signature above (NOT duplicated)"
 }}"""
 
         result = self.ai_engine.generate(
