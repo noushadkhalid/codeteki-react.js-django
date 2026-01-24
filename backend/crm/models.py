@@ -294,16 +294,27 @@ class Contact(models.Model):
 
         return result.strip() or 'Contact'
 
+    # Personal email domains to skip for company/website extraction
+    PERSONAL_EMAIL_DOMAINS = (
+        'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'live.com',
+        'icloud.com', 'me.com', 'aol.com', 'mail.com', 'protonmail.com',
+        'zoho.com', 'ymail.com', 'msn.com', 'bigpond.com', 'optusnet.com.au',
+    )
+
     def save(self, *args, **kwargs):
-        """Normalize email and auto-extract name/company if needed."""
+        """Normalize email and auto-extract name/company/website if needed."""
         if self.email:
             self.email = self.normalize_email(self.email)
+            email_domain = self.email.split('@')[1] if '@' in self.email else ''
+            is_business_email = email_domain and not email_domain.endswith(self.PERSONAL_EMAIL_DOMAINS)
 
             # Auto-extract company from domain if not provided
-            if not self.company or self.company.strip() == '':
-                email_domain = self.email.split('@')[1] if '@' in self.email else ''
-                if email_domain and not email_domain.endswith(('gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com')):
-                    self.company = self._humanize_domain(email_domain)
+            if is_business_email and (not self.company or self.company.strip() == ''):
+                self.company = self._humanize_domain(email_domain)
+
+            # Auto-extract website from domain if not provided
+            if is_business_email and (not self.website or self.website.strip() == ''):
+                self.website = f"https://{email_domain}"
 
             # Auto-extract name if empty, looks generic, or matches company exactly
             needs_name_extraction = (
