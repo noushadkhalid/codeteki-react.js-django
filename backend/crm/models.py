@@ -198,10 +198,119 @@ class Contact(models.Model):
         # Remove any remaining whitespace and lowercase
         return email.strip().lower()
 
+    # Generic email prefixes that need name extraction from domain/company
+    GENERIC_EMAIL_PREFIXES = {
+        'info', 'admin', 'sales', 'contact', 'hello', 'support', 'team',
+        'enquiry', 'enquiries', 'mail', 'office', 'help', 'service',
+        'marketing', 'hq', 'head', 'reception', 'general', 'inbox',
+        'noreply', 'no-reply', 'accounts', 'billing', 'hr', 'careers',
+    }
+
+    def _extract_smart_name(self) -> str:
+        """
+        Extract a smart name from email/company/domain.
+
+        Logic:
+        1. If email prefix is personal (rajesh@, nithya.patel@) → "Rajesh" or "Nithya"
+        2. If email is generic (info@, admin@, hq@) → Use company name or domain
+           - bombayre.com.au → "Bombay RE"
+           - skadre.com.au → "Skad RE"
+           - amberre.com.au → "Amber RE"
+        """
+        if not self.email or '@' not in self.email:
+            return self.company or 'Contact'
+
+        email_prefix = self.email.split('@')[0].lower()
+        email_domain = self.email.split('@')[1].lower()
+
+        # Clean prefix for comparison
+        clean_prefix = email_prefix.replace('.', '').replace('_', '').replace('-', '')
+
+        # Check if generic email
+        is_generic = (
+            email_prefix in self.GENERIC_EMAIL_PREFIXES or
+            clean_prefix in self.GENERIC_EMAIL_PREFIXES
+        )
+
+        if not is_generic:
+            # Personal email - extract name from prefix
+            # Handle formats: rajesh, r.kumar, nithya.patel, bob_smith
+            name_parts = email_prefix.replace('.', ' ').replace('_', ' ').replace('-', ' ').split()
+            if name_parts:
+                # Filter out single letters and numbers
+                valid_parts = [p.title() for p in name_parts if len(p) > 1 and not p.isdigit()]
+                if valid_parts:
+                    return ' '.join(valid_parts[:2])  # Max 2 parts (first + last)
+
+        # Generic email - use company or extract from domain
+        if self.company:
+            return self.company
+
+        # Extract from domain: bombayre.com.au → "Bombay RE"
+        return self._humanize_domain(email_domain)
+
+    def _humanize_domain(self, domain: str) -> str:
+        """
+        Convert domain to human-readable company name.
+
+        Examples:
+        - bombayre.com.au → "Bombay RE"
+        - skadre.com.au → "Skad RE"
+        - amberre.com.au → "Amber RE"
+        - reliancere.com.au → "Reliance RE"
+        - a-onerealestate.com.au → "A One Real Estate"
+        """
+        import re
+
+        # Get the main part (before first .)
+        main_part = domain.split('.')[0]
+
+        # Common suffixes to expand
+        suffixes = {
+            're': ' RE',
+            'realestate': ' Real Estate',
+            'property': ' Property',
+            'properties': ' Properties',
+            'group': ' Group',
+            'au': '',
+            'com': '',
+        }
+
+        # Check for known suffixes
+        result = main_part
+        for suffix, expansion in suffixes.items():
+            if result.lower().endswith(suffix) and len(result) > len(suffix):
+                result = result[:-len(suffix)] + expansion
+                break
+
+        # Clean up: replace hyphens/underscores with spaces, title case
+        result = result.replace('-', ' ').replace('_', ' ')
+
+        # Add spaces before capital letters (camelCase handling)
+        result = re.sub(r'([a-z])([A-Z])', r'\1 \2', result)
+
+        # Title case and clean up multiple spaces
+        result = ' '.join(word.title() for word in result.split())
+
+        return result.strip() or 'Contact'
+
     def save(self, *args, **kwargs):
-        """Normalize email before saving."""
+        """Normalize email and auto-extract name if needed."""
         if self.email:
             self.email = self.normalize_email(self.email)
+
+        # Auto-extract name if empty, looks generic, or matches company exactly
+        if self.email:
+            needs_name_extraction = (
+                not self.name or
+                self.name.strip() == '' or
+                self.name.lower() in self.GENERIC_EMAIL_PREFIXES or
+                (self.company and self.name.strip().lower() == self.company.strip().lower())
+            )
+
+            if needs_name_extraction:
+                self.name = self._extract_smart_name()
+
         super().save(*args, **kwargs)
 
 
