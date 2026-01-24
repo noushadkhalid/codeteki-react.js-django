@@ -52,9 +52,6 @@ python manage.py collectstatic --noinput --verbosity 0
 # ============================================
 echo -e "\n${YELLOW}Restarting services...${NC}"
 
-# Reload systemd in case service files changed
-sudo systemctl daemon-reload
-
 # Check Redis is running (don't restart - would clear cache)
 if ! redis-cli ping > /dev/null 2>&1; then
     echo -e "${YELLOW}Redis not responding, starting...${NC}"
@@ -65,7 +62,7 @@ fi
 sudo systemctl restart gunicorn
 sudo systemctl restart celery-worker
 sudo systemctl restart celerybeat 2>/dev/null || true
-sudo systemctl restart nginx
+sudo systemctl reload nginx
 
 # ============================================
 # STATUS CHECK
