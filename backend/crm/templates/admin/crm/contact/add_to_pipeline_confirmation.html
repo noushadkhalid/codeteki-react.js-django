@@ -1,0 +1,188 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block content %}
+<style>
+    .pipeline-form {
+        max-width: 800px;
+        margin: 20px auto;
+        padding: 30px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .pipeline-form h2 {
+        margin-bottom: 20px;
+        color: #1f2937;
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #374151;
+    }
+    .form-group select {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 16px;
+        background: #fff;
+    }
+    .form-group select:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    .contacts-preview {
+        background: #f9fafb;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .contacts-preview h3 {
+        margin: 0 0 10px 0;
+        font-size: 14px;
+        color: #6b7280;
+    }
+    .contacts-preview ul {
+        margin: 0;
+        padding-left: 20px;
+    }
+    .contacts-preview li {
+        padding: 4px 0;
+        color: #374151;
+    }
+    .warning-box {
+        background: #fef3c7;
+        border: 1px solid #f59e0b;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .warning-box strong {
+        color: #92400e;
+    }
+    .btn-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    .btn {
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+    }
+    .btn-primary {
+        background: #3b82f6;
+        color: white;
+    }
+    .btn-primary:hover {
+        background: #2563eb;
+    }
+    .btn-secondary {
+        background: #e5e7eb;
+        color: #374151;
+    }
+    .btn-secondary:hover {
+        background: #d1d5db;
+    }
+    .info-text {
+        font-size: 13px;
+        color: #6b7280;
+        margin-top: 5px;
+    }
+</style>
+
+<div class="pipeline-form">
+    <h2>📊 Add {{ contact_count }} Contact{{ contact_count|pluralize }} to Pipeline</h2>
+
+    <div class="warning-box">
+        <strong>⚠️ Important:</strong> This will create deals for the selected contacts.
+        No emails will be sent automatically - you control when to send via Email Composer.
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <!-- Pass selected contacts -->
+        {% for contact in queryset %}
+        <input type="hidden" name="{{ action_checkbox_name }}" value="{{ contact.pk }}">
+        {% endfor %}
+        <input type="hidden" name="action" value="add_to_pipeline_followup">
+
+        <div class="form-group">
+            <label for="pipeline">🎯 Select Pipeline</label>
+            <select name="pipeline" id="pipeline" required onchange="updateStages(this.value)">
+                <option value="">-- Choose Pipeline --</option>
+                {% for pipeline in pipelines %}
+                <option value="{{ pipeline.id }}" data-stages='[{% for stage in pipeline.stages.all %}{"id": "{{ stage.id }}", "name": "{{ stage.name }}"}{% if not forloop.last %},{% endif %}{% endfor %}]'>
+                    {{ pipeline.name }} ({{ pipeline.get_pipeline_type_display }})
+                </option>
+                {% endfor %}
+            </select>
+            <p class="info-text">Choose the correct pipeline for these contacts (Real Estate, Business Directory, etc.)</p>
+        </div>
+
+        <div class="form-group">
+            <label for="stage">📍 Starting Stage</label>
+            <select name="stage" id="stage">
+                <option value="">-- Select Pipeline First --</option>
+            </select>
+            <p class="info-text">Select which stage to start at (e.g., "Invited" for first contact, "Follow Up 1" for already contacted)</p>
+        </div>
+
+        <div class="contacts-preview">
+            <h3>📋 Contacts to Add ({{ contact_count }} total):</h3>
+            <ul>
+                {% for contact in contacts_preview %}
+                <li><strong>{{ contact.name }}</strong> - {{ contact.email }}{% if contact.company %} ({{ contact.company }}){% endif %}</li>
+                {% endfor %}
+                {% if contact_count > 10 %}
+                <li><em>... and {{ contact_count|add:"-10" }} more</em></li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <div class="btn-group">
+            <button type="submit" name="apply" class="btn btn-primary">
+                ✅ Add to Pipeline
+            </button>
+            <a href="{% url 'admin:crm_contact_changelist' %}" class="btn btn-secondary">
+                ❌ Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+function updateStages(pipelineId) {
+    const pipelineSelect = document.getElementById('pipeline');
+    const stageSelect = document.getElementById('stage');
+    const selectedOption = pipelineSelect.options[pipelineSelect.selectedIndex];
+
+    // Clear existing options
+    stageSelect.innerHTML = '<option value="">-- Select Stage --</option>';
+
+    if (!pipelineId) return;
+
+    // Get stages from data attribute
+    const stagesData = selectedOption.getAttribute('data-stages');
+    if (stagesData) {
+        const stages = JSON.parse(stagesData);
+        stages.forEach(stage => {
+            const option = document.createElement('option');
+            option.value = stage.id;
+            option.textContent = stage.name;
+            stageSelect.appendChild(option);
+        });
+    }
+}
+</script>
+{% endblock %}

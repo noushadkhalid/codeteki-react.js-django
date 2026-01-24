@@ -209,62 +209,101 @@ class ContactAdmin(ModelAdmin):
         )
         self.message_user(request, f"Resubscribed {updated} contact(s).")
 
-    @action(description="📊 Add to Pipeline (Follow-up Stage)")
+    @action(description="📊 Add to Pipeline (with selection)")
     def add_to_pipeline_followup(self, request, queryset):
-        """Add contacts to their brand's default pipeline at Follow-up stage (for already-contacted)."""
-        from crm.models import Pipeline, Deal
+        """Add contacts to a selected pipeline - shows confirmation page first."""
+        from crm.models import Pipeline, Deal, PipelineStage
         from django.utils import timezone
+        from django.template.response import TemplateResponse
+        from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 
-        created = 0
-        skipped = 0
+        # Get the brand from first contact
+        first_contact = queryset.first()
+        if not first_contact or not first_contact.brand:
+            self.message_user(request, "❌ No brand found for selected contacts.", messages.ERROR)
+            return
 
-        for contact in queryset:
-            # Skip if unsubscribed
-            if contact.is_unsubscribed:
-                skipped += 1
-                continue
+        brand = first_contact.brand
 
-            # Find pipeline for this contact's brand
-            brand = contact.brand
-            if not brand:
-                skipped += 1
-                continue
+        # Get available pipelines for this brand
+        pipelines = Pipeline.objects.filter(brand=brand, is_active=True)
 
-            pipeline = Pipeline.objects.filter(brand=brand, is_active=True).first()
-            if not pipeline:
-                skipped += 1
-                continue
+        if not pipelines.exists():
+            self.message_user(request, f"❌ No active pipelines for {brand.name}.", messages.ERROR)
+            return
 
-            # Check if already in this pipeline
-            existing = Deal.objects.filter(contact=contact, pipeline=pipeline, status='active').exists()
-            if existing:
-                skipped += 1
-                continue
+        # Check if form was submitted with pipeline selection
+        if 'apply' in request.POST:
+            pipeline_id = request.POST.get('pipeline')
+            stage_id = request.POST.get('stage')
 
-            # Find "Follow Up" or second stage
-            followup_stage = pipeline.stages.filter(name__icontains='follow').first()
-            if not followup_stage:
-                # Get second stage (skip Invited/first)
-                followup_stage = pipeline.stages.order_by('order')[1:2].first()
-            if not followup_stage:
-                followup_stage = pipeline.stages.first()
+            if not pipeline_id:
+                self.message_user(request, "❌ Please select a pipeline.", messages.ERROR)
+                return
 
-            if followup_stage:
+            pipeline = Pipeline.objects.get(id=pipeline_id)
+
+            # Get stage
+            if stage_id:
+                stage = PipelineStage.objects.get(id=stage_id)
+            else:
+                # Default to first stage
+                stage = pipeline.stages.order_by('order').first()
+
+            if not stage:
+                self.message_user(request, "❌ Pipeline has no stages.", messages.ERROR)
+                return
+
+            # Now create deals
+            created = 0
+            skipped = 0
+
+            for contact in queryset:
+                if contact.is_unsubscribed:
+                    skipped += 1
+                    continue
+
+                # Check if already in this pipeline
+                existing = Deal.objects.filter(contact=contact, pipeline=pipeline, status='active').exists()
+                if existing:
+                    skipped += 1
+                    continue
+
                 Deal.objects.create(
                     contact=contact,
                     pipeline=pipeline,
-                    current_stage=followup_stage,
+                    current_stage=stage,
                     status='active',
-                    emails_sent=1,  # Assume already contacted
-                    last_contact_date=timezone.now(),
-                    next_action_date=timezone.now() + timezone.timedelta(days=followup_stage.days_until_followup or 3),
-                    ai_notes="Added manually to pipeline at follow-up stage (already contacted)"
+                    emails_sent=0,  # No emails sent yet
+                    next_action_date=timezone.now() + timezone.timedelta(days=stage.days_until_followup or 3),
+                    ai_notes=f"Added manually to '{pipeline.name}' at '{stage.name}' stage"
                 )
                 created += 1
 
-        self.message_user(
+            self.message_user(
+                request,
+                f"✅ Created {created} deals in '{pipeline.name}' → '{stage.name}'. Skipped {skipped}.",
+                messages.SUCCESS
+            )
+            return
+
+        # Show confirmation page with pipeline/stage selection
+        context = {
+            **self.admin_site.each_context(request),
+            'title': 'Select Pipeline and Stage',
+            'queryset': queryset,
+            'opts': self.model._meta,
+            'action_checkbox_name': ACTION_CHECKBOX_NAME,
+            'pipelines': pipelines,
+            'brand': brand,
+            'contact_count': queryset.count(),
+            'contacts_preview': queryset[:10],  # Show first 10
+        }
+
+        return TemplateResponse(
             request,
-            f"✅ Created {created} deals in pipeline. Skipped {skipped} (unsubscribed/existing/no pipeline)."
+            'admin/crm/contact/add_to_pipeline_confirmation.html',
+            context
         )
 
     actions = ['mark_unsubscribed', 'resubscribe', 'add_to_pipeline_followup']
