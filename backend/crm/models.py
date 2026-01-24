@@ -295,12 +295,17 @@ class Contact(models.Model):
         return result.strip() or 'Contact'
 
     def save(self, *args, **kwargs):
-        """Normalize email and auto-extract name if needed."""
+        """Normalize email and auto-extract name/company if needed."""
         if self.email:
             self.email = self.normalize_email(self.email)
 
-        # Auto-extract name if empty, looks generic, or matches company exactly
-        if self.email:
+            # Auto-extract company from domain if not provided
+            if not self.company or self.company.strip() == '':
+                email_domain = self.email.split('@')[1] if '@' in self.email else ''
+                if email_domain and not email_domain.endswith(('gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com')):
+                    self.company = self._humanize_domain(email_domain)
+
+            # Auto-extract name if empty, looks generic, or matches company exactly
             needs_name_extraction = (
                 not self.name or
                 self.name.strip() == '' or
