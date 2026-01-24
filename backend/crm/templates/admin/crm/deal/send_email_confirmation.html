@@ -149,10 +149,20 @@
 
     {% if preview_email and not preview_email.error %}
     <div class="email-preview">
-        <h3>📧 Sample Email Preview (for {{ preview_email.contact }})</h3>
+        <h3>📧 Styled Email Preview (for {{ preview_email.contact }})</h3>
         <div class="recipient">To: {{ preview_email.email }}</div>
         <div class="subject">Subject: {{ preview_email.subject }}</div>
+        {% if preview_email.html %}
+        <div style="border: 1px solid #e5e7eb; border-radius: 8px; margin-top: 15px; background: #fff;">
+            <iframe id="email-preview-frame" style="width: 100%; height: 500px; border: none;"></iframe>
+        </div>
+        <script>
+            var emailHtml = `{{ preview_email.html|escapejs }}`;
+            document.getElementById('email-preview-frame').srcdoc = emailHtml;
+        </script>
+        {% else %}
         <div class="body">{{ preview_email.body }}</div>
+        {% endif %}
     </div>
     {% elif preview_email.error %}
     <div class="warning-box">

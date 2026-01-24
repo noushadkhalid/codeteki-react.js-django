@@ -645,18 +645,38 @@ class DealAdmin(ModelAdmin):
                 self.message_user(request, f"⏭️ Skipped {skipped} - recently emailed", messages.WARNING)
             return
 
-        # Generate preview for first deal
+        # Generate styled preview for first deal
+        from crm.services.email_templates import get_styled_email, get_email_type_for_stage, get_pipeline_type_from_name
         ai_agent = CRMAIAgent()
         preview_deal = queryset.first()
         preview_email = None
 
         if preview_deal:
             try:
+                # Get AI-generated content
                 email_result = ai_agent.compose_email(preview_deal, context={'email_type': 'followup'})
                 if email_result.get('success'):
+                    # Get the styled HTML template
+                    brand_slug = preview_deal.pipeline.brand.slug if preview_deal.pipeline and preview_deal.pipeline.brand else 'desifirms'
+                    pipeline_type = get_pipeline_type_from_name(preview_deal.pipeline.name) if preview_deal.pipeline else 'realestate'
+                    stage_name = preview_deal.current_stage.name if preview_deal.current_stage else 'follow_up'
+                    email_type = get_email_type_for_stage(stage_name) or 'agent_followup_1'
+
+                    styled = get_styled_email(
+                        brand_slug=brand_slug,
+                        pipeline_type=pipeline_type,
+                        email_type=email_type,
+                        recipient_name=preview_deal.contact.name.split()[0] if preview_deal.contact.name else 'there',
+                        recipient_email=preview_deal.contact.email,
+                        recipient_company=preview_deal.contact.company or '',
+                        subject=email_result['subject'],
+                        body=email_result['body'],
+                    )
+
                     preview_email = {
                         'subject': email_result['subject'],
                         'body': email_result['body'],
+                        'html': styled.get('html', ''),
                         'contact': preview_deal.contact.name,
                         'email': preview_deal.contact.email,
                     }
