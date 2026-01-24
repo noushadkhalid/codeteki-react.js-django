@@ -216,6 +216,7 @@ class ContactAdmin(ModelAdmin):
         from django.utils import timezone
         from django.template.response import TemplateResponse
         from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
+        from django.contrib import messages
 
         # Get the brand from first contact
         first_contact = queryset.first()
