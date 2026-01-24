@@ -1,0 +1,202 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block content %}
+<style>
+    .email-confirm-form {
+        max-width: 900px;
+        margin: 20px auto;
+        padding: 30px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .email-confirm-form h2 {
+        margin-bottom: 20px;
+        color: #1f2937;
+    }
+    .stage-summary {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+    }
+    .stage-badge {
+        background: #e0e7ff;
+        color: #3730a3;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 500;
+    }
+    .email-preview {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .email-preview h3 {
+        margin: 0 0 15px 0;
+        color: #374151;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .email-preview .subject {
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .email-preview .body {
+        color: #4b5563;
+        line-height: 1.6;
+        white-space: pre-wrap;
+    }
+    .email-preview .recipient {
+        font-size: 12px;
+        color: #6b7280;
+        margin-bottom: 10px;
+    }
+    .deals-list {
+        background: #f9fafb;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .deals-list h3 {
+        margin: 0 0 10px 0;
+        font-size: 14px;
+        color: #6b7280;
+    }
+    .deals-list ul {
+        margin: 0;
+        padding-left: 20px;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+    .deals-list li {
+        padding: 4px 0;
+        color: #374151;
+    }
+    .warning-box {
+        background: #fef3c7;
+        border: 1px solid #f59e0b;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .info-box {
+        background: #dbeafe;
+        border: 1px solid #3b82f6;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .info-box strong {
+        color: #1e40af;
+    }
+    .btn-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    .btn {
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+    }
+    .btn-danger {
+        background: #ef4444;
+        color: white;
+    }
+    .btn-danger:hover {
+        background: #dc2626;
+    }
+    .btn-secondary {
+        background: #e5e7eb;
+        color: #374151;
+    }
+    .btn-secondary:hover {
+        background: #d1d5db;
+    }
+</style>
+
+<div class="email-confirm-form">
+    <h2>📧 Send Follow-up Emails to {{ deal_count }} Deal{{ deal_count|pluralize }}</h2>
+
+    <div class="info-box">
+        <strong>ℹ️ What happens:</strong>
+        <ul style="margin: 10px 0 0 20px;">
+            <li>AI generates personalized follow-up email for each contact</li>
+            <li>Emails are sent via Zoho Mail</li>
+            <li>Deals are moved to the next pipeline stage</li>
+            <li>Automation will handle subsequent follow-ups</li>
+        </ul>
+    </div>
+
+    <h3>📊 Deals by Stage:</h3>
+    <div class="stage-summary">
+        {% for stage_name, count in stages.items %}
+        <span class="stage-badge">{{ stage_name }}: {{ count }}</span>
+        {% endfor %}
+    </div>
+
+    {% if preview_email and not preview_email.error %}
+    <div class="email-preview">
+        <h3>📧 Sample Email Preview (for {{ preview_email.contact }})</h3>
+        <div class="recipient">To: {{ preview_email.email }}</div>
+        <div class="subject">Subject: {{ preview_email.subject }}</div>
+        <div class="body">{{ preview_email.body }}</div>
+    </div>
+    {% elif preview_email.error %}
+    <div class="warning-box">
+        <strong>⚠️ Preview Error:</strong> {{ preview_email.error }}
+    </div>
+    {% endif %}
+
+    <div class="deals-list">
+        <h3>📋 Deals to Email ({{ deal_count }} total):</h3>
+        <ul>
+            {% for deal in deals_preview %}
+            <li>
+                <strong>{{ deal.contact.name }}</strong> ({{ deal.contact.email }})
+                - {{ deal.current_stage.name|default:"No Stage" }}
+            </li>
+            {% endfor %}
+            {% if deal_count > 10 %}
+            <li><em>... and {{ deal_count|add:"-10" }} more</em></li>
+            {% endif %}
+        </ul>
+    </div>
+
+    <div class="warning-box">
+        <strong>⚠️ This action cannot be undone.</strong>
+        Emails will be sent immediately. Make sure you've selected the correct deals.
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <!-- Pass selected deals -->
+        {% for deal in queryset %}
+        <input type="hidden" name="{{ action_checkbox_name }}" value="{{ deal.pk }}">
+        {% endfor %}
+        <input type="hidden" name="action" value="send_email_now">
+
+        <div class="btn-group">
+            <button type="submit" name="confirm_send" class="btn btn-danger">
+                📤 Send {{ deal_count }} Email{{ deal_count|pluralize }} Now
+            </button>
+            <a href="{% url 'admin:crm_deal_changelist' %}" class="btn btn-secondary">
+                ❌ Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

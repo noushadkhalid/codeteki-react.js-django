@@ -596,43 +596,98 @@ class DealAdmin(ModelAdmin):
             messages.SUCCESS
         )
 
-    @action(description="📤 Send Email NOW (1 per deal)")
+    @action(description="📤 Send Follow-up Email (with preview)")
     def send_email_now(self, request, queryset):
-        """Send AI-generated email immediately to selected deals."""
+        """Send follow-up email to selected deals - shows preview first."""
+        from crm.services.ai_agent import CRMAIAgent
         from crm.tasks import queue_deal_email
         from django.contrib import messages
+        from django.template.response import TemplateResponse
+        from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
+        from crm.models import EmailLog
+        from django.utils import timezone
+        from datetime import timedelta
 
-        queued = 0
-        skipped = 0
+        # Check for confirmation
+        if 'confirm_send' in request.POST:
+            queued = 0
+            skipped = 0
 
+            for deal in queryset:
+                # Check if email was sent recently (within 24 hours)
+                recent_email = EmailLog.objects.filter(
+                    deal=deal,
+                    sent_at__gte=timezone.now() - timedelta(hours=24)
+                ).exists()
+
+                if recent_email:
+                    skipped += 1
+                    continue
+
+                # Queue email for sending
+                queue_deal_email.delay(str(deal.id), 'followup')
+                queued += 1
+
+                # Move to next stage after sending
+                if deal.current_stage:
+                    next_stage = PipelineStage.objects.filter(
+                        pipeline=deal.pipeline,
+                        order__gt=deal.current_stage.order
+                    ).order_by('order').first()
+                    if next_stage:
+                        deal.current_stage = next_stage
+                        deal.next_action_date = timezone.now() + timedelta(days=next_stage.days_until_followup or 5)
+                        deal.save()
+
+            if queued:
+                self.message_user(request, f"✅ Sent {queued} follow-up email(s) & moved to next stage!", messages.SUCCESS)
+            if skipped:
+                self.message_user(request, f"⏭️ Skipped {skipped} - recently emailed", messages.WARNING)
+            return
+
+        # Generate preview for first deal
+        ai_agent = CRMAIAgent()
+        preview_deal = queryset.first()
+        preview_email = None
+
+        if preview_deal:
+            try:
+                email_result = ai_agent.compose_email(preview_deal, context={'email_type': 'followup'})
+                if email_result.get('success'):
+                    preview_email = {
+                        'subject': email_result['subject'],
+                        'body': email_result['body'],
+                        'contact': preview_deal.contact.name,
+                        'email': preview_deal.contact.email,
+                    }
+            except Exception as e:
+                preview_email = {'error': str(e)}
+
+        # Get stage info
+        stages = {}
         for deal in queryset:
-            # Check if email was sent recently (within 24 hours)
-            from crm.models import EmailLog
-            from django.utils import timezone
-            from datetime import timedelta
+            stage_name = deal.current_stage.name if deal.current_stage else 'No Stage'
+            if stage_name not in stages:
+                stages[stage_name] = 0
+            stages[stage_name] += 1
 
-            recent_email = EmailLog.objects.filter(
-                deal=deal,
-                sent_at__gte=timezone.now() - timedelta(hours=24)
-            ).exists()
+        context = {
+            **self.admin_site.each_context(request),
+            'title': 'Confirm Send Follow-up Emails',
+            'queryset': queryset,
+            'opts': self.model._meta,
+            'action_checkbox_name': ACTION_CHECKBOX_NAME,
+            'deal_count': queryset.count(),
+            'deals_preview': queryset[:10],
+            'preview_email': preview_email,
+            'stages': stages,
+        }
 
-            if recent_email:
-                skipped += 1
-                self.message_user(
-                    request,
-                    f"⏭️ {deal.contact.name}: Skipped - email sent within 24hrs",
-                    messages.WARNING
-                )
-                continue
-
-            # Queue email for sending
-            queue_deal_email.delay(str(deal.id), 'outreach')
-            queued += 1
-
-        if queued:
-            self.message_user(request, f"✅ Queued {queued} email(s) for sending!", messages.SUCCESS)
-        if skipped:
-            self.message_user(request, f"⏭️ Skipped {skipped} deal(s) - recently emailed", messages.WARNING)
+        return TemplateResponse(
+            request,
+            'admin/crm/deal/send_email_confirmation.html',
+            context
+        )
 
     @action(description="⏸️ Pause automation")
     def pause_deals(self, request, queryset):
