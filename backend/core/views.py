@@ -703,6 +703,14 @@ class ContactAPIView(JSONAPIView):
             source=data.get("source", "website"),
             metadata={k: v for k, v in data.items() if k not in {"name", "fullName", "email", "phone", "service", "topic", "message", "source"}},
         )
+
+        # Auto-add to CRM pipeline for follow-up
+        try:
+            from crm.services.lead_integration import LeadIntegrationService
+            LeadIntegrationService.create_lead_from_inquiry(inquiry, auto_create_deal=True)
+        except Exception:
+            pass  # Don't fail the form submission if CRM integration fails
+
         return self.render({"message": "Thanks! We'll be in touch shortly.", "id": inquiry.id}, status=201)
 
 

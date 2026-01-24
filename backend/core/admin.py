@@ -564,7 +564,7 @@ class ContactInquiryAdmin(ModelAdmin):
         }),
     )
 
-    actions = ['mark_as_contacted', 'mark_as_converted']
+    actions = ['mark_as_contacted', 'mark_as_converted', 'add_to_crm_pipeline']
 
     def mark_as_contacted(self, request, queryset):
         updated = queryset.update(status='contacted')
@@ -573,6 +573,35 @@ class ContactInquiryAdmin(ModelAdmin):
     def mark_as_converted(self, request, queryset):
         updated = queryset.update(status='converted')
         self.message_user(request, f'{updated} inquiries marked as converted', messages.SUCCESS)
+
+    @admin.action(description="🚀 Add to CRM Pipeline (Codeteki)")
+    def add_to_crm_pipeline(self, request, queryset):
+        """Push selected inquiries to CRM pipeline for follow-up."""
+        from crm.services.lead_integration import LeadIntegrationService
+
+        added = 0
+        updated = 0
+        errors = []
+
+        for inquiry in queryset:
+            try:
+                contact, deal, created = LeadIntegrationService.create_lead_from_inquiry(inquiry)
+                if contact:
+                    if created:
+                        added += 1
+                    else:
+                        updated += 1
+            except Exception as e:
+                errors.append(f"{inquiry.email}: {str(e)}")
+
+        if added or updated:
+            self.message_user(
+                request,
+                f"✅ {added} new leads added, {updated} existing updated in CRM pipeline",
+                messages.SUCCESS
+            )
+        if errors:
+            self.message_user(request, f"❌ Errors: {', '.join(errors)}", messages.ERROR)
 
     mark_as_contacted.short_description = "Mark as Contacted"
     mark_as_converted.short_description = "Mark as Converted"
@@ -1543,6 +1572,50 @@ class ChatConversationAdmin(ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+    actions = ['add_to_crm_pipeline', 'mark_as_escalated']
+
+    @admin.action(description="🚀 Add to CRM Pipeline (Codeteki)")
+    def add_to_crm_pipeline(self, request, queryset):
+        """Push chatbot leads to CRM pipeline for follow-up."""
+        from crm.services.lead_integration import LeadIntegrationService
+
+        added = 0
+        updated = 0
+        skipped = 0
+        errors = []
+
+        for conversation in queryset:
+            if not conversation.visitor_email:
+                skipped += 1
+                continue
+            try:
+                contact, deal, created = LeadIntegrationService.create_lead_from_chat(conversation)
+                if contact:
+                    if created:
+                        added += 1
+                    else:
+                        updated += 1
+            except Exception as e:
+                errors.append(f"{conversation.visitor_email}: {str(e)}")
+
+        msg_parts = []
+        if added:
+            msg_parts.append(f"{added} new leads added")
+        if updated:
+            msg_parts.append(f"{updated} existing updated")
+        if skipped:
+            msg_parts.append(f"{skipped} skipped (no email)")
+
+        if msg_parts:
+            self.message_user(request, f"✅ {', '.join(msg_parts)} in CRM pipeline", messages.SUCCESS)
+        if errors:
+            self.message_user(request, f"❌ Errors: {', '.join(errors)}", messages.ERROR)
+
+    @admin.action(description="⚠️ Mark as Escalated")
+    def mark_as_escalated(self, request, queryset):
+        updated = queryset.update(status='escalated')
+        self.message_user(request, f"{updated} conversations marked as escalated", messages.SUCCESS)
 
     class Meta:
         verbose_name_plural = "💬 Leads: Chat Conversations"

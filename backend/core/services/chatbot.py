@@ -127,6 +127,7 @@ class ChatbotService:
             assistant_entry.save(update_fields=["token_count", "metadata", "updated_at"])
 
         self._record_lead(response_text)
+        self._sync_to_crm()
 
         payload = {
             "response": response_text,
@@ -169,3 +170,25 @@ class ChatbotService:
         for message in reversed(history):
             rows.append(f"{message.role.capitalize()}: {message.content}")
         return "\n".join(rows)
+
+    def _sync_to_crm(self):
+        """Auto-add chatbot lead to CRM pipeline if email is provided."""
+        if not self.conversation.visitor_email:
+            return
+        # Only sync once (check metadata)
+        if self.conversation.metadata.get('crm_synced'):
+            return
+        try:
+            from crm.services.lead_integration import LeadIntegrationService
+            contact, deal, created = LeadIntegrationService.create_lead_from_chat(
+                self.conversation,
+                auto_create_deal=True
+            )
+            if contact:
+                self.conversation.metadata['crm_synced'] = True
+                self.conversation.metadata['crm_contact_id'] = str(contact.id)
+                if deal:
+                    self.conversation.metadata['crm_deal_id'] = str(deal.id)
+                self.conversation.save(update_fields=['metadata', 'updated_at'])
+        except Exception:
+            pass  # Don't break chat if CRM sync fails
