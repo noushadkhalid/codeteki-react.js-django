@@ -1,0 +1,60 @@
+server {
+    server_name desifirms.com.au www.desifirms.com.au;
+
+    # Gzip compression
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_proxied any;
+    gzip_types text/plain text/css text/xml text/javascript application/javascript application/x-javascript application/xml application/json;
+    gzip_comp_level 6;
+
+    # SECURITY: Block bots & vulnerability scanners
+    location ~* \.(php|asp|aspx|jsp|cgi|env|sql|bak)$ { return 444; }
+    location ~* (\.git|\.svn|wp-admin|wp-login|phpmyadmin) { return 444; }
+    location ~* (\+webvpn\+|/vpn/|/remote/|/dana-na/) { return 444; }
+
+    location = /favicon.ico {
+        access_log off;
+        log_not_found off;
+        expires 1y;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    location /static/ {
+        alias /home/codeteki/codeteki-react.js-django/backend/staticfiles/;
+        expires 1y;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+        add_header Vary "Accept-Encoding";
+        gzip_static on;
+    }
+
+    location /media/ {
+        alias /home/codeteki/codeteki-react.js-django/backend/media/;
+        expires 7d;
+        add_header Cache-Control "public, max-age=604800";
+    }
+
+    location / {
+        include proxy_params;
+        proxy_read_timeout 300;
+        proxy_connect_timeout 300;
+        proxy_send_timeout 300;
+        proxy_pass http://unix:/run/gunicorn.sock;
+        client_max_body_size 250m;
+    }
+
+    listen 443 ssl;
+    ssl_certificate /etc/letsencrypt/live/desifirms.com.au/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/desifirms.com.au/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+}
+
+server {
+    if ($host = www.desifirms.com.au) { return 301 https://$host$request_uri; }
+    if ($host = desifirms.com.au) { return 301 https://$host$request_uri; }
+    listen 80;
+    server_name desifirms.com.au www.desifirms.com.au;
+    return 404;
+}
