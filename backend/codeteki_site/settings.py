@@ -174,7 +174,7 @@ for path in [BASE_DIR / "static", FRONTEND_BUILD, FRONTEND_BUILD / "static"]:
     if path.exists():
         STATICFILES_DIRS.append(path)
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 # WhiteNoise cache settings - cache static files for 1 year (files have hashed names)
 WHITENOISE_MAX_AGE = 31536000  # 1 year in seconds
