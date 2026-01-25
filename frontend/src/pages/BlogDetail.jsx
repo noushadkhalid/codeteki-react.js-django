@@ -58,42 +58,17 @@ export default function BlogDetail() {
   }
 
   if (error || !post) {
-    // Try to parse error details from the error message (contains JSON response)
-    let apiError = null;
-    let apiSlug = null;
-
-    if (error?.message) {
-      try {
-        // Error message format: "404: {JSON}"
-        const jsonPart = error.message.replace(/^\d+:\s*/, '');
-        if (jsonPart.startsWith('{')) {
-          const parsed = JSON.parse(jsonPart);
-          apiError = parsed?.data?.error;
-          apiSlug = parsed?.data?.slug;
-        }
-      } catch {
-        // Ignore parse errors
-      }
-    }
-
     return (
       <div className="min-h-screen bg-white py-12">
         <div className="container mx-auto px-4 max-w-3xl text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Article not found</h1>
-          <p className="text-gray-600 mb-4">
-            {apiError || "The blog post you're looking for doesn't exist or has been removed."}
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Coming Soon</h1>
+          <p className="text-gray-600 mb-8">
+            This article is being prepared and will be published soon. Stay tuned!
           </p>
-          <p className="text-gray-400 text-sm mb-2">Requested slug: {slug}</p>
-          {apiSlug && (
-            <p className="text-gray-400 text-sm mb-2">API received: {apiSlug}</p>
-          )}
-          {error && !apiError && (
-            <p className="text-red-400 text-xs mb-4">Error: {error.message}</p>
-          )}
           <Link href="/blog">
-            <Button>
+            <Button className="bg-[#f9cb07] hover:bg-[#e6b800] text-black">
               <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Blog
+              Browse Other Articles
             </Button>
           </Link>
         </div>
