@@ -1044,7 +1044,7 @@ class BlogPost(TimestampedModel):
 
     # Basic fields
     title = models.CharField(max_length=255)
-    slug = models.SlugField(unique=True)
+    slug = models.SlugField(max_length=255, unique=True)
     excerpt = models.TextField(max_length=320, help_text="Brief summary for previews (max 320 chars)")
     content = RichTextField()
     featured_image = OptimizedImageField(upload_to='blog/', blank=True, null=True)

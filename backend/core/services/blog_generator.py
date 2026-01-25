@@ -634,6 +634,24 @@ class BlogGenerationProcessor:
         # Create unique slug
         slug = self._unique_slug(result['title'])
 
+        # Get or create category
+        category = self.job.target_category
+        if not category:
+            # Auto-create category from job name
+            category_name = self.job.name[:80]  # Use job name as category
+            category_slug = slugify(category_name)[:50]
+            category, created = BlogCategory.objects.get_or_create(
+                slug=category_slug,
+                defaults={
+                    'name': category_name,
+                    'description': f'Blog posts about {category_name}'
+                }
+            )
+            # Save to job so all posts in this job use same category
+            if created:
+                self.job.target_category = category
+                self.job.save(update_fields=['target_category'])
+
         # Create blog post
         post = BlogPost.objects.create(
             title=result['title'],
@@ -641,7 +659,7 @@ class BlogGenerationProcessor:
             excerpt=Truncator(result['excerpt']).chars(320),
             content=result['content'],
             author='Codeteki Team',
-            blog_category=self.job.target_category,
+            blog_category=category,
             tags=', '.join(result['keywords']),
             focus_keyword=topic[:100],
             meta_title=result['title'][:70],

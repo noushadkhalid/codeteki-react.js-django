@@ -1896,6 +1896,7 @@ class BlogCategoryAdmin(ModelAdmin):
 class BlogPostAdmin(ModelAdmin):
     list_display = ('title', 'author', 'blog_category', 'status', 'is_featured', 'published_at', 'views_count')
     list_filter = ('status', 'is_featured', 'blog_category', 'ai_generated', 'published_at')
+    list_editable = ('status', 'is_featured')
     prepopulated_fields = {'slug': ('title',)}
     ordering = ('-published_at', '-created_at')
     search_fields = ('title', 'excerpt', 'content', 'focus_keyword')
