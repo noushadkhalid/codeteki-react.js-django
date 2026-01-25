@@ -7,6 +7,7 @@
 
     // Actions that should show loading overlay (excludes instant actions like exports)
     const LOADING_ACTIONS = [
+        // SEO Actions
         'run_lighthouse_audit',
         'run_pagespeed_analysis',
         'generate_ai_analysis',
@@ -23,7 +24,17 @@
         'apply_to_matching_service',
         'approve_recommendations',
         'apply_recommendations',
-        'generate_ai_meta'
+        'generate_ai_meta',
+        // Blog Builder Actions
+        'scan_csv',
+        'generate_blogs',
+        // CRM Actions (Desi Firms)
+        'add_to_pipeline_followup',
+        'send_email_now',
+        'move_to_next_stage',
+        'queue_followup_email',
+        'generate_ai_email',
+        'compose_ai_email'
     ];
 
     // Actions that return file downloads (don't show loading, they're instant)
@@ -33,6 +44,7 @@
 
     // Loading messages for each action
     const LOADING_MESSAGES = {
+        // SEO Messages
         'run_lighthouse_audit': 'Running Lighthouse Audit... This may take 30-60 seconds per URL.',
         'run_pagespeed_analysis': 'Analyzing with PageSpeed Insights...',
         'generate_ai_analysis': 'Generating AI Analysis with ChatGPT... Results will appear in "AI Analysis" tab.',
@@ -49,7 +61,17 @@
         'apply_to_matching_service': 'Smart matching keywords to services... Applying SEO recommendations.',
         'approve_recommendations': 'Approving selected recommendations...',
         'apply_recommendations': 'Applying SEO recommendations to pages...',
-        'generate_ai_meta': 'Generating AI Meta Tags with ChatGPT... This may take a few seconds per page.'
+        'generate_ai_meta': 'Generating AI Meta Tags with ChatGPT... This may take a few seconds per page.',
+        // Blog Builder Messages
+        'scan_csv': 'Scanning CSV file... Detecting type and extracting topics.',
+        'generate_blogs': 'Generating blog posts with AI... This may take 30-60 seconds per post.',
+        // CRM Messages
+        'add_to_pipeline_followup': 'Adding contacts to pipeline...',
+        'send_email_now': 'Generating email preview...',
+        'move_to_next_stage': 'Moving deals to next stage...',
+        'queue_followup_email': 'Queueing follow-up emails...',
+        'generate_ai_email': 'Generating AI email with ChatGPT...',
+        'compose_ai_email': 'Composing AI email...'
     };
 
     let isLoading = false;

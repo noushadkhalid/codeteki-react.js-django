@@ -1956,6 +1956,9 @@ class BlogGenerationJobAdmin(ModelAdmin):
     3. Run "Generate Blogs" to create draft posts
     """
 
+    class Media:
+        js = ('admin/js/seo-loading.js',)
+
     list_display = ('name', 'source_type', 'status_badge', 'detected_type', 'generated_count', 'created_at')
     list_filter = ('status', 'source_type', 'auto_publish', 'writing_style')
     search_fields = ('name',)

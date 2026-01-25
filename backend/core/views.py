@@ -1213,7 +1213,13 @@ class BlogAPIView(JSONAPIView):
 class BlogDetailAPIView(JSONAPIView):
     """Single blog post by slug."""
     def get(self, request, slug):
+        import logging
+        logger = logging.getLogger(__name__)
+
         try:
+            # Log the incoming slug for debugging
+            logger.info(f"BlogDetail request for slug: '{slug}'")
+
             post = BlogPost.objects.select_related('blog_category').get(slug=slug, status='published')
 
             # Increment view count
@@ -1246,7 +1252,19 @@ class BlogDetailAPIView(JSONAPIView):
                 }
             })
         except BlogPost.DoesNotExist:
-            return self.render({"error": "Post not found"}, status=404)
+            # Log more details about why it failed
+            logger.warning(f"BlogPost not found for slug: '{slug}'")
+
+            # Check if slug exists with different status
+            existing = BlogPost.objects.filter(slug=slug).first()
+            if existing:
+                logger.warning(f"Found post with slug '{slug}' but status is '{existing.status}' (not published)")
+                return self.render({
+                    "error": f"Post exists but is not published (status: {existing.status})",
+                    "slug": slug
+                }, status=404)
+
+            return self.render({"error": "Post not found", "slug": slug}, status=404)
 
 
 class KnowledgeBaseAPIView(JSONAPIView):

@@ -127,6 +127,9 @@ class ContactAdmin(ModelAdmin):
     readonly_fields = ['created_at', 'updated_at', 'id', 'last_emailed_at', 'email_count', 'unsubscribed_at']
     ordering = ['-created_at']
 
+    class Media:
+        js = ('admin/js/seo-loading.js',)
+
     fieldsets = (
         ('Contact Information', {
             'fields': ('brand', 'name', 'email', 'company', 'website')
@@ -474,6 +477,9 @@ class DealAdmin(ModelAdmin):
     readonly_fields = ['id', 'created_at', 'updated_at', 'stage_entered_at', 'emails_sent']
     inlines = [DealActivityInline, EmailLogInline]
     ordering = ['-created_at']
+
+    class Media:
+        js = ('admin/js/seo-loading.js',)
 
     fieldsets = (
         ('Deal Information', {
@@ -1226,7 +1232,7 @@ class EmailDraftAdmin(ModelAdmin):
         css = {
             'all': []
         }
-        js = []
+        js = ('admin/js/seo-loading.js',)
 
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)

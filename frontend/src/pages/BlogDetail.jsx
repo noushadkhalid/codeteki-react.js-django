@@ -7,13 +7,38 @@ import { ArrowLeft, Clock, User, Calendar, ArrowRight } from "lucide-react";
 import SEOHead from "../components/SEOHead";
 
 export default function BlogDetail() {
-  const { slug } = useParams();
+  const params = useParams();
+  const slug = params?.slug;
 
   const { data, isLoading, error } = useQuery({
     queryKey: [`/api/blog/${slug}/`],
+    enabled: !!slug, // Only fetch if slug exists
   });
 
   const post = data?.data?.post;
+
+  // Debug: Log what we're getting
+  if (process.env.NODE_ENV === 'development') {
+    console.log('BlogDetail params:', params, 'slug:', slug, 'data:', data, 'error:', error);
+  }
+
+  // Check slug first - before loading check
+  if (!slug) {
+    return (
+      <div className="min-h-screen bg-white py-12">
+        <div className="container mx-auto px-4 max-w-3xl text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Invalid URL</h1>
+          <p className="text-gray-600 mb-8">No article slug provided in the URL.</p>
+          <Link href="/blog">
+            <Button>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Blog
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -33,11 +58,38 @@ export default function BlogDetail() {
   }
 
   if (error || !post) {
+    // Try to parse error details from the error message (contains JSON response)
+    let apiError = null;
+    let apiSlug = null;
+
+    if (error?.message) {
+      try {
+        // Error message format: "404: {JSON}"
+        const jsonPart = error.message.replace(/^\d+:\s*/, '');
+        if (jsonPart.startsWith('{')) {
+          const parsed = JSON.parse(jsonPart);
+          apiError = parsed?.data?.error;
+          apiSlug = parsed?.data?.slug;
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    }
+
     return (
       <div className="min-h-screen bg-white py-12">
         <div className="container mx-auto px-4 max-w-3xl text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Article not found</h1>
-          <p className="text-gray-600 mb-8">The blog post you're looking for doesn't exist or has been removed.</p>
+          <p className="text-gray-600 mb-4">
+            {apiError || "The blog post you're looking for doesn't exist or has been removed."}
+          </p>
+          <p className="text-gray-400 text-sm mb-2">Requested slug: {slug}</p>
+          {apiSlug && (
+            <p className="text-gray-400 text-sm mb-2">API received: {apiSlug}</p>
+          )}
+          {error && !apiError && (
+            <p className="text-red-400 text-xs mb-4">Error: {error.message}</p>
+          )}
           <Link href="/blog">
             <Button>
               <ArrowLeft className="w-4 h-4 mr-2" />
