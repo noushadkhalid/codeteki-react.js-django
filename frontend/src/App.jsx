@@ -21,6 +21,7 @@ const ServiceDetail = lazy(() => import("./pages/ServiceDetail"));
 const AIToolsPage = lazy(() => import("./pages/AIToolsPage"));
 const Contact = lazy(() => import("./pages/Contact"));
 const Blog = lazy(() => import("./pages/Blog"));
+const BlogDetail = lazy(() => import("./pages/BlogDetail"));
 const FAQPage = lazy(() => import("./pages/FAQ"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
@@ -65,6 +66,7 @@ function Router() {
             <Route path="/ai-tools" component={AIToolsPage} />
             <Route path="/demos" component={Demos} />
             <Route path="/blog" component={Blog} />
+            <Route path="/blog/:slug" component={BlogDetail} />
             <Route path="/contact" component={Contact} />
             <Route path="/faq" component={FAQPage} />
             <Route path="/privacy-policy" component={PrivacyPolicy} />

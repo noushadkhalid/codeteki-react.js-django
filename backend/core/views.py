@@ -1210,6 +1210,45 @@ class BlogAPIView(JSONAPIView):
         return self.render({"posts": payload})
 
 
+class BlogDetailAPIView(JSONAPIView):
+    """Single blog post by slug."""
+    def get(self, request, slug):
+        try:
+            post = BlogPost.objects.select_related('blog_category').get(slug=slug, status='published')
+
+            # Increment view count
+            post.views_count = (post.views_count or 0) + 1
+            post.save(update_fields=['views_count'])
+
+            # Convert markdown content to HTML if needed
+            import markdown
+            content_html = markdown.markdown(
+                post.content,
+                extensions=['extra', 'codehilite', 'tables', 'toc']
+            ) if post.content else ''
+
+            return self.render({
+                "post": {
+                    "title": post.title,
+                    "slug": post.slug,
+                    "excerpt": post.excerpt,
+                    "content": post.content,
+                    "contentHtml": content_html,
+                    "featuredImage": post.featured_image.url if post.featured_image else None,
+                    "author": post.author,
+                    "category": post.blog_category.name if post.blog_category else post.category,
+                    "tags": post.tags.split(",") if post.tags else [],
+                    "metaTitle": post.meta_title,
+                    "metaDescription": post.meta_description,
+                    "publishedAt": post.published_at.isoformat() if post.published_at else None,
+                    "viewsCount": post.views_count,
+                    "readingTime": post.reading_time_minutes,
+                }
+            })
+        except BlogPost.DoesNotExist:
+            return self.render({"error": "Post not found"}, status=404)
+
+
 class KnowledgeBaseAPIView(JSONAPIView):
     """Knowledge-base articles for the chatbot and frontend."""
 

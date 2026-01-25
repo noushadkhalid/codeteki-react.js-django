@@ -4,6 +4,7 @@ from .views import (
     AIToolsContentAPIView,
     AIToolsPageAPIView,
     BlogAPIView,
+    BlogDetailAPIView,
     BusinessImpactAPIView,
     ContactAPIView,
     ContactPageAPIView,
@@ -69,6 +70,7 @@ urlpatterns = [
     # Navigation and blog
     path("navigation/", NavigationAPIView.as_view(), name="navigation"),
     path("blog/", BlogAPIView.as_view(), name="blog"),
+    path("blog/<slug:slug>/", BlogDetailAPIView.as_view(), name="blog-detail"),
     # Page-level aggregated endpoints
     path("pages/home/", HomePageAPIView.as_view(), name="page-home"),
     path("pages/services/", ServicesPageAPIView.as_view(), name="page-services"),
