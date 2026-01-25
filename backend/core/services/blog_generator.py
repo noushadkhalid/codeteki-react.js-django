@@ -140,18 +140,21 @@ CRITICAL: Write like a real human expert, NOT like AI. Your writing MUST:
 CODETEKI_CONTEXT = """
 About Codeteki (the company publishing this blog):
 - Melbourne-based AI solutions agency
-- Services: AI chatbots, voice agents, custom websites, business automation, CRM
-- Key differentiator: No monthly fees on many solutions, transparent pricing
-- Target audience: Australian small-to-medium businesses
-- Expertise: Custom-built solutions, not cookie-cutter templates
+- Services: AI chatbots, AI voice agents, custom websites, business automation, SEO
+- Key differentiator: No monthly fees on many solutions, transparent flat-rate pricing
+- Target audience: Australian small-to-medium businesses who want AI automation
+- Expertise: Custom-built AI solutions tailored to each business
 - Phone: 0424 538 777
 - Website: codeteki.au
+- Booking: codeteki.au/contact for free strategy call
 
-When mentioning Codeteki:
-- Be subtle and natural, never salesy
-- Use phrases like "At agencies like Codeteki, we've seen..."
-- Reference as a local example: "Melbourne-based solutions like..."
-- Don't force the name in - only mention where genuinely relevant
+IMPORTANT - Position Codeteki as THE solution:
+- Write as if Codeteki IS the answer to the problems discussed
+- Don't list competitors - position Codeteki's services as the solution
+- Include 2-3 mentions of specific Codeteki services with benefits
+- End EVERY post with a clear CTA: "Ready to [benefit]? Book a free strategy call at codeteki.au"
+- Use phrases like "At Codeteki, we've built..." or "Our AI chatbot clients see..."
+- Reference real results: "40% reduction in phone calls", "24/7 customer support", "no monthly fees"
 """
 
 
@@ -386,8 +389,12 @@ class HumanLikeBlogWriter:
 
 {HUMAN_WRITING_RULES}
 
-Remember: Your goal is to write content that helps businesses, not content that sells services.
-The best marketing is genuinely useful content. Be that.
+CRITICAL MARKETING GOAL:
+- Every blog post should position Codeteki as THE solution
+- Don't write generic "Top 10" or "Best Tools" listicles listing competitors
+- Instead, write problem/solution content where Codeteki is the solution
+- Include specific CTAs to codeteki.au services
+- Your goal is CONVERSIONS: get readers to book a strategy call
 """
 
     def _build_prompt(
@@ -401,18 +408,33 @@ The best marketing is genuinely useful content. Be that.
     ) -> str:
         """Build the content generation prompt."""
 
-        # Service context if applicable
+        # Service context - ALWAYS include Codeteki as the solution
         service_context = ""
         if related_services:
             services_info = []
             for svc_key in related_services:
                 svc = CODETEKI_SERVICES.get(svc_key, {})
                 if svc:
-                    services_info.append(f"- {svc['name']}: {svc['mention']}")
+                    services_info.append(f"- {svc['name']}: {svc['mention']} (URL: {svc['url']})")
             if services_info:
                 service_context = f"""
-RELEVANT CODETEKI SERVICES (mention naturally if appropriate, don't force):
+CODETEKI SERVICES TO PROMOTE (these ARE the solution - feature prominently):
 {chr(10).join(services_info)}
+
+YOU MUST:
+- Mention these services 2-3 times in the article as the solution
+- Include at least one inline CTA linking to the service
+- End with a strong CTA: "Book your free strategy call at codeteki.au/contact"
+"""
+        else:
+            # Default services to mention
+            service_context = """
+CODETEKI SERVICES TO PROMOTE:
+- AI Chatbot Development: 24/7 customer support automation
+- AI Voice Agents: Automated phone answering and appointment booking
+- Custom Websites: Fast, conversion-focused websites
+
+Include these naturally and end with a CTA to codeteki.au/contact
 """
 
         keywords_str = ', '.join(keywords) if keywords else 'derive from topic'
@@ -428,11 +450,19 @@ STYLE: {writing_style}
 {service_context}
 
 STRUCTURE REQUIREMENTS:
-1. Title (H1) - Compelling, keyword-rich but natural
-2. Excerpt - 2 sentences that hook the reader (put this right after the title)
-3. Introduction - Hook them immediately, no clichés
-4. 3-5 main sections (H2) - Each with practical value
-5. Conclusion - Natural wrap-up with subtle CTA
+1. Title (H1) - Compelling, keyword-rich, positions the SOLUTION not the problem
+2. Excerpt - 2 sentences that hook and hint at the solution (Codeteki)
+3. Introduction - Hook with the PROBLEM, hint that you have the solution
+4. 2-3 main sections (H2) - Show how Codeteki's services solve the problem
+5. "How Codeteki Helps" section - Explicitly showcase relevant services
+6. Conclusion - Strong CTA: "Ready to [benefit]? Book a free strategy call at codeteki.au/contact"
+
+IMPORTANT CONTENT RULES:
+- Do NOT write "Top 10 Tools" or "Best Platforms" articles listing competitors
+- Instead write "How to [achieve X]" with Codeteki as the solution
+- Every section should build toward why Codeteki is the answer
+- Include at least 2 mentions of specific Codeteki services
+- Include real benefits: "no monthly fees", "custom-built", "24/7 automation"
 
 FORMAT:
 Return the blog post in clean Markdown format:
