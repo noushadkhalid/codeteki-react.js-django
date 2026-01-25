@@ -1175,12 +1175,17 @@ class ContactPageAPIView(JSONAPIView):
 class BlogAPIView(JSONAPIView):
     """Blog posts."""
     def get(self, request):
-        posts = BlogPost.objects.filter(is_published=True).order_by("-published_at")
+        # Filter by status='published' (new field) for consistency
+        posts = BlogPost.objects.filter(status='published').order_by("-published_at")
 
-        # Optional filtering
+        # Optional filtering by category
         category = request.GET.get('category')
         if category:
-            posts = posts.filter(category=category)
+            posts = posts.filter(
+                models.Q(blog_category__name__icontains=category) |
+                models.Q(blog_category__slug__icontains=category) |
+                models.Q(category__icontains=category)  # Legacy field
+            )
 
         featured_only = request.GET.get('featured')
         if featured_only:
@@ -1194,13 +1199,13 @@ class BlogAPIView(JSONAPIView):
                 "content": post.content,
                 "featuredImage": post.featured_image.url if post.featured_image else None,
                 "author": post.author,
-                "category": post.category,
+                "category": post.blog_category.name if post.blog_category else post.category,
                 "tags": post.tags.split(",") if post.tags else [],
                 "isFeatured": post.is_featured,
                 "publishedAt": post.published_at.isoformat() if post.published_at else None,
                 "viewsCount": post.views_count,
             }
-            for post in posts[:20]  # Limit to 20 posts
+            for post in posts.select_related('blog_category')[:20]  # Limit to 20 posts
         ]
         return self.render({"posts": payload})
 
