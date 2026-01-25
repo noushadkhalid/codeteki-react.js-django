@@ -3,15 +3,113 @@ import { useParams, Link } from "wouter";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Skeleton } from "../components/ui/skeleton";
-import { ArrowLeft, Clock, User, Calendar, ArrowRight, Share2, BookOpen, ChevronUp, Sparkles } from "lucide-react";
+import { ArrowLeft, Clock, User, Calendar, ArrowRight, Share2, BookOpen, ChevronUp, Sparkles, X, Copy, Check, Twitter, Linkedin, Facebook, Mail } from "lucide-react";
 import SEOHead from "../components/SEOHead";
 import { useState, useEffect } from "react";
+
+// Brand Colors
+const BRAND = {
+  yellow: '#f9cd15',
+  black: '#000000',
+  white: '#FFFFFF'
+};
+
+// Share Modal Component
+function ShareModal({ isOpen, onClose, title, url }) {
+  const [copied, setCopied] = useState(false);
+
+  if (!isOpen) return null;
+
+  const shareOptions = [
+    {
+      name: 'Copy Link',
+      icon: copied ? Check : Copy,
+      color: 'bg-gray-100 hover:bg-gray-200 text-black',
+      action: async () => {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }
+    },
+    {
+      name: 'X (Twitter)',
+      icon: Twitter,
+      color: 'bg-black hover:bg-gray-900 text-white',
+      action: () => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`, '_blank')
+    },
+    {
+      name: 'LinkedIn',
+      icon: Linkedin,
+      color: 'bg-[#0077B5] hover:bg-[#006399] text-white',
+      action: () => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank')
+    },
+    {
+      name: 'Facebook',
+      icon: Facebook,
+      color: 'bg-[#1877F2] hover:bg-[#0d65d9] text-white',
+      action: () => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank')
+    },
+    {
+      name: 'Email',
+      icon: Mail,
+      color: `bg-[${BRAND.yellow}] hover:bg-[#e6bc00] text-black`,
+      action: () => window.open(`mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(`Check out this article: ${url}`)}`, '_blank')
+    }
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b">
+          <h3 className="text-xl font-bold text-black">Share this article</h3>
+          <button
+            onClick={onClose}
+            className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+          >
+            <X className="w-5 h-5 text-gray-600" />
+          </button>
+        </div>
+
+        {/* Share Options */}
+        <div className="p-6 space-y-3">
+          {shareOptions.map((option) => (
+            <button
+              key={option.name}
+              onClick={option.action}
+              className={`w-full flex items-center gap-4 p-4 rounded-xl font-semibold transition-all ${option.color}`}
+            >
+              <option.icon className="w-5 h-5" />
+              <span>{copied && option.name === 'Copy Link' ? 'Copied!' : option.name}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* URL Preview */}
+        <div className="px-6 pb-6">
+          <div className="bg-gray-50 rounded-xl p-4 border-2 border-dashed border-gray-200">
+            <p className="text-xs text-gray-500 mb-1">Article URL</p>
+            <p className="text-sm text-gray-700 truncate font-mono">{url}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function BlogDetail() {
   const params = useParams();
   const slug = params?.slug;
   const [progress, setProgress] = useState(0);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: [`/api/blog/${slug}/`],
@@ -37,32 +135,17 @@ export default function BlogDetail() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const shareArticle = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: post?.title,
-          text: post?.excerpt,
-          url: window.location.href,
-        });
-      } catch (err) {}
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert('Link copied to clipboard!');
-    }
-  };
-
   if (!slug) {
     return (
       <div className="min-h-screen bg-[#FFFDF7] flex items-center justify-center">
         <div className="text-center px-4">
-          <div className="w-20 h-20 bg-[#f9cb07]/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <BookOpen className="w-10 h-10 text-[#f9cb07]" />
+          <div className="w-20 h-20 bg-[#f9cd15]/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <BookOpen className="w-10 h-10 text-[#f9cd15]" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Invalid URL</h1>
           <p className="text-gray-600 mb-8">No article slug provided.</p>
           <Link href="/blog">
-            <Button className="bg-[#f9cb07] text-black hover:bg-[#e6b800] font-semibold">
+            <Button className="bg-[#f9cd15] text-black hover:bg-[#e6b800] font-semibold">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Blog
             </Button>
@@ -101,15 +184,15 @@ export default function BlogDetail() {
     return (
       <div className="min-h-screen bg-[#FFFDF7] flex items-center justify-center">
         <div className="text-center px-4">
-          <div className="w-20 h-20 bg-[#f9cb07]/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <Clock className="w-10 h-10 text-[#f9cb07]" />
+          <div className="w-20 h-20 bg-[#f9cd15]/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Clock className="w-10 h-10 text-[#f9cd15]" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Coming Soon</h1>
           <p className="text-gray-600 mb-8 max-w-md">
             This article is being prepared and will be published soon. Stay tuned!
           </p>
           <Link href="/blog">
-            <Button className="bg-[#f9cb07] hover:bg-[#e6b800] text-black font-semibold">
+            <Button className="bg-[#f9cd15] hover:bg-[#e6b800] text-black font-semibold">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Browse Other Articles
             </Button>
@@ -133,7 +216,7 @@ export default function BlogDetail() {
       {/* Progress Bar */}
       <div className="fixed top-0 left-0 right-0 h-1.5 bg-gray-200 z-50">
         <div
-          className="h-full bg-gradient-to-r from-[#f9cb07] to-[#e6b800] transition-all duration-150 shadow-lg shadow-[#f9cb07]/50"
+          className="h-full bg-gradient-to-r from-[#f9cd15] to-[#e6b800] transition-all duration-150 shadow-lg shadow-[#f9cd15]/50"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -141,8 +224,8 @@ export default function BlogDetail() {
       {/* Hero Header */}
       <header className="relative overflow-hidden bg-gradient-to-br from-[#FFF9E6] via-[#FFFDF7] to-[#FFF4CC]">
         {/* Decorative Elements */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#f9cb07]/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[#f9cb07]/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4" />
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#f9cd15]/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[#f9cd15]/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4" />
 
         {/* Pattern */}
         <div className="absolute inset-0 opacity-[0.03]" style={{
@@ -161,7 +244,7 @@ export default function BlogDetail() {
           <div className="max-w-4xl">
             {/* Category Badge */}
             {post.category && (
-              <Badge className="bg-[#f9cb07] text-black mb-6 font-semibold shadow-lg shadow-[#f9cb07]/20 px-4 py-1.5">
+              <Badge className="bg-[#f9cd15] text-black mb-6 font-semibold shadow-lg shadow-[#f9cd15]/20 px-4 py-1.5">
                 {post.category}
               </Badge>
             )}
@@ -181,7 +264,7 @@ export default function BlogDetail() {
             {/* Meta Info */}
             <div className="flex flex-wrap items-center gap-4 md:gap-6">
               <div className="flex items-center gap-2 bg-white/70 backdrop-blur-sm rounded-full px-4 py-2">
-                <div className="w-8 h-8 rounded-full bg-[#f9cb07] flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-[#f9cd15] flex items-center justify-center">
                   <User className="w-4 h-4 text-black" />
                 </div>
                 <span className="text-black font-semibold text-sm">{post.author || "Codeteki Team"}</span>
@@ -204,11 +287,11 @@ export default function BlogDetail() {
               </div>
 
               <button
-                onClick={shareArticle}
-                className="flex items-center gap-2 text-gray-600 hover:text-[#c9a000] transition-colors ml-auto bg-white/70 backdrop-blur-sm rounded-full px-4 py-2"
+                onClick={() => setShowShareModal(true)}
+                className="flex items-center gap-2 text-black hover:text-[#c9a000] transition-colors ml-auto bg-[#f9cd15] hover:bg-[#e6bc00] rounded-full px-5 py-2.5 font-semibold shadow-lg"
               >
                 <Share2 className="w-4 h-4" />
-                <span className="text-sm font-medium">Share</span>
+                <span className="text-sm">Share</span>
               </button>
             </div>
           </div>
@@ -241,16 +324,16 @@ export default function BlogDetail() {
               prose-h2:text-2xl prose-h2:md:text-3xl prose-h2:mt-16 prose-h2:mb-6 prose-h2:relative prose-h2:pl-6
               prose-h3:text-xl prose-h3:mt-10 prose-h3:mb-4
               prose-p:text-gray-700 prose-p:leading-[1.9] prose-p:mb-6 prose-p:text-[17px]
-              prose-a:text-[#c9a000] prose-a:font-semibold prose-a:no-underline prose-a:border-b-2 prose-a:border-[#f9cb07] hover:prose-a:border-[#c9a000] prose-a:transition-colors
-              prose-strong:text-black prose-strong:font-bold prose-strong:bg-[#f9cb07]/20 prose-strong:px-1 prose-strong:rounded
+              prose-a:text-[#c9a000] prose-a:font-semibold prose-a:no-underline prose-a:border-b-2 prose-a:border-[#f9cd15] hover:prose-a:border-[#c9a000] prose-a:transition-colors
+              prose-strong:text-black prose-strong:font-bold prose-strong:bg-[#f9cd15]/20 prose-strong:px-1 prose-strong:rounded
               prose-ul:my-8 prose-ul:space-y-3
               prose-li:text-gray-700 prose-li:pl-2 prose-li:leading-relaxed
               prose-ol:my-8 prose-ol:space-y-3
-              prose-blockquote:border-l-4 prose-blockquote:border-[#f9cb07] prose-blockquote:bg-gradient-to-r prose-blockquote:from-[#f9cb07]/10 prose-blockquote:to-transparent prose-blockquote:py-6 prose-blockquote:px-8 prose-blockquote:rounded-r-2xl prose-blockquote:not-italic prose-blockquote:text-gray-800 prose-blockquote:font-medium prose-blockquote:my-10 prose-blockquote:shadow-lg prose-blockquote:shadow-[#f9cb07]/10
-              prose-code:bg-[#f9cb07]/20 prose-code:text-black prose-code:px-2 prose-code:py-1 prose-code:rounded-md prose-code:text-sm prose-code:font-semibold prose-code:before:content-none prose-code:after:content-none
+              prose-blockquote:border-l-4 prose-blockquote:border-[#f9cd15] prose-blockquote:bg-gradient-to-r prose-blockquote:from-[#f9cd15]/10 prose-blockquote:to-transparent prose-blockquote:py-6 prose-blockquote:px-8 prose-blockquote:rounded-r-2xl prose-blockquote:not-italic prose-blockquote:text-gray-800 prose-blockquote:font-medium prose-blockquote:my-10 prose-blockquote:shadow-lg prose-blockquote:shadow-[#f9cd15]/10
+              prose-code:bg-[#f9cd15]/20 prose-code:text-black prose-code:px-2 prose-code:py-1 prose-code:rounded-md prose-code:text-sm prose-code:font-semibold prose-code:before:content-none prose-code:after:content-none
               prose-pre:bg-gray-900 prose-pre:rounded-2xl prose-pre:shadow-2xl prose-pre:my-10
               prose-img:rounded-2xl prose-img:shadow-2xl prose-img:my-10
-              prose-hr:border-[#f9cb07]/30 prose-hr:my-12"
+              prose-hr:border-[#f9cd15]/30 prose-hr:my-12"
             dangerouslySetInnerHTML={{ __html: post.contentHtml || post.content }}
           />
 
@@ -263,15 +346,15 @@ export default function BlogDetail() {
               top: 0;
               bottom: 0;
               width: 4px;
-              background: linear-gradient(to bottom, #f9cb07, #e6b800);
+              background: linear-gradient(to bottom, #f9cd15, #e6b800);
               border-radius: 2px;
             }
             .blog-content ul li::marker {
-              color: #f9cb07;
+              color: #f9cd15;
               font-size: 1.2em;
             }
             .blog-content ol li::marker {
-              color: #f9cb07;
+              color: #f9cd15;
               font-weight: bold;
             }
             .blog-content p:first-of-type::first-letter {
@@ -281,15 +364,15 @@ export default function BlogDetail() {
               line-height: 1;
               margin-right: 12px;
               margin-top: 4px;
-              color: #f9cb07;
+              color: #f9cd15;
             }
           `}</style>
 
           {/* Key Takeaways Box (if content is long enough) */}
           {post.content && post.content.length > 2000 && (
-            <div className="my-12 p-8 bg-gradient-to-br from-[#f9cb07]/10 to-[#f9cb07]/5 rounded-2xl border-2 border-[#f9cb07]/20">
+            <div className="my-12 p-8 bg-gradient-to-br from-[#f9cd15]/10 to-[#f9cd15]/5 rounded-2xl border-2 border-[#f9cd15]/20">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[#f9cb07] flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-[#f9cd15] flex items-center justify-center">
                   <Sparkles className="w-5 h-5 text-black" />
                 </div>
                 <h3 className="text-xl font-black text-black">Key Takeaway</h3>
@@ -303,7 +386,7 @@ export default function BlogDetail() {
 
           {/* Tags */}
           {post.tags && post.tags.length > 0 && post.tags[0] && (
-            <div className="mt-16 pt-8 border-t-2 border-[#f9cb07]/20">
+            <div className="mt-16 pt-8 border-t-2 border-[#f9cd15]/20">
               <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">
                 Related Topics
               </h3>
@@ -311,7 +394,7 @@ export default function BlogDetail() {
                 {post.tags.filter(t => t.trim()).map((tag, idx) => (
                   <Badge
                     key={idx}
-                    className="bg-[#f9cb07]/10 text-gray-700 hover:bg-[#f9cb07]/20 transition-colors px-4 py-2 font-medium border-0"
+                    className="bg-[#f9cd15]/10 text-gray-700 hover:bg-[#f9cd15]/20 transition-colors px-4 py-2 font-medium border-0"
                   >
                     {tag.trim()}
                   </Badge>
@@ -322,7 +405,7 @@ export default function BlogDetail() {
 
           {/* Author Card */}
           <div className="mt-16 p-8 bg-white rounded-2xl shadow-xl border border-gray-100 flex flex-col sm:flex-row items-center gap-6">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#f9cb07] to-[#e6b800] flex items-center justify-center flex-shrink-0 shadow-lg">
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#f9cd15] to-[#e6b800] flex items-center justify-center flex-shrink-0 shadow-lg">
               <span className="text-3xl font-black text-black">C</span>
             </div>
             <div className="text-center sm:text-left flex-1">
@@ -337,7 +420,7 @@ export default function BlogDetail() {
           </div>
 
           {/* CTA Section */}
-          <div className="mt-16 relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#f9cb07] to-[#e6b800] p-8 md:p-12 shadow-2xl">
+          <div className="mt-16 relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#f9cd15] to-[#e6b800] p-8 md:p-12 shadow-2xl">
             {/* Pattern */}
             <div className="absolute inset-0 opacity-10" style={{
               backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
@@ -375,12 +458,20 @@ export default function BlogDetail() {
       {showScrollTop && (
         <button
           onClick={scrollToTop}
-          className="fixed bottom-8 right-8 w-14 h-14 bg-[#f9cb07] text-black rounded-full shadow-lg shadow-[#f9cb07]/30 flex items-center justify-center hover:bg-[#e6b800] transition-all z-40 hover:scale-110"
+          className="fixed bottom-8 right-8 w-14 h-14 bg-[#f9cd15] text-black rounded-full shadow-lg shadow-[#f9cd15]/30 flex items-center justify-center hover:bg-[#e6bc00] transition-all z-40 hover:scale-110"
           aria-label="Scroll to top"
         >
           <ChevronUp className="w-6 h-6" />
         </button>
       )}
+
+      {/* Share Modal */}
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        title={post?.title || ''}
+        url={typeof window !== 'undefined' ? window.location.href : ''}
+      />
     </div>
   );
 }

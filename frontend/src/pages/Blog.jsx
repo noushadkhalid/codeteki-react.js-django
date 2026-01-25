@@ -42,8 +42,8 @@ export default function Blog() {
       {/* Hero Header */}
       <section className="relative overflow-hidden bg-gradient-to-br from-[#FFF9E6] via-[#FFFDF7] to-[#FFF4CC]">
         {/* Decorative Elements */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#f9cb07]/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[#f9cb07]/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4" />
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#f9cd15]/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-[#f9cd15]/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4" />
 
         {/* Pattern Overlay */}
         <div className="absolute inset-0 opacity-[0.03]" style={{
@@ -53,7 +53,7 @@ export default function Blog() {
         <div className="relative container mx-auto px-4 py-16 md:py-24">
           <div className="max-w-3xl">
             {/* Badge */}
-            <div className="inline-flex items-center gap-2 bg-[#f9cb07] rounded-full px-4 py-2 mb-6 shadow-lg shadow-[#f9cb07]/20">
+            <div className="inline-flex items-center gap-2 bg-[#f9cd15] rounded-full px-4 py-2 mb-6 shadow-lg shadow-[#f9cd15]/20">
               <Sparkles className="w-4 h-4 text-black" />
               <span className="text-black text-sm font-semibold">AI & Automation Insights</span>
             </div>
@@ -63,7 +63,7 @@ export default function Blog() {
               The Codeteki{" "}
               <span className="relative">
                 <span className="relative z-10">Blog</span>
-                <span className="absolute bottom-2 left-0 right-0 h-4 bg-[#f9cb07]/40 -z-0" />
+                <span className="absolute bottom-2 left-0 right-0 h-4 bg-[#f9cd15]/40 -z-0" />
               </span>
             </h1>
 
@@ -75,7 +75,7 @@ export default function Blog() {
             {/* Stats */}
             <div className="flex flex-wrap gap-8 mt-10 pt-8 border-t border-black/10">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-[#f9cb07] flex items-center justify-center shadow-lg">
+                <div className="w-12 h-12 rounded-xl bg-[#f9cd15] flex items-center justify-center shadow-lg">
                   <BookOpen className="w-6 h-6 text-black" />
                 </div>
                 <div>
@@ -85,7 +85,7 @@ export default function Blog() {
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-xl bg-black flex items-center justify-center shadow-lg">
-                  <Sparkles className="w-6 h-6 text-[#f9cb07]" />
+                  <Sparkles className="w-6 h-6 text-[#f9cd15]" />
                 </div>
                 <div>
                   <div className="text-2xl font-black text-black">{categories.length - 1}+</div>
@@ -110,7 +110,7 @@ export default function Blog() {
                     onClick={() => setActiveCategory(category)}
                     className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all whitespace-nowrap ${
                       activeCategory === category
-                        ? "bg-[#f9cb07] text-black shadow-lg shadow-[#f9cb07]/30"
+                        ? "bg-[#f9cd15] text-black shadow-lg shadow-[#f9cd15]/30"
                         : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                     }`}
                   >
@@ -152,15 +152,15 @@ export default function Blog() {
             </div>
           ) : filteredPosts.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
-              <div className="w-20 h-20 bg-[#f9cb07]/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <BookOpen className="w-10 h-10 text-[#f9cb07]" />
+              <div className="w-20 h-20 bg-[#f9cd15]/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <BookOpen className="w-10 h-10 text-[#f9cd15]" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">No posts yet</h2>
               <p className="text-gray-600 mb-8 max-w-md mx-auto">
                 We're working on new content. Check back soon!
               </p>
               <Link href="/contact">
-                <Button className="bg-[#f9cb07] hover:bg-[#e6b800] text-black font-semibold shadow-lg shadow-[#f9cb07]/30">
+                <Button className="bg-[#f9cd15] hover:bg-[#e6b800] text-black font-semibold shadow-lg shadow-[#f9cd15]/30">
                   Request a Topic
                 </Button>
               </Link>
@@ -179,7 +179,7 @@ export default function Blog() {
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                         {post.category && (
-                          <Badge className="absolute top-4 left-4 bg-[#f9cb07] text-black font-semibold shadow-lg">
+                          <Badge className="absolute top-4 left-4 bg-[#f9cd15] text-black font-semibold shadow-lg">
                             {post.category}
                           </Badge>
                         )}
@@ -193,7 +193,7 @@ export default function Blog() {
                         </div>
                       </div>
                     ) : (
-                      <div className="h-56 bg-gradient-to-br from-[#f9cb07] to-[#e6b800] flex items-center justify-center relative">
+                      <div className="h-56 bg-gradient-to-br from-[#f9cd15] to-[#e6b800] flex items-center justify-center relative">
                         <span className="text-8xl font-black text-black/10">
                           {post.title.charAt(0)}
                         </span>
@@ -215,7 +215,7 @@ export default function Blog() {
                     <CardContent className="px-6 pb-6 pt-0">
                       <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-[#f9cb07] flex items-center justify-center">
+                          <div className="w-8 h-8 rounded-full bg-[#f9cd15] flex items-center justify-center">
                             <User className="w-4 h-4 text-black" />
                           </div>
                           <span className="text-sm text-gray-600 font-medium">
@@ -237,7 +237,7 @@ export default function Blog() {
       </section>
 
       {/* CTA */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#f9cb07] to-[#e6b800]">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#f9cd15] to-[#e6b800]">
         {/* Pattern */}
         <div className="absolute inset-0 opacity-10" style={{
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
