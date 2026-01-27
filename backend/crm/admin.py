@@ -1757,7 +1757,17 @@ class EmailDraftAdmin(ModelAdmin):
 
         # If confirmation received, send emails
         if 'confirm_send' in request.POST:
-            return self._execute_send(request, draft, valid_recipients, subject, body_text)
+            try:
+                return self._execute_send(request, draft, valid_recipients, subject, body_text)
+            except Exception as e:
+                import logging
+                import traceback
+                logger = logging.getLogger(__name__)
+                logger.error(f"[EMAIL SEND ERROR] {str(e)}\n{traceback.format_exc()}")
+                self.message_user(request, f"❌ Error sending emails: {str(e)}", messages.ERROR)
+                from django.http import HttpResponseRedirect
+                from django.urls import reverse
+                return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))
 
         # Generate preview HTML for first valid recipient
         preview_html = None
@@ -2120,7 +2130,17 @@ class EmailDraftAdmin(ModelAdmin):
 
         # If confirmation received, send emails
         if 'confirm_send' in request.POST:
-            return self._execute_send(request, draft, valid_recipients, subject, body_text)
+            try:
+                return self._execute_send(request, draft, valid_recipients, subject, body_text)
+            except Exception as e:
+                import logging
+                import traceback
+                logger = logging.getLogger(__name__)
+                logger.error(f"[EMAIL SEND ERROR] {str(e)}\n{traceback.format_exc()}")
+                self.message_user(request, f"❌ Error sending emails: {str(e)}", messages.ERROR)
+                from django.http import HttpResponseRedirect
+                from django.urls import reverse
+                return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))
 
         # Generate preview HTML for first valid recipient
         preview_html = None
