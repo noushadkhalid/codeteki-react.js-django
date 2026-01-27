@@ -333,6 +333,7 @@
         <input type="hidden" name="action" value="send_email_now">
         <input type="hidden" name="index" value="0">
         <input type="hidden" name="select_across" value="0">
+        <!-- confirm_send added dynamically by JS when button is clicked -->
 
         <div class="btn-group">
             {% if valid_count > 0 %}
@@ -364,37 +365,65 @@
 
 <script>
 (function() {
+    console.log('[EMAIL SEND] Initializing send form handler...');
     try {
         var form = document.getElementById('send-form');
         var sendBtn = document.getElementById('send-btn');
         var overlay = document.getElementById('send-loading-overlay');
 
+        console.log('[EMAIL SEND] Form:', form ? 'found' : 'NOT FOUND');
+        console.log('[EMAIL SEND] Send button:', sendBtn ? 'found' : 'NOT FOUND');
+        console.log('[EMAIL SEND] Overlay:', overlay ? 'found' : 'NOT FOUND');
+
         if (form && sendBtn) {
             // Use click handler instead of submit to ensure form submits
             sendBtn.addEventListener('click', function(e) {
+                console.log('[EMAIL SEND] Button clicked!');
                 e.preventDefault();
                 e.stopPropagation();
 
                 try {
+                    // CRITICAL: Add confirm_send hidden field since form.submit() doesn't include button values
+                    var confirmInput = document.createElement('input');
+                    confirmInput.type = 'hidden';
+                    confirmInput.name = 'confirm_send';
+                    confirmInput.value = '1';
+                    form.appendChild(confirmInput);
+                    console.log('[EMAIL SEND] Added confirm_send hidden field');
+
                     // Show loading overlay
                     if (overlay) {
                         overlay.classList.add('active');
+                        console.log('[EMAIL SEND] Overlay activated');
                     }
                     document.body.classList.add('sending');
                     sendBtn.disabled = true;
                     sendBtn.textContent = '⏳ Sending...';
                 } catch (err) {
-                    console.error('Loading overlay error:', err);
+                    console.error('[EMAIL SEND] Loading overlay error:', err);
+                }
+
+                // Log form data before submit
+                var formData = new FormData(form);
+                console.log('[EMAIL SEND] Form action:', form.action);
+                console.log('[EMAIL SEND] Form data:');
+                for (var pair of formData.entries()) {
+                    console.log('  ' + pair[0] + ': ' + pair[1]);
                 }
 
                 // Explicitly submit the form
+                console.log('[EMAIL SEND] Submitting form...');
                 setTimeout(function() {
                     form.submit();
+                    console.log('[EMAIL SEND] Form submitted');
                 }, 50);
             });
+            console.log('[EMAIL SEND] Click handler attached');
+        } else {
+            console.error('[EMAIL SEND] Form or button not found!');
         }
     } catch (err) {
-        console.error('Send form JS error:', err);
+        console.error('[EMAIL SEND] JS error:', err);
     }
 })();
 </script>

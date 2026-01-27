@@ -1678,6 +1678,9 @@ class EmailDraftAdmin(ModelAdmin):
         Send first contact email with preview. Shows all recipients before sending.
         Contacts already in ANY pipeline are SKIPPED (managed by autopilot).
         """
+        import logging
+        logger = logging.getLogger(__name__)
+
         from crm.services.email_service import ZohoEmailService
         from crm.models import Contact, Deal, PipelineStage
         from crm.services.email_templates import get_styled_email
@@ -1685,6 +1688,13 @@ class EmailDraftAdmin(ModelAdmin):
         from django.utils import timezone
         from django.template.response import TemplateResponse
         from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
+
+        # DEBUG: Log incoming request
+        logger.info(f"[EMAIL SEND ACTION] Method: {request.method}")
+        logger.info(f"[EMAIL SEND ACTION] POST keys: {list(request.POST.keys())}")
+        logger.info(f"[EMAIL SEND ACTION] confirm_send in POST: {'confirm_send' in request.POST}")
+        if 'confirm_send' in request.POST:
+            logger.info(f"[EMAIL SEND ACTION] confirm_send value: {request.POST.get('confirm_send')}")
 
         # Only process one draft at a time for preview
         if queryset.count() > 1:
@@ -1756,18 +1766,22 @@ class EmailDraftAdmin(ModelAdmin):
             })
 
         # If confirmation received, send emails
+        logger.info(f"[EMAIL SEND ACTION] Checking confirm_send... valid_recipients count: {len(valid_recipients)}")
         if 'confirm_send' in request.POST:
+            logger.info(f"[EMAIL SEND ACTION] ✅ CONFIRM_SEND FOUND! Calling _execute_send...")
             try:
-                return self._execute_send(request, draft, valid_recipients, subject, body_text)
+                result = self._execute_send(request, draft, valid_recipients, subject, body_text)
+                logger.info(f"[EMAIL SEND ACTION] _execute_send returned: {type(result)}")
+                return result
             except Exception as e:
-                import logging
                 import traceback
-                logger = logging.getLogger(__name__)
                 logger.error(f"[EMAIL SEND ERROR] {str(e)}\n{traceback.format_exc()}")
                 self.message_user(request, f"❌ Error sending emails: {str(e)}", messages.ERROR)
                 from django.http import HttpResponseRedirect
                 from django.urls import reverse
                 return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))
+        else:
+            logger.info(f"[EMAIL SEND ACTION] ❌ confirm_send NOT in POST - showing preview page")
 
         # Generate preview HTML for first valid recipient
         preview_html = None
@@ -2058,12 +2072,18 @@ class EmailDraftAdmin(ModelAdmin):
         Show preview before sending. Called from custom change form button.
         Reuses the same preview logic as send_email_now action.
         """
+        import logging
+        logger = logging.getLogger(__name__)
+
         from crm.models import Contact, Deal
         from crm.services.email_templates import get_styled_email
         from django.contrib import messages
         from django.http import HttpResponseRedirect
         from django.template.response import TemplateResponse
         from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
+
+        # DEBUG logging
+        logger.info(f"[_send_single_draft] Method: {request.method}, POST keys: {list(request.POST.keys())}")
 
         # Validate pipeline
         if not draft.pipeline:
@@ -2129,18 +2149,22 @@ class EmailDraftAdmin(ModelAdmin):
             })
 
         # If confirmation received, send emails
+        logger.info(f"[EMAIL SEND ACTION] Checking confirm_send... valid_recipients count: {len(valid_recipients)}")
         if 'confirm_send' in request.POST:
+            logger.info(f"[EMAIL SEND ACTION] ✅ CONFIRM_SEND FOUND! Calling _execute_send...")
             try:
-                return self._execute_send(request, draft, valid_recipients, subject, body_text)
+                result = self._execute_send(request, draft, valid_recipients, subject, body_text)
+                logger.info(f"[EMAIL SEND ACTION] _execute_send returned: {type(result)}")
+                return result
             except Exception as e:
-                import logging
                 import traceback
-                logger = logging.getLogger(__name__)
                 logger.error(f"[EMAIL SEND ERROR] {str(e)}\n{traceback.format_exc()}")
                 self.message_user(request, f"❌ Error sending emails: {str(e)}", messages.ERROR)
                 from django.http import HttpResponseRedirect
                 from django.urls import reverse
                 return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))
+        else:
+            logger.info(f"[EMAIL SEND ACTION] ❌ confirm_send NOT in POST - showing preview page")
 
         # Generate preview HTML for first valid recipient
         preview_html = None
