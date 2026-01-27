@@ -370,21 +370,27 @@
         var overlay = document.getElementById('send-loading-overlay');
 
         if (form && sendBtn) {
-            form.addEventListener('submit', function(e) {
+            // Use click handler instead of submit to ensure form submits
+            sendBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
                 try {
                     // Show loading overlay
                     if (overlay) {
                         overlay.classList.add('active');
                     }
                     document.body.classList.add('sending');
-
-                    // Disable button to prevent double submit
                     sendBtn.disabled = true;
                     sendBtn.textContent = '⏳ Sending...';
                 } catch (err) {
                     console.error('Loading overlay error:', err);
                 }
-                // Form continues to submit normally
+
+                // Explicitly submit the form
+                setTimeout(function() {
+                    form.submit();
+                }, 50);
             });
         }
     } catch (err) {
