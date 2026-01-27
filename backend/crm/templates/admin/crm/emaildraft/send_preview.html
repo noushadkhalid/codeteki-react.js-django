@@ -364,22 +364,31 @@
 
 <script>
 (function() {
-    const form = document.getElementById('send-form');
-    const sendBtn = document.getElementById('send-btn');
-    const overlay = document.getElementById('send-loading-overlay');
+    try {
+        var form = document.getElementById('send-form');
+        var sendBtn = document.getElementById('send-btn');
+        var overlay = document.getElementById('send-loading-overlay');
 
-    if (form && sendBtn) {
-        form.addEventListener('submit', function(e) {
-            // Show loading overlay
-            overlay.classList.add('active');
-            document.body.classList.add('sending');
+        if (form && sendBtn) {
+            form.addEventListener('submit', function(e) {
+                try {
+                    // Show loading overlay
+                    if (overlay) {
+                        overlay.classList.add('active');
+                    }
+                    document.body.classList.add('sending');
 
-            // Disable button to prevent double submit
-            sendBtn.disabled = true;
-            sendBtn.textContent = '⏳ Sending...';
-
-            console.log('[Send Preview] Form submitted, showing loading overlay');
-        });
+                    // Disable button to prevent double submit
+                    sendBtn.disabled = true;
+                    sendBtn.textContent = '⏳ Sending...';
+                } catch (err) {
+                    console.error('Loading overlay error:', err);
+                }
+                // Form continues to submit normally
+            });
+        }
+    } catch (err) {
+        console.error('Send form JS error:', err);
     }
 })();
 </script>
