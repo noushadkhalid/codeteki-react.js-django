@@ -1836,6 +1836,7 @@ class EmailDraftAdmin(ModelAdmin):
         sent_count = 0
         failed_count = 0
         total_deals = 0
+        first_error = None
 
         for recipient in valid_recipients:
             contact = recipient.get('contact')
@@ -1942,6 +1943,13 @@ class EmailDraftAdmin(ModelAdmin):
                         total_deals += 1
             else:
                 failed_count += 1
+                error_msg = result.get('error', 'Unknown error')
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to send email to {recipient_email}: {error_msg}")
+                # Store first error for user feedback
+                if failed_count == 1:
+                    first_error = error_msg
 
         # Update draft tracking
         draft.sent_count = (draft.sent_count or 0) + sent_count
@@ -1959,6 +1967,8 @@ class EmailDraftAdmin(ModelAdmin):
             msg += f", created {total_deals} new deal(s)"
         if failed_count > 0:
             msg += f" ({failed_count} failed)"
+            if first_error:
+                msg += f" - Error: {first_error}"
 
         self.message_user(request, msg, messages.SUCCESS if sent_count > 0 else messages.WARNING)
         return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))
