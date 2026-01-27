@@ -1829,8 +1829,13 @@ class EmailDraftAdmin(ModelAdmin):
 
         email_service = ZohoEmailService(brand=draft.brand)
         if not email_service.enabled:
-            self.message_user(request, f"❌ Zoho not configured for {draft.brand.name}!", messages.ERROR)
+            self.message_user(request, f"❌ Zoho not configured for {draft.brand.name}! Check Brand settings for Zoho credentials.", messages.ERROR)
             return
+
+        # Log Zoho config for debugging
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"[EMAIL SEND] Brand: {draft.brand.name}, From: {email_service.from_email}, API Domain: {email_service.api_domain}")
 
         ai_agent = CRMAIAgent()
         sent_count = 0
@@ -1963,6 +1968,8 @@ class EmailDraftAdmin(ModelAdmin):
         from django.urls import reverse
 
         msg = f"📤 Sent {sent_count} email(s)"
+        if sent_count > 0:
+            msg += f" from {email_service.from_email}"
         if total_deals > 0:
             msg += f", created {total_deals} new deal(s)"
         if failed_count > 0:
