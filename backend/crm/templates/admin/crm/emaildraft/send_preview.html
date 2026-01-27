@@ -3,6 +3,71 @@
 
 {% block content %}
 <style>
+    /* Loading overlay styles */
+    #send-loading-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(8px);
+        z-index: 999999;
+        justify-content: center;
+        align-items: center;
+    }
+    #send-loading-overlay.active {
+        display: flex !important;
+    }
+    .loading-content {
+        text-align: center;
+        color: white;
+        padding: 3rem;
+        max-width: 400px;
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%);
+        border-radius: 1rem;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .loading-spinner {
+        width: 4rem;
+        height: 4rem;
+        border: 4px solid rgba(255, 255, 255, 0.2);
+        border-top-color: #10b981;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin: 0 auto 1.5rem;
+    }
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    .loading-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+        color: #f8fafc;
+    }
+    .loading-message {
+        font-size: 1rem;
+        color: #94a3b8;
+        margin-bottom: 1rem;
+        line-height: 1.6;
+    }
+    .loading-warning {
+        font-size: 0.875rem;
+        color: #fbbf24;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+    body.sending * {
+        pointer-events: none !important;
+    }
+    body.sending #send-loading-overlay,
+    body.sending #send-loading-overlay * {
+        pointer-events: auto !important;
+    }
+
     .email-confirm-form {
         max-width: 1000px;
         margin: 20px auto;
@@ -174,7 +239,7 @@
 </style>
 
 <div class="email-confirm-form">
-    <h2>📧 Email Preview - {{ draft.name }}</h2>
+    <h2>📧 Email Preview - {{ subject }}</h2>
 
     <!-- Stats -->
     <div class="stats-row">
@@ -260,16 +325,18 @@
     </div>
     {% endif %}
 
-    <form method="post">
+    <form method="post" action="{% url 'admin:crm_emaildraft_changelist' %}" id="send-form">
         {% csrf_token %}
 
         <!-- Pass selected draft -->
         <input type="hidden" name="{{ action_checkbox_name }}" value="{{ draft.pk }}">
         <input type="hidden" name="action" value="send_email_now">
+        <input type="hidden" name="index" value="0">
+        <input type="hidden" name="select_across" value="0">
 
         <div class="btn-group">
             {% if valid_count > 0 %}
-            <button type="submit" name="confirm_send" class="btn btn-success">
+            <button type="submit" name="confirm_send" value="1" class="btn btn-success" id="send-btn">
                 📤 Send {{ valid_count }} Email{{ valid_count|pluralize }} Now
             </button>
             {% endif %}
@@ -279,4 +346,41 @@
         </div>
     </form>
 </div>
+
+<!-- Loading Overlay -->
+<div id="send-loading-overlay">
+    <div class="loading-content">
+        <div class="loading-spinner"></div>
+        <h2 class="loading-title">Sending Emails...</h2>
+        <p class="loading-message">Sending {{ valid_count }} email{{ valid_count|pluralize }} to recipients. This may take a moment.</p>
+        <p class="loading-warning">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            Do not close or navigate away
+        </p>
+    </div>
+</div>
+
+<script>
+(function() {
+    const form = document.getElementById('send-form');
+    const sendBtn = document.getElementById('send-btn');
+    const overlay = document.getElementById('send-loading-overlay');
+
+    if (form && sendBtn) {
+        form.addEventListener('submit', function(e) {
+            // Show loading overlay
+            overlay.classList.add('active');
+            document.body.classList.add('sending');
+
+            // Disable button to prevent double submit
+            sendBtn.disabled = true;
+            sendBtn.textContent = '⏳ Sending...';
+
+            console.log('[Send Preview] Form submitted, showing loading overlay');
+        });
+    }
+})();
+</script>
 {% endblock %}
