@@ -1,0 +1,108 @@
+{% extends "crm/emails/base_desifirms.html" %}
+
+{% block title %}Complete Your Business Listing | Desi Firms{% endblock %}
+{% block preheader %}{{ recipient_name }}, your free listing is waiting - join as a founding member!{% endblock %}
+{% block subtitle %}Business Directory{% endblock %}
+
+{% block content %}
+<tr>
+    <td style="padding: 40px 30px;">
+        <!-- Hero Icon -->
+        <div style="text-align: center; margin-bottom: 20px;">
+            <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border-radius: 16px; margin: 0 auto; display: inline-flex; align-items: center; justify-content: center;">
+                <span style="font-size: 36px;">🏪</span>
+            </div>
+        </div>
+
+        <!-- Heading -->
+        <h1 style="color: #1f2937; font-size: 28px; font-weight: 700; text-align: center; margin: 0 0 8px 0;">
+            You're Invited!
+        </h1>
+        <p style="color: #8b5cf6; font-size: 15px; font-weight: 600; text-align: center; margin: 0 0 30px 0;">
+            Be a Founding Member of Desi Firms
+        </p>
+
+        <!-- Greeting & Message -->
+        <p style="color: #4b5563; font-size: 15px; line-height: 1.7; margin: 0 0 16px 0;">
+            Hi {{ recipient_name }},
+        </p>
+
+        {% if body_html and body_html != '<p style="margin: 0 0 15px 0;"></p>' %}
+        <!-- Dynamic AI Content (without signature - template adds it) -->
+        <div style="color: #4b5563; font-size: 15px; line-height: 1.7; margin: 0 0 24px 0;">
+            {{ body_html|safe }}
+        </div>
+        {% else %}
+        <!-- Default Message -->
+        <p style="color: #4b5563; font-size: 15px; line-height: 1.7; margin: 0 0 16px 0;">
+            We've just launched <strong style="color: #8b5cf6;">Desi Firms</strong> - a new community platform dedicated to connecting South Asian businesses in Australia.
+        </p>
+
+        <p style="color: #4b5563; font-size: 15px; line-height: 1.7; margin: 0 0 24px 0;">
+            We'd love to invite <strong>{{ recipient_company }}</strong> to join us as a <strong style="color: #8b5cf6;">founding member</strong>. Your presence would greatly enrich our community.
+        </p>
+        {% endif %}
+
+        <!-- Benefits Box - Simple & Clean -->
+        <div style="background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); border-radius: 12px; padding: 20px 24px; margin: 0 0 24px 0;">
+            <p style="color: #5b21b6; font-size: 14px; font-weight: 700; margin: 0 0 14px 0; text-transform: uppercase; letter-spacing: 0.5px;">
+                🎁 100% FREE - NO CATCH
+            </p>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td style="padding: 6px 0;">
+                        <span style="color: #7c3aed; font-size: 15px; margin-right: 10px;">✓</span>
+                        <span style="color: #374151; font-size: 14px;">Free business listing forever</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0;">
+                        <span style="color: #7c3aed; font-size: 15px; margin-right: 10px;">✓</span>
+                        <span style="color: #374151; font-size: 14px;">Connect with the South Asian community</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0;">
+                        <span style="color: #7c3aed; font-size: 15px; margin-right: 10px;">✓</span>
+                        <span style="color: #374151; font-size: 14px;">Showcase your products & services</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0;">
+                        <span style="color: #7c3aed; font-size: 15px; margin-right: 10px;">✓</span>
+                        <span style="color: #374151; font-size: 14px;">No credit card required</span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- CTA Button -->
+        <div style="text-align: center; margin: 0 0 20px 0;">
+            <a href="https://www.desifirms.com.au/dashboard/add-business"
+               style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 10px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);">
+                List Your Business Free →
+            </a>
+        </div>
+
+        <p style="color: #9ca3af; font-size: 13px; text-align: center; margin: 0 0 30px 0;">
+            Have questions? Just reply to this email!
+        </p>
+
+        <!-- Signature -->
+        <div style="border-top: 1px solid #e5e7eb; padding-top: 24px;">
+            <p style="color: #4b5563; font-size: 14px; line-height: 1.5; margin: 0 0 12px 0;">
+                Warm regards,
+            </p>
+            <p style="color: #1f2937; font-size: 14px; font-weight: 600; margin: 0 0 4px 0;">
+                Noushad
+            </p>
+            <p style="color: #6b7280; font-size: 13px; margin: 0 0 8px 0;">
+                Desi Firms
+            </p>
+            <p style="color: #6b7280; font-size: 13px; margin: 0;">
+                📱 0424 538 777 &nbsp;|&nbsp; 🌐 <a href="https://desifirms.com.au" style="color: #8b5cf6; text-decoration: none;">desifirms.com.au</a>
+            </p>
+        </div>
+    </td>
+</tr>
+{% endblock %}

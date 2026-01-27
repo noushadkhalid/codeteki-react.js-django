@@ -145,6 +145,7 @@ class ZohoEmailService:
         """Make an authenticated request to Zoho Mail API."""
         token = self._get_access_token()
         if not token:
+            logger.error(f"Zoho Mail: Failed to get access token for {self.from_email}")
             return None
 
         headers = kwargs.pop('headers', {})
@@ -154,6 +155,7 @@ class ZohoEmailService:
         url = f"{self.API_BASE}/accounts/{self.account_id}/{endpoint}"
 
         try:
+            logger.info(f"Zoho Mail: Making {method} request to {endpoint}")
             response = requests.request(
                 method,
                 url,
@@ -161,10 +163,35 @@ class ZohoEmailService:
                 timeout=kwargs.pop('timeout', 30),
                 **kwargs
             )
+
+            # Log response details for debugging
+            logger.info(f"Zoho Mail: Response status {response.status_code}")
+
+            # Try to parse response even if status is not 200
+            try:
+                response_data = response.json()
+                logger.debug(f"Zoho Mail: Response data: {response_data}")
+            except ValueError:
+                logger.error(f"Zoho Mail: Invalid JSON response: {response.text[:500]}")
+                return None
+
+            # Check for Zoho-specific errors even in 200 responses
+            if response_data.get('status', {}).get('code') != 200:
+                error_desc = response_data.get('status', {}).get('description', 'Unknown error')
+                logger.error(f"Zoho Mail: API error - {error_desc}")
+
             response.raise_for_status()
-            return response.json()
+            return response_data
+
         except requests.RequestException as e:
             logger.error(f"Zoho Mail API request failed: {e}")
+            # Try to get more details from the response
+            if hasattr(e, 'response') and e.response is not None:
+                try:
+                    error_detail = e.response.json()
+                    logger.error(f"Zoho Mail: Error detail: {error_detail}")
+                except ValueError:
+                    logger.error(f"Zoho Mail: Error response: {e.response.text[:500]}")
             return None
 
     def send(
@@ -252,6 +279,7 @@ class ZohoEmailService:
         if bcc:
             email_data['bccAddress'] = ','.join(bcc)
 
+        logger.info(f"Zoho Mail: Sending email to {to}, subject: {subject[:50]}...")
         result = self._make_request('POST', 'messages', json=email_data)
 
         if result and result.get('status', {}).get('code') == 200:
@@ -263,15 +291,26 @@ class ZohoEmailService:
                 'success': True,
                 'message_id': message_id,
                 'error': None,
-                'bcc_count': bcc_count
+                'bcc_count': bcc_count,
+                'from_email': self.from_email,
             }
         else:
-            error_msg = result.get('status', {}).get('description', 'Unknown error') if result else 'Request failed'
+            # Build detailed error message
+            if result is None:
+                error_msg = 'Zoho API request failed - check server logs for details'
+            elif result.get('status'):
+                error_code = result.get('status', {}).get('code', 'unknown')
+                error_desc = result.get('status', {}).get('description', 'Unknown error')
+                error_msg = f"Zoho error {error_code}: {error_desc}"
+            else:
+                error_msg = f"Unexpected Zoho response: {str(result)[:200]}"
+
             logger.error(f"Failed to send email to {to}: {error_msg}")
             return {
                 'success': False,
                 'message_id': None,
-                'error': error_msg
+                'error': error_msg,
+                'from_email': self.from_email,
             }
 
     def _extract_first_name(self, text: str) -> str:

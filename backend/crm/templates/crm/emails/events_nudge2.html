@@ -1,0 +1,120 @@
+{% extends "crm/emails/base_desifirms.html" %}
+
+{% block title %}Any Events Coming Up? | Desi Firms{% endblock %}
+{% block preheader %}{{ recipient_name }}, your account is ready to promote events - free!{% endblock %}
+{% block subtitle %}Events Platform{% endblock %}
+
+{% block content %}
+<tr>
+    <td style="padding: 40px 30px;">
+        <!-- Hero Icon -->
+        <div style="text-align: center; margin-bottom: 25px;">
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 50%; margin: 0 auto; display: inline-flex; align-items: center; justify-content: center;">
+                <span style="font-size: 40px;">🎉</span>
+            </div>
+        </div>
+
+        <!-- Heading -->
+        <h1 style="color: #1f2937; font-size: 26px; font-weight: 700; text-align: center; margin: 0 0 10px 0;">
+            Got Any Events Coming Up?
+        </h1>
+        <p style="color: #d97706; font-size: 16px; font-weight: 600; text-align: center; margin: 0 0 30px 0;">
+            Share with our growing community
+        </p>
+
+        <!-- Dynamic Body Content OR Default Message -->
+        {% if body_html and body_html != '<p style="margin: 0 0 15px 0;"></p>' %}
+        <div style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            {{ body_html|safe }}
+        </div>
+        {% else %}
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            Hi {{ recipient_name }},
+        </p>
+
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            Just checking in - I noticed you haven't listed any events on Desi Firms yet. If you organise events for the community, we'd love to help promote them!
+        </p>
+
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            Even if you don't have something planned right now, you can always add events later. Your account is ready to go whenever you are.
+        </p>
+        {% endif %}
+
+        <!-- Did You Know Box -->
+        <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 16px; padding: 24px; margin: 0 0 30px 0; border: 1px solid #f59e0b;">
+            <div style="text-align: center;">
+                <span style="font-size: 32px;">💡</span>
+                <h3 style="color: #92400e; font-size: 18px; font-weight: 700; margin: 10px 0;">
+                    Did You Know?
+                </h3>
+                <p style="color: #78350f; font-size: 15px; line-height: 1.6; margin: 0;">
+                    Events listed early get <strong>more visibility</strong> and often appear<br>
+                    in our featured carousel on the homepage!
+                </p>
+            </div>
+        </div>
+
+        <!-- Benefits Quick List -->
+        <div style="background: #f9fafb; border-radius: 12px; padding: 24px; margin: 0 0 30px 0; border: 1px solid #e5e7eb;">
+            <h3 style="color: #1f2937; font-size: 15px; font-weight: 700; margin: 0 0 16px 0; text-transform: uppercase; letter-spacing: 1px;">
+                🎯 Quick Benefits:
+            </h3>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #22c55e; font-size: 18px; margin-right: 10px;">✓</span>
+                        <span style="color: #1f2937; font-size: 14px; font-weight: 500;">Free promotion to thousands</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #22c55e; font-size: 18px; margin-right: 10px;">✓</span>
+                        <span style="color: #1f2937; font-size: 14px; font-weight: 500;">Featured on events calendar</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #22c55e; font-size: 18px; margin-right: 10px;">✓</span>
+                        <span style="color: #1f2937; font-size: 14px; font-weight: 500;">Direct enquiries & RSVPs</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #22c55e; font-size: 18px; margin-right: 10px;">✓</span>
+                        <span style="color: #1f2937; font-size: 14px; font-weight: 500;">Takes less than 5 minutes</span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- CTA Button -->
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="https://www.desifirms.com.au/dashboard/add-event"
+               style="display: inline-block; background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); color: #ffffff; text-decoration: none; padding: 18px 48px; border-radius: 12px; font-weight: 700; font-size: 17px; box-shadow: 0 8px 25px rgba(236, 72, 153, 0.35); letter-spacing: 0.5px;">
+                Add an Event →
+            </a>
+        </div>
+
+        <p style="color: #9ca3af; font-size: 13px; text-align: center; margin: 20px 0 0 0;">
+            Questions? Just reply - I'm happy to help!
+        </p>
+
+        <!-- Signature -->
+        <div style="margin-top: 35px; padding-top: 25px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0;">
+                Cheers,
+            </p>
+            <p style="color: #1f2937; font-size: 15px; font-weight: 600; margin: 10px 0 5px 0;">
+                Noushad
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0 0 5px 0;">
+                Desi Firms
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                📱 0424 538 777 &nbsp;|&nbsp; 🌐 <a href="https://desifirms.com.au" style="color: #db2777; text-decoration: none;">desifirms.com.au</a>
+            </p>
+        </div>
+    </td>
+</tr>
+{% endblock %}

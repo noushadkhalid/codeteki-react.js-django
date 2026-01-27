@@ -1,0 +1,110 @@
+{% extends "crm/emails/base_desifirms.html" %}
+
+{% block title %}Your Event is Now Live!{% endblock %}
+{% block preheader %}{{ recipient_name }}, congratulations - your event is on Desi Firms!{% endblock %}
+{% block subtitle %}Events Platform{% endblock %}
+
+{% block content %}
+<tr>
+    <td style="padding: 40px 30px;">
+        <!-- Celebration Icon -->
+        <div style="text-align: center; margin-bottom: 25px;">
+            <div style="width: 90px; height: 90px; background: linear-gradient(135deg, #fbbf24, #f59e0b); border-radius: 50%; margin: 0 auto; display: inline-block; line-height: 90px;">
+                <span style="font-size: 45px;">🎊</span>
+            </div>
+        </div>
+
+        <!-- Heading -->
+        <h1 style="color: #1f2937; font-size: 26px; font-weight: 700; text-align: center; margin: 0 0 10px 0;">
+            Your Event is Live!
+        </h1>
+        <p style="color: #f59e0b; font-size: 16px; font-weight: 600; text-align: center; margin: 0 0 30px 0;">
+            Time to spread the word! 🎉
+        </p>
+
+        <!-- Greeting -->
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            Hi {{ recipient_name }},
+        </p>
+
+        <!-- Message -->
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            <strong>Fantastic news!</strong> Your event from <strong>{{ recipient_company }}</strong> is now live on Desi Firms. The community can now discover and engage with your event!
+        </p>
+
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            You're now reaching thousands of people in Australia's South Asian community who are actively looking for events and experiences just like yours.
+        </p>
+
+        <!-- Tips Box -->
+        <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #fcd34d; border-radius: 12px; padding: 24px; margin: 0 0 25px 0;">
+            <h3 style="color: #92400e; font-size: 14px; font-weight: 600; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 1px;">
+                💡 Tips for Maximum Reach
+            </h3>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #d97706; font-size: 16px; margin-right: 10px;">•</span>
+                        <span style="color: #1f2937; font-size: 14px;"><strong>Add eye-catching photos</strong> - Events with great images get 3x more views</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #d97706; font-size: 16px; margin-right: 10px;">•</span>
+                        <span style="color: #1f2937; font-size: 14px;"><strong>Share on social media</strong> - Post on Facebook, Instagram & WhatsApp</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #d97706; font-size: 16px; margin-right: 10px;">•</span>
+                        <span style="color: #1f2937; font-size: 14px;"><strong>Keep details updated</strong> - Accurate times, venue & ticket info</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #d97706; font-size: 16px; margin-right: 10px;">•</span>
+                        <span style="color: #1f2937; font-size: 14px;"><strong>Respond to enquiries</strong> - Quick responses boost engagement</span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- CTA Buttons -->
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="https://www.desifirms.com.au/dashboard/add-event"
+               style="display: inline-block; background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 10px; font-weight: 600; font-size: 16px; box-shadow: 0 8px 25px rgba(236, 72, 153, 0.25);">
+                Add More Events →
+            </a>
+        </div>
+        <div style="text-align: center; margin: 15px 0;">
+            <a href="https://www.desifirms.com.au/dashboard"
+               style="display: inline-block; background: #ffffff; color: #db2777; border: 2px solid #db2777; text-decoration: none; padding: 14px 35px; border-radius: 10px; font-weight: 600; font-size: 15px;">
+                View Your Dashboard
+            </a>
+        </div>
+
+        <!-- Share Box -->
+        <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center;">
+            <p style="color: #374151; font-size: 14px; line-height: 1.6; margin: 0;">
+                🔗 <strong>Share your event:</strong> Spread the word and let your community know about your upcoming event!
+            </p>
+        </div>
+
+        <!-- Signature -->
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0;">
+                Wishing you a successful event,
+            </p>
+            <p style="color: #1f2937; font-size: 15px; font-weight: 600; margin: 10px 0 5px 0;">
+                Noushad
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0 0 5px 0;">
+                Desi Firms
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                📱 0424 538 777 &nbsp;|&nbsp; 🌐 <a href="https://desifirms.com.au" style="color: #0093E9; text-decoration: none;">desifirms.com.au</a>
+            </p>
+        </div>
+    </td>
+</tr>
+{% endblock %}

@@ -29,11 +29,21 @@
         'scan_csv',
         'generate_blogs',
         // CRM Actions (Desi Firms)
+        'test_email_config',
+        'mark_unsubscribed',
+        'resubscribe',
         'add_to_pipeline_followup',
         'send_email_now',
         'move_to_next_stage',
+        'preview_email',
+        'generate_drafts',
         'queue_followup_email',
+        'pause_deals',
+        'resume_deals',
+        'process_import',
         'generate_ai_email',
+        'copy_to_final',
+        'save_as_template',
         'compose_ai_email'
     ];
 
@@ -66,11 +76,21 @@
         'scan_csv': 'Scanning CSV file... Detecting type and extracting topics.',
         'generate_blogs': 'Generating blog posts with AI... This may take 30-60 seconds per post.',
         // CRM Messages
+        'test_email_config': 'Testing email configuration... Sending test email.',
+        'mark_unsubscribed': 'Marking contacts as unsubscribed...',
+        'resubscribe': 'Resubscribing contacts... Clearing unsubscribe flags.',
         'add_to_pipeline_followup': 'Adding contacts to pipeline...',
-        'send_email_now': 'Generating email preview...',
+        'send_email_now': 'Processing emails... Preparing preview.',
         'move_to_next_stage': 'Moving deals to next stage...',
-        'queue_followup_email': 'Queueing follow-up emails...',
-        'generate_ai_email': 'Generating AI email with ChatGPT...',
+        'preview_email': 'Generating email preview with AI...',
+        'generate_drafts': 'Generating draft emails with AI... This may take a moment.',
+        'queue_followup_email': 'Sending follow-up emails... Please wait.',
+        'pause_deals': 'Pausing deal automation...',
+        'resume_deals': 'Resuming deal automation...',
+        'process_import': 'Processing CSV import... This may take a while for large files.',
+        'generate_ai_email': 'Generating AI email with ChatGPT... This may take 10-30 seconds.',
+        'copy_to_final': 'Copying AI content to final fields...',
+        'save_as_template': 'Saving as reusable template...',
         'compose_ai_email': 'Composing AI email...'
     };
 

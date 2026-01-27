@@ -304,10 +304,10 @@ class ContactImporter:
 
         data['email'] = email
 
-        # Check for duplicate (case-insensitive)
-        existing = Contact.objects.filter(email__iexact=email).first()
+        # Check for duplicate within same brand (case-insensitive)
+        existing = Contact.objects.filter(email__iexact=email, brand=self.brand).first()
         if existing:
-            logger.debug(f"Skipping duplicate email: {email}")
+            logger.debug(f"Skipping duplicate email for brand {self.brand}: {email}")
             return 'skipped'
 
         # Handle domain authority

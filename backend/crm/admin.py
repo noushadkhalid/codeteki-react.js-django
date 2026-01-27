@@ -67,6 +67,122 @@ class BrandAdmin(ModelAdmin):
     def pipelines_count(self, obj):
         return obj.pipelines.count()
 
+    @action(description="🔧 Test Email Configuration")
+    def test_email_config(self, request, queryset):
+        """Send a test email to verify Zoho configuration is working."""
+        from crm.services.email_service import ZohoEmailService
+        from django.contrib import messages
+        from django.template.response import TemplateResponse
+        from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
+
+        if queryset.count() > 1:
+            self.message_user(request, "⚠️ Please select only 1 brand to test.", messages.WARNING)
+            return
+
+        brand = queryset.first()
+
+        # Check if form submitted with test email
+        if 'send_test' in request.POST:
+            test_email = request.POST.get('test_email', '').strip()
+            if not test_email or '@' not in test_email:
+                self.message_user(request, "❌ Please enter a valid email address.", messages.ERROR)
+                return
+
+            # Initialize email service for this brand
+            email_service = ZohoEmailService(brand=brand)
+
+            # Check configuration
+            config_info = []
+            config_info.append(f"Brand: {brand.name}")
+            config_info.append(f"From Email: {email_service.from_email}")
+            config_info.append(f"From Name: {email_service.from_name}")
+            config_info.append(f"API Domain: {email_service.api_domain}")
+            config_info.append(f"Account ID: {email_service.account_id[:8]}..." if email_service.account_id else "Account ID: NOT SET")
+            config_info.append(f"Client ID: {email_service.client_id[:8]}..." if email_service.client_id else "Client ID: NOT SET")
+            config_info.append(f"Enabled: {email_service.enabled}")
+
+            if not email_service.enabled:
+                self.message_user(
+                    request,
+                    f"❌ Zoho not configured for {brand.name}! Missing credentials. Config: {' | '.join(config_info)}",
+                    messages.ERROR
+                )
+                return
+
+            # Try to send test email
+            result = email_service.send(
+                to=test_email,
+                subject=f"[TEST] Email Configuration Test - {brand.name}",
+                body=f"""
+                <html>
+                <body style="font-family: Arial, sans-serif; padding: 20px;">
+                    <h2 style="color: #22c55e;">✅ Email Configuration Working!</h2>
+                    <p>This is a test email from <strong>{brand.name}</strong>.</p>
+                    <hr style="border: 1px solid #e5e7eb; margin: 20px 0;">
+                    <h3>Configuration Details:</h3>
+                    <ul>
+                        <li><strong>Brand:</strong> {brand.name}</li>
+                        <li><strong>From Email:</strong> {email_service.from_email}</li>
+                        <li><strong>From Name:</strong> {email_service.from_name}</li>
+                        <li><strong>API Domain:</strong> {email_service.api_domain}</li>
+                    </ul>
+                    <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+                        This test email was sent from the CRM admin panel.
+                    </p>
+                </body>
+                </html>
+                """,
+                from_name=f"{brand.name} (Test)"
+            )
+
+            if result.get('success'):
+                self.message_user(
+                    request,
+                    f"✅ Test email sent successfully to {test_email}! Message ID: {result.get('message_id', 'N/A')}. "
+                    f"Check your inbox (and spam folder). Config: {' | '.join(config_info)}",
+                    messages.SUCCESS
+                )
+            else:
+                self.message_user(
+                    request,
+                    f"❌ Failed to send test email: {result.get('error', 'Unknown error')}. Config: {' | '.join(config_info)}",
+                    messages.ERROR
+                )
+            return
+
+        # Show test email form
+        email_service = ZohoEmailService(brand=brand)
+        context = {
+            **self.admin_site.each_context(request),
+            'title': f'Test Email Configuration - {brand.name}',
+            'brand': brand,
+            'opts': self.model._meta,
+            'action_checkbox_name': ACTION_CHECKBOX_NAME,
+            'queryset': queryset,
+            'email_service': email_service,
+            'config': {
+                'from_email': email_service.from_email,
+                'from_name': email_service.from_name,
+                'api_domain': email_service.api_domain,
+                'account_id': f"{email_service.account_id[:8]}..." if email_service.account_id else "NOT SET",
+                'client_id': f"{email_service.client_id[:8]}..." if email_service.client_id else "NOT SET",
+                'client_secret': "SET" if email_service.client_secret else "NOT SET",
+                'refresh_token': "SET" if email_service.refresh_token else "NOT SET",
+                'enabled': email_service.enabled,
+            }
+        }
+
+        return TemplateResponse(
+            request,
+            'admin/crm/brand/test_email_config.html',
+            context
+        )
+
+    actions = ['test_email_config']
+
+    class Media:
+        js = ('admin/js/seo-loading.js',)
+
 
 # =============================================================================
 # INLINES
@@ -205,12 +321,32 @@ class ContactAdmin(ModelAdmin):
 
     @action(description="Resubscribe (remove unsubscribe)")
     def resubscribe(self, request, queryset):
-        updated = queryset.update(
-            is_unsubscribed=False,
-            unsubscribed_at=None,
-            status='new'
-        )
-        self.message_user(request, f"Resubscribed {updated} contact(s).")
+        from crm.models import Deal
+        updated = 0
+        deals_reactivated = 0
+
+        for contact in queryset:
+            # Clear all unsubscribe flags
+            contact.is_unsubscribed = False
+            contact.unsubscribed_brands = []
+            contact.unsubscribed_at = None
+            contact.unsubscribe_reason = ''
+            contact.status = 'new'
+            contact.save()
+            updated += 1
+
+            # Reactivate deals that were lost due to unsubscribe
+            reactivated = Deal.objects.filter(
+                contact=contact,
+                status='lost',
+                lost_reason='unsubscribed'
+            ).update(status='active', lost_reason='')
+            deals_reactivated += reactivated
+
+        msg = f"Resubscribed {updated} contact(s)."
+        if deals_reactivated:
+            msg += f" Reactivated {deals_reactivated} deal(s)."
+        self.message_user(request, msg)
 
     @action(description="📊 Add to Pipeline (with selection)")
     def add_to_pipeline_followup(self, request, queryset):
@@ -606,20 +742,38 @@ class DealAdmin(ModelAdmin):
     def send_email_now(self, request, queryset):
         """Send follow-up email to selected deals - shows preview first."""
         from crm.services.ai_agent import CRMAIAgent
-        from crm.tasks import queue_deal_email
+        from crm.services.email_service import ZohoEmailService
+        from crm.services.email_templates import (
+            get_styled_email, get_email_type_for_stage,
+            get_template_for_email
+        )
+        from crm.views import get_unsubscribe_url
+        from django.template.loader import render_to_string
         from django.contrib import messages
         from django.template.response import TemplateResponse
         from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
-        from crm.models import EmailLog
+        from crm.models import EmailLog, DealActivity
         from django.utils import timezone
         from datetime import timedelta
 
-        # Check for confirmation
+        # Check for confirmation - SEND EMAILS DIRECTLY (not via Celery)
         if 'confirm_send' in request.POST:
-            queued = 0
+            sent_count = 0
+            failed_count = 0
             skipped = 0
 
             for deal in queryset:
+                # Get brand first for unsubscribe check
+                brand = deal.pipeline.brand if deal.pipeline else None
+                brand_slug = brand.slug if brand else None
+                contact = deal.contact
+
+                # Check if contact is unsubscribed (global OR brand-specific)
+                if contact.is_unsubscribed or (brand_slug and contact.is_unsubscribed_from_brand(brand_slug)):
+                    self.message_user(request, f"⚠️ Skipped {contact.email} - unsubscribed", messages.WARNING)
+                    skipped += 1
+                    continue
+
                 # Check if email was sent recently (within 24 hours)
                 recent_email = EmailLog.objects.filter(
                     deal=deal,
@@ -630,25 +784,170 @@ class DealAdmin(ModelAdmin):
                     skipped += 1
                     continue
 
-                # Queue email for sending
-                queue_deal_email.delay(str(deal.id), 'followup')
-                queued += 1
+                # Validate brand
+                if not brand:
+                    self.message_user(request, f"❌ Deal {deal.contact.email} has no brand configured", messages.ERROR)
+                    failed_count += 1
+                    continue
 
-                # Move to next stage after sending
-                if deal.current_stage:
-                    next_stage = PipelineStage.objects.filter(
-                        pipeline=deal.pipeline,
-                        order__gt=deal.current_stage.order
-                    ).order_by('order').first()
-                    if next_stage:
-                        deal.current_stage = next_stage
-                        deal.next_action_date = timezone.now() + timedelta(days=next_stage.days_until_followup or 5)
-                        deal.save()
+                email_service = ZohoEmailService(brand=brand)
+                if not email_service.enabled:
+                    self.message_user(request, f"❌ Zoho not configured for {brand.name}", messages.ERROR)
+                    failed_count += 1
+                    continue
 
-            if queued:
-                self.message_user(request, f"✅ Sent {queued} follow-up email(s) & moved to next stage!", messages.SUCCESS)
+                # Determine email type based on stage
+                pipeline_type = deal.pipeline.pipeline_type if deal.pipeline else 'sales'
+                stage_name = deal.current_stage.name if deal.current_stage else 'follow_up'
+                email_type = get_email_type_for_stage(stage_name, pipeline_type) or 'agent_followup_1'
+
+                # Get recipient info
+                recipient_name = contact.name.split()[0] if contact.name else 'there'
+                recipient_email = contact.email
+                recipient_company = contact.company or 'your business'
+
+                # Check for pre-designed template
+                template_path = get_template_for_email(brand_slug, pipeline_type, email_type)
+
+                if template_path and 'generic' not in template_path:
+                    # Use pre-designed template
+                    context = {
+                        'recipient_name': recipient_name,
+                        'recipient_email': recipient_email,
+                        'recipient_company': recipient_company,
+                        'unsubscribe_url': get_unsubscribe_url(recipient_email, brand_slug),
+                        'current_year': timezone.now().year,
+                        'brand_slug': brand_slug,
+                    }
+                    html_body = render_to_string(template_path, context)
+
+                    # Get subject based on email type
+                    subject_map = {
+                        # Real Estate
+                        'agent_invitation': f"Join {brand.name} as a Founding Member",
+                        'agent_followup_1': f"Just checking in - free listing opportunity",
+                        'agent_followup_2': f"Final reminder - free real estate listing",
+                        # Business Directory
+                        'directory_invitation': f"List {recipient_company} on {brand.name} - FREE",
+                        'directory_followup_1': f"Quick follow-up - free business listing",
+                        'directory_followup_2': f"Final reminder - free listing opportunity",
+                        # Events
+                        'events_invitation': f"List your events on {brand.name} - FREE",
+                        'events_followup_1': f"Quick follow-up - free event listing",
+                        'events_followup_2': f"Final reminder - free event listing",
+                        'events_responded': f"Thank you for your interest - {brand.name}",
+                        # Nudge - Registered but inactive users
+                        'business_nudge': f"Your business listing is almost ready!",
+                        'business_nudge_2': f"Still thinking about it? Here's why you should list",
+                        'realestate_nudge': f"Your agent profile awaits!",
+                        'realestate_nudge_2': f"Quick check-in from {brand.name}",
+                        'events_nudge': f"Ready to promote your events?",
+                        'events_nudge_2': f"Got any events coming up?",
+                    }
+                    subject = subject_map.get(email_type, f"Following up - {brand.name}")
+                else:
+                    # Use AI to generate email
+                    ai_agent = CRMAIAgent()
+                    email_result = ai_agent.compose_email(deal, context={'email_type': 'followup'})
+
+                    if not email_result.get('success'):
+                        self.message_user(request, f"❌ Failed to generate email for {recipient_email}", messages.ERROR)
+                        failed_count += 1
+                        continue
+
+                    styled_email = get_styled_email(
+                        brand_slug=brand_slug,
+                        pipeline_type=pipeline_type,
+                        email_type='followup',
+                        recipient_name=recipient_name,
+                        recipient_email=recipient_email,
+                        recipient_company=recipient_company,
+                        subject=email_result['subject'],
+                        body=email_result['body'],
+                    )
+                    html_body = styled_email['html']
+                    subject = email_result['subject']
+
+                # Create email log BEFORE sending
+                email_log = EmailLog.objects.create(
+                    deal=deal,
+                    subject=subject,
+                    body=html_body[:5000],  # Truncate for storage
+                    to_email=recipient_email,
+                    from_email=email_service.from_email,
+                    ai_generated=not bool(template_path and 'generic' not in template_path)
+                )
+
+                # SEND EMAIL DIRECTLY
+                result = email_service.send(
+                    to=recipient_email,
+                    subject=subject,
+                    body=html_body,
+                    from_name=brand.from_name
+                )
+
+                if result.get('success'):
+                    # Update email log
+                    email_log.sent_at = timezone.now()
+                    email_log.zoho_message_id = result.get('message_id', '')
+                    email_log.save()
+
+                    # Update deal
+                    deal.emails_sent = (deal.emails_sent or 0) + 1
+                    deal.last_contact_date = timezone.now()
+
+                    # Move to next stage
+                    if deal.current_stage:
+                        next_stage = PipelineStage.objects.filter(
+                            pipeline=deal.pipeline,
+                            order__gt=deal.current_stage.order
+                        ).order_by('order').first()
+                        if next_stage:
+                            deal.current_stage = next_stage
+                            deal.next_action_date = timezone.now() + timedelta(days=next_stage.days_until_followup or 5)
+
+                    deal.save()
+
+                    # Log activity
+                    DealActivity.objects.create(
+                        deal=deal,
+                        activity_type='email_sent',
+                        description=f"Follow-up email sent: {subject}",
+                        metadata={'email_log_id': str(email_log.id), 'message_id': result.get('message_id')}
+                    )
+
+                    # Update contact
+                    contact.last_emailed_at = timezone.now()
+                    contact.email_count = (contact.email_count or 0) + 1
+                    contact.status = 'contacted'
+                    contact.save(update_fields=['last_emailed_at', 'email_count', 'status'])
+
+                    sent_count += 1
+
+                    # Show first success details
+                    if sent_count == 1:
+                        self.message_user(
+                            request,
+                            f"📧 First email: From {result.get('from_email')} to {recipient_email}, ID: {result.get('message_id', 'N/A')}",
+                            messages.INFO
+                        )
+                else:
+                    # Delete the email log since send failed
+                    email_log.delete()
+                    failed_count += 1
+                    self.message_user(
+                        request,
+                        f"❌ Failed to send to {recipient_email}: {result.get('error', 'Unknown error')}",
+                        messages.ERROR
+                    )
+
+            # Summary message
+            if sent_count:
+                self.message_user(request, f"✅ Successfully sent {sent_count} email(s) & moved to next stage!", messages.SUCCESS)
             if skipped:
-                self.message_user(request, f"⏭️ Skipped {skipped} - recently emailed", messages.WARNING)
+                self.message_user(request, f"⏭️ Skipped {skipped} - recently emailed (within 24h)", messages.WARNING)
+            if failed_count and not sent_count:
+                self.message_user(request, f"❌ All {failed_count} emails failed to send", messages.ERROR)
             return
 
         # Generate styled preview for first deal
@@ -701,6 +1000,13 @@ class DealAdmin(ModelAdmin):
                         'directory_invitation': f"List {recipient_company} on Desi Firms - FREE",
                         'directory_followup_1': f"Quick follow-up - free business listing",
                         'directory_followup_2': f"Final reminder - free listing opportunity",
+                        # Nudge - Registered but inactive users
+                        'business_nudge': f"Your business listing is almost ready!",
+                        'business_nudge_2': f"Still thinking about it? Here's why you should list",
+                        'realestate_nudge': f"Your agent profile awaits!",
+                        'realestate_nudge_2': f"Quick check-in from Desi Firms",
+                        'events_nudge': f"Ready to promote your events?",
+                        'events_nudge_2': f"Got any events coming up?",
                     }
                     subject = subject_map.get(email_type, 'Following up')
 
@@ -1067,6 +1373,9 @@ class ContactImportAdmin(ModelAdmin):
 
     actions = ['process_import']
 
+    class Media:
+        js = ('admin/js/seo-loading.js',)
+
     @display(description="Status", label=True)
     def status_badge(self, obj):
         colors = {
@@ -1136,6 +1445,9 @@ class BacklinkImportAdmin(ModelAdmin):
 
     actions = ['process_import']
 
+    class Media:
+        js = ('admin/js/seo-loading.js',)
+
     @display(description="Status", label=True)
     def status_badge(self, obj):
         colors = {
@@ -1201,9 +1513,9 @@ class EmailDraftAdmin(ModelAdmin):
             'fields': ('brand', 'pipeline'),
             'description': 'Select brand and pipeline. After sending, contacts will be added to this pipeline for automated follow-ups.'
         }),
-        ('2. Add Recipients (First Contact Only)', {
-            'fields': ('contacts', 'manual_emails'),
-            'description': 'Select contacts AND/OR add emails manually. Contacts already in ANY pipeline will be SKIPPED.'
+        ('2. Add Recipients', {
+            'fields': ('contacts', 'manual_emails', 'send_to_pipeline_contacts'),
+            'description': 'Select contacts AND/OR add emails manually. By default, contacts already in a pipeline are skipped. Check the box below to include them.'
         }),
         ('3. Email Settings', {
             'fields': ('email_type', 'tone', 'your_suggestions'),
@@ -1360,261 +1672,296 @@ class EmailDraftAdmin(ModelAdmin):
 
         self.message_user(request, f"📋 Copied {copied} draft(s) to final.", messages.SUCCESS)
 
-    @action(description="📤 Send & Add to Pipeline")
+    @action(description="📤 Send & Add to Pipeline (with preview)")
     def send_email_now(self, request, queryset):
         """
-        Send first contact email using BCC (single API call) and add contacts to pipeline.
+        Send first contact email with preview. Shows all recipients before sending.
         Contacts already in ANY pipeline are SKIPPED (managed by autopilot).
         """
         from crm.services.email_service import ZohoEmailService
         from crm.models import Contact, Deal, PipelineStage
+        from crm.services.email_templates import get_styled_email
         from django.contrib import messages
         from django.utils import timezone
+        from django.template.response import TemplateResponse
+        from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 
-        total_sent = 0
-        total_in_pipeline = 0
-        total_blocked = 0
-        total_deals = 0
+        # Only process one draft at a time for preview
+        if queryset.count() > 1:
+            self.message_user(request, "⚠️ Please select only 1 draft at a time for sending.", messages.WARNING)
+            return
 
-        for draft in queryset:
-            # Validate pipeline
-            if not draft.pipeline:
-                self.message_user(request, f"❌ {draft}: No pipeline selected!", messages.ERROR)
+        draft = queryset.first()
+
+        # Validate basics
+        if not draft.pipeline:
+            self.message_user(request, f"❌ {draft}: No pipeline selected!", messages.ERROR)
+            return
+
+        subject = draft.final_subject or draft.generated_subject
+        body_text = draft.final_body or draft.generated_body
+
+        if not subject or not body_text:
+            self.message_user(request, f"⚠️ {draft}: No content - generate first", messages.WARNING)
+            return
+
+        # Get all recipients and categorize them
+        all_recipients = draft.get_all_recipients()
+        if not all_recipients:
+            self.message_user(request, f"⚠️ {draft}: No recipients", messages.WARNING)
+            return
+
+        # Categorize recipients for preview
+        recipients_preview = []
+        valid_recipients = []
+        in_pipeline_count = 0
+        blocked_count = 0
+
+        for recipient in all_recipients:
+            recipient_email = Contact.normalize_email(recipient['email'])
+            if not recipient_email:
                 continue
 
-            # Get "Invited" stage (second stage) for first contact emails
-            # First stage is for leads not yet contacted
-            invited_stage = PipelineStage.objects.filter(
-                pipeline=draft.pipeline,
-                name__icontains='invited'
-            ).first()
+            contact = recipient.get('contact')
+            if not contact:
+                contact = Contact.objects.filter(email__iexact=recipient_email, brand=draft.brand).first()
 
-            if not invited_stage:
-                # Fallback to second stage
-                invited_stage = PipelineStage.objects.filter(
-                    pipeline=draft.pipeline
-                ).order_by('order')[1:2].first()
+            brand_slug = draft.brand.slug if draft.brand else None
+            status = 'ok'
 
-            if not invited_stage:
-                # Last resort: first stage
-                invited_stage = PipelineStage.objects.filter(
-                    pipeline=draft.pipeline
-                ).order_by('order').first()
+            # Check unsubscribed
+            if contact and (contact.is_unsubscribed or contact.is_unsubscribed_from_brand(brand_slug)):
+                status = 'blocked'
+                blocked_count += 1
+            # Check in pipeline
+            elif contact and not draft.send_to_pipeline_contacts:
+                if Deal.objects.filter(contact=contact, status='active').exists():
+                    status = 'pipeline'
+                    in_pipeline_count += 1
 
-            if not invited_stage:
-                self.message_user(request, f"❌ {draft}: Pipeline has no stages!", messages.ERROR)
-                continue
-
-            # Get email content
-            subject = draft.final_subject or draft.generated_subject
-            body_text = draft.final_body or draft.generated_body
-
-            if not subject or not body_text:
-                self.message_user(request, f"⚠️ {draft}: No content - generate first", messages.WARNING)
-                continue
-
-            # Get all recipients and filter
-            all_recipients = draft.get_all_recipients()
-            if not all_recipients:
-                self.message_user(request, f"⚠️ {draft}: No recipients", messages.WARNING)
-                continue
-
-            # Filter recipients - remove unsubscribed and already in pipeline
-            valid_recipients = []
-            contacts_to_update = []
-
-            for recipient in all_recipients:
-                # Normalize email immediately for consistent lookups
-                recipient_email = Contact.normalize_email(recipient['email'])
-                if not recipient_email:
-                    continue
-
-                contact = recipient.get('contact')
-
-                # Get or find contact using normalized email
-                if not contact:
-                    contact = Contact.objects.filter(email=recipient_email).first()
-                    # Fallback to case-insensitive for old data
-                    if not contact:
-                        contact = Contact.objects.filter(email__iexact=recipient_email).first()
-
-                # Check unsubscribed (global OR brand-specific)
-                brand_slug = draft.brand.slug if draft.brand else None
-                if contact:
-                    if contact.is_unsubscribed or contact.is_unsubscribed_from_brand(brand_slug):
-                        total_blocked += 1
-                        continue
-
-                # Check if already in active pipeline
-                if contact:
-                    existing_deal = Deal.objects.filter(
-                        contact=contact,
-                        status='active'
-                    ).exists()
-                    if existing_deal:
-                        total_in_pipeline += 1
-                        continue
-
-                # Valid recipient - pass contact if found
+            if status == 'ok':
                 valid_recipients.append({
                     'email': recipient_email,
                     'name': recipient.get('name', ''),
                     'company': recipient.get('company', ''),
                     'website': recipient.get('website', ''),
                     'contact': contact,
-                    'brand_slug': brand_slug,
                 })
 
-            if not valid_recipients:
-                self.message_user(
-                    request,
-                    f"⚠️ {draft}: No valid recipients (all filtered out)",
-                    messages.WARNING
-                )
-                continue
+            recipients_preview.append({
+                'email': recipient_email,
+                'name': recipient.get('name', ''),
+                'company': recipient.get('company', ''),
+                'status': status,
+            })
 
-            # Send individually with per-recipient styled HTML
-            email_service = ZohoEmailService(brand=draft.brand)
-            from crm.services.email_templates import get_styled_email
+        # If confirmation received, send emails
+        if 'confirm_send' in request.POST:
+            return self._execute_send(request, draft, valid_recipients, subject, body_text)
 
-            # Check if Zoho is configured
-            if not email_service.enabled:
-                self.message_user(
-                    request,
-                    f"❌ {draft}: Zoho Mail not configured for {draft.brand.name}! "
-                    f"Please configure Zoho credentials in Brand settings.",
-                    messages.ERROR
-                )
-                continue
+        # Generate preview HTML for first valid recipient
+        preview_html = None
+        if valid_recipients:
+            first = valid_recipients[0]
+            from crm.services.ai_agent import CRMAIAgent
+            ai_agent = CRMAIAgent()
+            salutation = ai_agent.get_smart_salutation(
+                email=first['email'],
+                name=first.get('name', ''),
+                company=first.get('company', '')
+            )
+            personalized_body = body_text.replace('{{SALUTATION}}', salutation)
+            extracted_name = salutation.replace('Hi ', '').replace(',', '').strip() if salutation.startswith('Hi ') else 'there'
 
-            sent_count = 0
-            failed_count = 0
+            styled = get_styled_email(
+                brand_slug=draft.brand.slug if draft.brand else 'desifirms',
+                pipeline_type=draft.pipeline.pipeline_type if draft.pipeline else 'business',
+                email_type=draft.email_type or 'directory_invitation',
+                recipient_name=extracted_name,
+                recipient_email=first['email'],
+                recipient_company=first.get('company', ''),
+                subject=subject,
+                body=personalized_body,
+            )
+            preview_html = styled.get('html', '')
 
-            try:
-                # Send to each recipient individually with personalized unsubscribe link
-                from crm.services.ai_agent import CRMAIAgent
-                ai_agent = CRMAIAgent()
+        # Show preview page
+        draft_title = draft.final_subject or draft.generated_subject or draft.get_email_type_display()
+        context = {
+            **self.admin_site.each_context(request),
+            'title': f'Preview: {draft_title}',
+            'draft': draft,
+            'subject': subject,
+            'preview_html': preview_html,
+            'recipients_preview': recipients_preview[:20],  # First 20
+            'valid_count': len(valid_recipients),
+            'in_pipeline_count': in_pipeline_count,
+            'blocked_count': blocked_count,
+            'total_count': len(all_recipients),
+            'action_checkbox_name': ACTION_CHECKBOX_NAME,
+            'opts': self.model._meta,
+        }
 
-                for recipient in valid_recipients:
-                    contact = recipient.get('contact')
-                    recipient_email = recipient['email']
-                    recipient_name = recipient.get('name', '')
-                    recipient_company = recipient.get('company', '')
+        return TemplateResponse(request, 'admin/crm/emaildraft/send_preview.html', context)
 
-                    # Generate smart salutation (extracts name from email like john.smith@company.com → "Hi John,")
-                    salutation = ai_agent.get_smart_salutation(
-                        email=recipient_email,
-                        name=recipient_name,
-                        company=recipient_company
-                    )
+    def _execute_send(self, request, draft, valid_recipients, subject, body_text):
+        """Actually send emails after confirmation."""
+        from crm.services.email_service import ZohoEmailService
+        from crm.services.email_templates import get_styled_email
+        from crm.services.ai_agent import CRMAIAgent
+        from crm.models import Contact, Deal, PipelineStage
+        from django.contrib import messages
+        from django.utils import timezone
 
-                    # Replace {{SALUTATION}} placeholder in body
-                    personalized_body = body_text.replace('{{SALUTATION}}', salutation)
+        # Get invited stage
+        invited_stage = PipelineStage.objects.filter(
+            pipeline=draft.pipeline,
+            name__icontains='invited'
+        ).first() or PipelineStage.objects.filter(
+            pipeline=draft.pipeline
+        ).order_by('order')[1:2].first() or PipelineStage.objects.filter(
+            pipeline=draft.pipeline
+        ).order_by('order').first()
 
-                    # Extract first name for template (from salutation like "Hi John," → "John")
-                    extracted_name = salutation.replace('Hi ', '').replace(',', '').strip() if salutation.startswith('Hi ') else 'there'
-                    if ' Team' in extracted_name:
-                        extracted_name = 'there'  # Don't use "Company Team" as name
+        if not invited_stage:
+            self.message_user(request, f"❌ {draft}: Pipeline has no stages!", messages.ERROR)
+            return
 
-                    # Generate styled HTML with correct recipient email for unsubscribe link
-                    styled_email = get_styled_email(
-                        brand_slug=draft.brand.slug if draft.brand else 'desifirms',
-                        pipeline_type=draft.pipeline.pipeline_type if draft.pipeline else 'business',
-                        email_type=draft.email_type or 'directory_invitation',
-                        recipient_name=extracted_name,
-                        recipient_email=recipient_email,  # Correct email for unsubscribe!
-                        recipient_company=recipient_company,
-                        subject=subject,
-                        body=personalized_body,  # Use personalized body with salutation
-                    )
-                    html_body = styled_email['html']
+        email_service = ZohoEmailService(brand=draft.brand)
+        if not email_service.enabled:
+            self.message_user(request, f"❌ Zoho not configured for {draft.brand.name}!", messages.ERROR)
+            return
 
-                    # Send email
-                    result = email_service.send(
-                        to=recipient_email,
-                        subject=subject,
-                        body=html_body,
-                        from_name=draft.brand.from_name
-                    )
+        ai_agent = CRMAIAgent()
+        sent_count = 0
+        failed_count = 0
+        total_deals = 0
 
-                    if result.get('success'):
-                        sent_count += 1
+        for recipient in valid_recipients:
+            contact = recipient.get('contact')
+            recipient_email = recipient['email']
+            recipient_name = recipient.get('name', '')
+            recipient_company = recipient.get('company', '')
 
-                        # Get or create contact - email is already normalized from earlier
-                        if not contact:
-                            # Try to find with case-insensitive search (handles old data)
-                            contact = Contact.objects.filter(email__iexact=recipient_email).first()
+            # Generate smart salutation
+            salutation = ai_agent.get_smart_salutation(
+                email=recipient_email,
+                name=recipient_name,
+                company=recipient_company
+            )
 
-                        if not contact:
-                            # Create new contact using savepoint to handle UNIQUE errors
-                            from django.db import transaction
-                            try:
-                                with transaction.atomic():
-                                    contact = Contact.objects.create(
-                                        email=recipient_email,  # Already normalized
-                                        brand=draft.brand,
-                                        name=recipient_name or extracted_name,
-                                        company=recipient_company,
-                                        website=recipient.get('website', ''),
-                                        status='contacted',
-                                        last_emailed_at=timezone.now(),
-                                        email_count=1,
-                                        source='email_composer'
-                                    )
-                            except Exception:
-                                # If create fails, contact must exist - fetch it
-                                contact = Contact.objects.filter(email__iexact=recipient_email).first()
-                                if contact:
-                                    contact.last_emailed_at = timezone.now()
-                                    contact.email_count = (contact.email_count or 0) + 1
-                                    contact.status = 'contacted'
-                                    contact.save(update_fields=['last_emailed_at', 'email_count', 'status'])
-                        else:
-                            # Update existing contact
+            # Replace {{SALUTATION}} placeholder in body
+            personalized_body = body_text.replace('{{SALUTATION}}', salutation)
+
+            # Extract first name for template
+            extracted_name = salutation.replace('Hi ', '').replace(',', '').strip() if salutation.startswith('Hi ') else 'there'
+            if ' Team' in extracted_name:
+                extracted_name = 'there'
+
+            # Generate styled HTML with correct recipient email for unsubscribe link
+            styled_email = get_styled_email(
+                brand_slug=draft.brand.slug if draft.brand else 'desifirms',
+                pipeline_type=draft.pipeline.pipeline_type if draft.pipeline else 'business',
+                email_type=draft.email_type or 'directory_invitation',
+                recipient_name=extracted_name,
+                recipient_email=recipient_email,
+                recipient_company=recipient_company,
+                subject=subject,
+                body=personalized_body,
+            )
+            html_body = styled_email['html']
+
+            # Send email
+            result = email_service.send(
+                to=recipient_email,
+                subject=subject,
+                body=html_body,
+                from_name=draft.brand.from_name
+            )
+
+            if result.get('success'):
+                sent_count += 1
+
+                # Get or create contact
+                if not contact:
+                    contact = Contact.objects.filter(email__iexact=recipient_email, brand=draft.brand).first()
+
+                if not contact:
+                    from django.db import transaction
+                    try:
+                        with transaction.atomic():
+                            contact = Contact.objects.create(
+                                email=recipient_email,
+                                brand=draft.brand,
+                                name=recipient_name or extracted_name,
+                                company=recipient_company,
+                                website=recipient.get('website', ''),
+                                status='contacted',
+                                last_emailed_at=timezone.now(),
+                                email_count=1,
+                                source='email_composer'
+                            )
+                    except Exception:
+                        contact = Contact.objects.filter(email__iexact=recipient_email, brand=draft.brand).first()
+                        if contact:
                             contact.last_emailed_at = timezone.now()
                             contact.email_count = (contact.email_count or 0) + 1
                             contact.status = 'contacted'
                             contact.save(update_fields=['last_emailed_at', 'email_count', 'status'])
+                else:
+                    contact.last_emailed_at = timezone.now()
+                    contact.email_count = (contact.email_count or 0) + 1
+                    contact.status = 'contacted'
+                    contact.save(update_fields=['last_emailed_at', 'email_count', 'status'])
 
-                        # Create deal in pipeline at "Invited" stage
-                        if contact:
-                            Deal.objects.create(
-                                contact=contact,
-                                pipeline=draft.pipeline,
-                                current_stage=invited_stage,
-                                status='active',
-                                emails_sent=1,
-                                last_contact_date=timezone.now(),
-                                next_action_date=timezone.now() + timezone.timedelta(days=invited_stage.days_until_followup or 3),
-                                ai_notes=f"First contact via Email Composer\nSubject: {subject}"
-                            )
-                            total_deals += 1
+                # Create or update deal in pipeline
+                if contact:
+                    existing_deal = Deal.objects.filter(
+                        contact=contact,
+                        pipeline=draft.pipeline,
+                        status='active'
+                    ).first()
+
+                    if existing_deal:
+                        existing_deal.emails_sent = (existing_deal.emails_sent or 0) + 1
+                        existing_deal.last_contact_date = timezone.now()
+                        existing_deal.next_action_date = timezone.now() + timezone.timedelta(days=existing_deal.current_stage.days_until_followup if existing_deal.current_stage else 3)
+                        existing_deal.ai_notes = (existing_deal.ai_notes or '') + f"\n[{timezone.now().strftime('%Y-%m-%d')}] Email sent via Composer: {subject}"
+                        existing_deal.save()
                     else:
-                        failed_count += 1
+                        Deal.objects.create(
+                            contact=contact,
+                            pipeline=draft.pipeline,
+                            current_stage=invited_stage,
+                            status='active',
+                            emails_sent=1,
+                            last_contact_date=timezone.now(),
+                            next_action_date=timezone.now() + timezone.timedelta(days=invited_stage.days_until_followup or 3),
+                            ai_notes=f"First contact via Email Composer\nSubject: {subject}"
+                        )
+                        total_deals += 1
+            else:
+                failed_count += 1
 
-                total_sent += sent_count
+        # Update draft tracking
+        draft.sent_count = (draft.sent_count or 0) + sent_count
+        draft.deals_created = (draft.deals_created or 0) + total_deals
+        draft.is_sent = True
+        draft.sent_at = timezone.now()
+        draft.save(update_fields=['sent_count', 'deals_created', 'is_sent', 'sent_at'])
 
-                # Update draft tracking
-                draft.sent_count = (draft.sent_count or 0) + sent_count
-                draft.deals_created = (draft.deals_created or 0) + total_deals
-                draft.is_sent = True
-                draft.sent_at = timezone.now()
-                draft.save(update_fields=['sent_count', 'deals_created', 'is_sent', 'sent_at'])
+        # Return with summary message
+        from django.http import HttpResponseRedirect
+        from django.urls import reverse
 
-                msg = f"✅ {draft}: Sent {sent_count} emails"
-                if failed_count > 0:
-                    msg += f" ({failed_count} failed)"
-                self.message_user(request, msg, messages.SUCCESS)
+        msg = f"📤 Sent {sent_count} email(s)"
+        if total_deals > 0:
+            msg += f", created {total_deals} new deal(s)"
+        if failed_count > 0:
+            msg += f" ({failed_count} failed)"
 
-            except Exception as e:
-                self.message_user(request, f"❌ {draft}: {str(e)}", messages.ERROR)
-
-        # Summary
-        self.message_user(
-            request,
-            f"📤 DONE: {total_sent} sent, {total_deals} deals created, {total_in_pipeline} skipped (in pipeline), {total_blocked} blocked (unsubscribed)",
-            messages.SUCCESS if total_sent > 0 else messages.WARNING
-        )
+        self.message_user(request, msg, messages.SUCCESS if sent_count > 0 else messages.WARNING)
+        return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))
 
     @action(description="📋 Save as Template")
     def save_as_template(self, request, queryset):
@@ -1681,40 +2028,19 @@ class EmailDraftAdmin(ModelAdmin):
 
     def _send_single_draft(self, request, draft):
         """
-        Send a single draft via BCC and create deals.
-        Called from custom change form button.
+        Show preview before sending. Called from custom change form button.
+        Reuses the same preview logic as send_email_now action.
         """
-        from crm.services.email_service import ZohoEmailService
-        from crm.models import Contact, Deal, PipelineStage
+        from crm.models import Contact, Deal
+        from crm.services.email_templates import get_styled_email
         from django.contrib import messages
         from django.http import HttpResponseRedirect
-        from django.utils import timezone
+        from django.template.response import TemplateResponse
+        from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 
         # Validate pipeline
         if not draft.pipeline:
             self.message_user(request, f"❌ No pipeline selected!", messages.ERROR)
-            return HttpResponseRedirect(request.path)
-
-        # Get "Invited" stage for first contact emails
-        invited_stage = PipelineStage.objects.filter(
-            pipeline=draft.pipeline,
-            name__icontains='invited'
-        ).first()
-
-        if not invited_stage:
-            # Fallback to second stage
-            invited_stage = PipelineStage.objects.filter(
-                pipeline=draft.pipeline
-            ).order_by('order')[1:2].first()
-
-        if not invited_stage:
-            # Last resort: first stage
-            invited_stage = PipelineStage.objects.filter(
-                pipeline=draft.pipeline
-            ).order_by('order').first()
-
-        if not invited_stage:
-            self.message_user(request, f"❌ Pipeline has no stages!", messages.ERROR)
             return HttpResponseRedirect(request.path)
 
         # Get email content
@@ -1725,198 +2051,103 @@ class EmailDraftAdmin(ModelAdmin):
             self.message_user(request, f"⚠️ No content - generate or write email first", messages.WARNING)
             return HttpResponseRedirect(request.path)
 
-        # Get all recipients and filter
+        # Get all recipients
         all_recipients = draft.get_all_recipients()
         if not all_recipients:
             self.message_user(request, f"⚠️ No recipients", messages.WARNING)
             return HttpResponseRedirect(request.path)
 
-        # Filter recipients - remove unsubscribed and already in pipeline
+        # Categorize recipients for preview
+        recipients_preview = []
         valid_recipients = []
-        total_blocked = 0
-        total_in_pipeline = 0
+        in_pipeline_count = 0
+        blocked_count = 0
 
         for recipient in all_recipients:
-            # Normalize email immediately for consistent lookups
             recipient_email = Contact.normalize_email(recipient['email'])
             if not recipient_email:
                 continue
 
             contact = recipient.get('contact')
-
-            # Get or find contact using normalized email (exact match on lowercase)
             if not contact:
-                contact = Contact.objects.filter(email=recipient_email).first()
+                contact = Contact.objects.filter(email__iexact=recipient_email, brand=draft.brand).first()
 
-            # Check unsubscribed (global OR brand-specific)
             brand_slug = draft.brand.slug if draft.brand else None
-            if contact:
-                if contact.is_unsubscribed or contact.is_unsubscribed_from_brand(brand_slug):
-                    total_blocked += 1
-                    continue
+            status = 'ok'
 
-            # Check if already in active pipeline
-            if contact:
-                existing_deal = Deal.objects.filter(
-                    contact=contact,
-                    status='active'
-                ).exists()
-                if existing_deal:
-                    total_in_pipeline += 1
-                    continue
+            # Check unsubscribed
+            if contact and (contact.is_unsubscribed or contact.is_unsubscribed_from_brand(brand_slug)):
+                status = 'blocked'
+                blocked_count += 1
+            # Check in pipeline
+            elif contact and not draft.send_to_pipeline_contacts:
+                if Deal.objects.filter(contact=contact, status='active').exists():
+                    status = 'pipeline'
+                    in_pipeline_count += 1
 
-            # Valid recipient - pass contact if found
-            valid_recipients.append({
+            if status == 'ok':
+                valid_recipients.append({
+                    'email': recipient_email,
+                    'name': recipient.get('name', ''),
+                    'company': recipient.get('company', ''),
+                    'website': recipient.get('website', ''),
+                    'contact': contact,
+                })
+
+            recipients_preview.append({
                 'email': recipient_email,
                 'name': recipient.get('name', ''),
                 'company': recipient.get('company', ''),
-                'website': recipient.get('website', ''),
-                'contact': contact  # Will be used later to avoid duplicate creation
+                'status': status,
             })
 
-        if not valid_recipients:
-            self.message_user(
-                request,
-                f"⚠️ No valid recipients (all filtered: {total_blocked} unsubscribed, {total_in_pipeline} in pipeline)",
-                messages.WARNING
-            )
-            return HttpResponseRedirect(request.path)
+        # If confirmation received, send emails
+        if 'confirm_send' in request.POST:
+            return self._execute_send(request, draft, valid_recipients, subject, body_text)
 
-        # Send individually with per-recipient styled HTML
-        email_service = ZohoEmailService(brand=draft.brand)
-        from crm.services.email_templates import get_styled_email
-
-        # Check if Zoho is configured
-        if not email_service.enabled:
-            self.message_user(
-                request,
-                f"❌ Zoho Mail not configured for {draft.brand.name}! "
-                f"Please configure DESIFIRMS_ZOHO_* env vars or Brand Zoho settings.",
-                messages.ERROR
-            )
-            return HttpResponseRedirect(request.path)
-
-        sent_count = 0
-        failed_count = 0
-        total_deals = 0
-
-        try:
-            # Send to each recipient individually with personalized unsubscribe link
+        # Generate preview HTML for first valid recipient
+        preview_html = None
+        if valid_recipients:
+            first = valid_recipients[0]
             from crm.services.ai_agent import CRMAIAgent
             ai_agent = CRMAIAgent()
+            salutation = ai_agent.get_smart_salutation(
+                email=first['email'],
+                name=first.get('name', ''),
+                company=first.get('company', '')
+            )
+            personalized_body = body_text.replace('{{SALUTATION}}', salutation)
+            extracted_name = salutation.replace('Hi ', '').replace(',', '').strip() if salutation.startswith('Hi ') else 'there'
 
-            for recipient in valid_recipients:
-                contact = recipient.get('contact')
-                recipient_email = recipient['email']
-                recipient_name = recipient.get('name', '')
-                recipient_company = recipient.get('company', '')
+            styled = get_styled_email(
+                brand_slug=draft.brand.slug if draft.brand else 'desifirms',
+                pipeline_type=draft.pipeline.pipeline_type if draft.pipeline else 'business',
+                email_type=draft.email_type or 'directory_invitation',
+                recipient_name=extracted_name,
+                recipient_email=first['email'],
+                recipient_company=first.get('company', ''),
+                subject=subject,
+                body=personalized_body,
+            )
+            preview_html = styled.get('html', '')
 
-                # Generate smart salutation (extracts name from email like john.smith@company.com → "Hi John,")
-                salutation = ai_agent.get_smart_salutation(
-                    email=recipient_email,
-                    name=recipient_name,
-                    company=recipient_company
-                )
+        # Show preview page
+        draft_title = draft.final_subject or draft.generated_subject or draft.get_email_type_display()
+        context = {
+            **self.admin_site.each_context(request),
+            'title': f'Preview: {draft_title}',
+            'draft': draft,
+            'subject': subject,
+            'preview_html': preview_html,
+            'recipients_preview': recipients_preview[:20],
+            'valid_count': len(valid_recipients),
+            'in_pipeline_count': in_pipeline_count,
+            'blocked_count': blocked_count,
+            'total_count': len(all_recipients),
+            'action_checkbox_name': ACTION_CHECKBOX_NAME,
+            'opts': self.model._meta,
+        }
 
-                # Replace {{SALUTATION}} placeholder in body
-                personalized_body = body_text.replace('{{SALUTATION}}', salutation)
-
-                # Extract first name for template (from salutation like "Hi John," → "John")
-                extracted_name = salutation.replace('Hi ', '').replace(',', '').strip() if salutation.startswith('Hi ') else 'there'
-                if ' Team' in extracted_name:
-                    extracted_name = 'there'  # Don't use "Company Team" as name
-
-                # Generate styled HTML with correct recipient email for unsubscribe link
-                styled_email = get_styled_email(
-                    brand_slug=draft.brand.slug if draft.brand else 'desifirms',
-                    pipeline_type=draft.pipeline.pipeline_type if draft.pipeline else 'business',
-                    email_type=draft.email_type or 'directory_invitation',
-                    recipient_name=extracted_name,
-                    recipient_email=recipient_email,  # Correct email for unsubscribe!
-                    recipient_company=recipient_company,
-                    subject=subject,
-                    body=personalized_body,  # Use personalized body with salutation
-                )
-                html_body = styled_email['html']
-
-                # Send email
-                result = email_service.send(
-                    to=recipient_email,
-                    subject=subject,
-                    body=html_body,
-                    from_name=draft.brand.from_name
-                )
-
-                if result.get('success'):
-                    sent_count += 1
-
-                    # Get or create contact - email is already normalized from earlier
-                    if not contact:
-                        # Try to find with case-insensitive search first (handles old non-normalized data)
-                        contact = Contact.objects.filter(email__iexact=recipient_email).first()
-
-                    if not contact:
-                        # Create new contact using savepoint to handle UNIQUE errors gracefully
-                        from django.db import transaction
-                        try:
-                            with transaction.atomic():
-                                contact = Contact.objects.create(
-                                    email=recipient_email,  # Already normalized
-                                    brand=draft.brand,
-                                    name=recipient_name or extracted_name,
-                                    company=recipient_company,
-                                    website=recipient.get('website', ''),
-                                    status='contacted',
-                                    last_emailed_at=timezone.now(),
-                                    email_count=1,
-                                    source='email_composer'
-                                )
-                        except Exception:
-                            # If create fails, contact must exist - fetch it
-                            contact = Contact.objects.filter(email__iexact=recipient_email).first()
-                            if contact:
-                                contact.last_emailed_at = timezone.now()
-                                contact.email_count = (contact.email_count or 0) + 1
-                                contact.status = 'contacted'
-                                contact.save(update_fields=['last_emailed_at', 'email_count', 'status'])
-                    else:
-                        # Update existing contact
-                        contact.last_emailed_at = timezone.now()
-                        contact.email_count = (contact.email_count or 0) + 1
-                        contact.status = 'contacted'
-                        contact.save(update_fields=['last_emailed_at', 'email_count', 'status'])
-
-                    # Create deal in pipeline at "Invited" stage - only if we have a contact
-                    if contact:
-                        Deal.objects.create(
-                            contact=contact,
-                            pipeline=draft.pipeline,
-                            current_stage=invited_stage,
-                            status='active',
-                            emails_sent=1,
-                            last_contact_date=timezone.now(),
-                            next_action_date=timezone.now() + timezone.timedelta(days=invited_stage.days_until_followup or 3),
-                            ai_notes=f"First contact via Email Composer\nSubject: {subject}"
-                        )
-                        total_deals += 1
-                else:
-                    failed_count += 1
-
-            # Update draft tracking
-            draft.sent_count = (draft.sent_count or 0) + sent_count
-            draft.deals_created = (draft.deals_created or 0) + total_deals
-            draft.is_sent = True
-            draft.sent_at = timezone.now()
-            draft.save(update_fields=['sent_count', 'deals_created', 'is_sent', 'sent_at'])
-
-            msg = f"✅ Sent {sent_count} emails! {total_deals} deals created in {draft.pipeline.name}"
-            if failed_count > 0:
-                msg += f" ({failed_count} failed)"
-            self.message_user(request, msg, messages.SUCCESS)
-
-        except Exception as e:
-            self.message_user(request, f"❌ Error: {str(e)}", messages.ERROR)
-
-        return HttpResponseRedirect(request.path)
+        return TemplateResponse(request, 'admin/crm/emaildraft/send_preview.html', context)
 
 

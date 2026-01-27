@@ -1,0 +1,251 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block content %}
+<style>
+    .test-form {
+        max-width: 700px;
+        margin: 20px auto;
+        padding: 30px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .test-form h2 {
+        margin-bottom: 20px;
+        color: #1f2937;
+    }
+    .config-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-bottom: 25px;
+        padding: 20px;
+        background: #f9fafb;
+        border-radius: 8px;
+    }
+    .config-item {
+        display: flex;
+        flex-direction: column;
+    }
+    .config-item label {
+        font-size: 12px;
+        color: #6b7280;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .config-item span {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1f2937;
+        word-break: break-all;
+    }
+    .config-item span.success {
+        color: #16a34a;
+    }
+    .config-item span.error {
+        color: #dc2626;
+    }
+    .status-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+    }
+    .status-badge.enabled {
+        background: #dcfce7;
+        color: #166534;
+    }
+    .status-badge.disabled {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #374151;
+    }
+    .form-group input[type="email"] {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 16px;
+        box-sizing: border-box;
+    }
+    .form-group input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    .info-text {
+        font-size: 13px;
+        color: #6b7280;
+        margin-top: 5px;
+    }
+    .warning-box {
+        background: #fef3c7;
+        border: 1px solid #f59e0b;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .warning-box strong {
+        color: #92400e;
+    }
+    .error-box {
+        background: #fee2e2;
+        border: 1px solid #f87171;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .error-box strong {
+        color: #991b1b;
+    }
+    .success-box {
+        background: #dcfce7;
+        border: 1px solid #86efac;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .success-box strong {
+        color: #166534;
+    }
+    .btn-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    .btn {
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+    }
+    .btn-primary {
+        background: #3b82f6;
+        color: white;
+    }
+    .btn-primary:hover {
+        background: #2563eb;
+    }
+    .btn-primary:disabled {
+        background: #9ca3af;
+        cursor: not-allowed;
+    }
+    .btn-secondary {
+        background: #e5e7eb;
+        color: #374151;
+    }
+    .btn-secondary:hover {
+        background: #d1d5db;
+    }
+</style>
+
+<div class="test-form">
+    <h2>Test Email Configuration - {{ brand.name }}</h2>
+
+    <h3>Current Configuration</h3>
+    <div class="config-grid">
+        <div class="config-item">
+            <label>From Email</label>
+            <span>{{ config.from_email }}</span>
+        </div>
+        <div class="config-item">
+            <label>From Name</label>
+            <span>{{ config.from_name }}</span>
+        </div>
+        <div class="config-item">
+            <label>API Domain</label>
+            <span>{{ config.api_domain }}</span>
+        </div>
+        <div class="config-item">
+            <label>Account ID</label>
+            <span class="{% if config.account_id != 'NOT SET' %}success{% else %}error{% endif %}">{{ config.account_id }}</span>
+        </div>
+        <div class="config-item">
+            <label>Client ID</label>
+            <span class="{% if config.client_id != 'NOT SET' %}success{% else %}error{% endif %}">{{ config.client_id }}</span>
+        </div>
+        <div class="config-item">
+            <label>Client Secret</label>
+            <span class="{% if config.client_secret == 'SET' %}success{% else %}error{% endif %}">{{ config.client_secret }}</span>
+        </div>
+        <div class="config-item">
+            <label>Refresh Token</label>
+            <span class="{% if config.refresh_token == 'SET' %}success{% else %}error{% endif %}">{{ config.refresh_token }}</span>
+        </div>
+        <div class="config-item">
+            <label>Status</label>
+            <span class="status-badge {% if config.enabled %}enabled{% else %}disabled{% endif %}">
+                {% if config.enabled %}ENABLED{% else %}DISABLED{% endif %}
+            </span>
+        </div>
+    </div>
+
+    {% if not config.enabled %}
+    <div class="error-box">
+        <strong>Zoho Mail is not configured!</strong><br>
+        Please set up the Zoho credentials either in:
+        <ul style="margin: 10px 0 0 20px;">
+            <li>Brand settings (Zoho Credentials section)</li>
+            <li>Environment variables: <code>{{ brand.name|upper|cut:" " }}_ZOHO_CLIENT_ID</code>, etc.</li>
+            <li>Global settings: <code>ZOHO_CLIENT_ID</code>, etc.</li>
+        </ul>
+    </div>
+    {% else %}
+    <div class="success-box">
+        <strong>Zoho Mail credentials found!</strong><br>
+        Send a test email below to verify the configuration is working correctly.
+    </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+
+        <!-- Pass selected brand -->
+        {% for item in queryset %}
+        <input type="hidden" name="{{ action_checkbox_name }}" value="{{ item.pk }}">
+        {% endfor %}
+        <input type="hidden" name="action" value="test_email_config">
+
+        <div class="form-group">
+            <label for="test_email">Send Test Email To:</label>
+            <input type="email" name="test_email" id="test_email"
+                   placeholder="your-email@example.com"
+                   required
+                   {% if not config.enabled %}disabled{% endif %}>
+            <p class="info-text">Enter your email address to receive a test email. Check spam folder if not received.</p>
+        </div>
+
+        <div class="warning-box">
+            <strong>Troubleshooting Tips:</strong>
+            <ul style="margin: 10px 0 0 20px;">
+                <li>If email doesn't arrive, check your <strong>spam/junk folder</strong></li>
+                <li>Verify the <strong>from_email</strong> is authorized in your Zoho Mail account</li>
+                <li>For <strong>zoho.com.au</strong> accounts, set API Domain to <code>zoho.com.au</code></li>
+                <li>Ensure your Zoho OAuth app has <strong>Mail API</strong> scope enabled</li>
+            </ul>
+        </div>
+
+        <div class="btn-group">
+            <button type="submit" name="send_test" class="btn btn-primary" {% if not config.enabled %}disabled{% endif %}>
+                Send Test Email
+            </button>
+            <a href="{% url 'admin:crm_brand_changelist' %}" class="btn btn-secondary">
+                Back to Brands
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

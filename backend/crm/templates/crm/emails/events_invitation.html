@@ -1,16 +1,16 @@
 {% extends "crm/emails/base_desifirms.html" %}
 
-{% block title %}Join Desi Firms Business Directory{% endblock %}
-{% block preheader %}{{ recipient_name }}, list your business for FREE on Desi Firms{% endblock %}
-{% block subtitle %}Business Directory{% endblock %}
+{% block title %}List Your Events on Desi Firms{% endblock %}
+{% block preheader %}{{ recipient_name }}, showcase your events to the South Asian community{% endblock %}
+{% block subtitle %}Events Platform{% endblock %}
 
 {% block content %}
 <tr>
     <td style="padding: 40px 30px;">
         <!-- Icon -->
         <div style="text-align: center; margin-bottom: 25px;">
-            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #8b5cf6, #6366f1); border-radius: 50%; margin: 0 auto; display: inline-block; line-height: 80px;">
-                <span style="font-size: 40px;">🏪</span>
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #ec4899, #db2777); border-radius: 50%; margin: 0 auto; display: inline-block; line-height: 80px;">
+                <span style="font-size: 40px;">🎪</span>
             </div>
         </div>
 
@@ -18,8 +18,8 @@
         <h1 style="color: #1f2937; font-size: 24px; font-weight: 700; text-align: center; margin: 0 0 10px 0;">
             You're Invited!
         </h1>
-        <p style="color: #8b5cf6; font-size: 16px; font-weight: 600; text-align: center; margin: 0 0 25px 0;">
-            Be a Founding Member of Desi Firms
+        <p style="color: #db2777; font-size: 16px; font-weight: 600; text-align: center; margin: 0 0 25px 0;">
+            Be a Founding Event Partner on Desi Firms
         </p>
 
         <!-- Greeting -->
@@ -29,40 +29,40 @@
 
         <!-- Message -->
         <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            We've just launched <strong style="color: #0093E9;">Desi Firms</strong> - a new community platform dedicated to connecting South Asian businesses in Australia.
+            We've just launched <strong style="color: #db2777;">Desi Firms Events</strong> - a dedicated platform to help event organisers connect with the South Asian community across Australia.
         </p>
 
         <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
-            We'd love to invite <strong>{{ recipient_company }}</strong> to join us as a <strong>founding member</strong>. Your presence would greatly enrich our community.
+            Whether you organise cultural festivals, community gatherings, business networking events, or private celebrations - we'd love to have <strong>{{ recipient_company }}</strong> as one of our <strong>founding event partners</strong>.
         </p>
 
         <!-- Benefits Box -->
-        <div style="background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); border: 1px solid #c4b5fd; border-radius: 12px; padding: 24px; margin: 0 0 25px 0;">
-            <h3 style="color: #5b21b6; font-size: 14px; font-weight: 600; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 1px;">
+        <div style="background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%); border: 1px solid #f9a8d4; border-radius: 12px; padding: 24px; margin: 0 0 25px 0;">
+            <h3 style="color: #9d174d; font-size: 14px; font-weight: 600; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 1px;">
                 🎁 100% FREE - No Catch
             </h3>
             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                 <tr>
                     <td style="padding: 8px 0;">
-                        <span style="color: #7c3aed; font-size: 16px; margin-right: 10px;">✓</span>
-                        <span style="color: #1f2937; font-size: 14px;">Free business listing forever</span>
+                        <span style="color: #db2777; font-size: 16px; margin-right: 10px;">✓</span>
+                        <span style="color: #1f2937; font-size: 14px;">Free event listings forever</span>
                     </td>
                 </tr>
                 <tr>
                     <td style="padding: 8px 0;">
-                        <span style="color: #7c3aed; font-size: 16px; margin-right: 10px;">✓</span>
-                        <span style="color: #1f2937; font-size: 14px;">Connect with the South Asian community</span>
+                        <span style="color: #db2777; font-size: 16px; margin-right: 10px;">✓</span>
+                        <span style="color: #1f2937; font-size: 14px;">Reach thousands in the South Asian community</span>
                     </td>
                 </tr>
                 <tr>
                     <td style="padding: 8px 0;">
-                        <span style="color: #7c3aed; font-size: 16px; margin-right: 10px;">✓</span>
-                        <span style="color: #1f2937; font-size: 14px;">Showcase your products & services</span>
+                        <span style="color: #db2777; font-size: 16px; margin-right: 10px;">✓</span>
+                        <span style="color: #1f2937; font-size: 14px;">Promote upcoming events with ease</span>
                     </td>
                 </tr>
                 <tr>
                     <td style="padding: 8px 0;">
-                        <span style="color: #7c3aed; font-size: 16px; margin-right: 10px;">✓</span>
+                        <span style="color: #db2777; font-size: 16px; margin-right: 10px;">✓</span>
                         <span style="color: #1f2937; font-size: 14px;">No credit card required</span>
                     </td>
                 </tr>
@@ -72,8 +72,8 @@
         <!-- CTA Button -->
         <div style="text-align: center; margin: 30px 0;">
             <a href="https://www.desifirms.com.au/api/register/?next=%2F"
-               style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 10px; font-weight: 600; font-size: 16px; box-shadow: 0 8px 25px rgba(139, 92, 246, 0.25);">
-                List Your Business Free →
+               style="display: inline-block; background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 10px; font-weight: 600; font-size: 16px; box-shadow: 0 8px 25px rgba(236, 72, 153, 0.25);">
+                List Your Events Free →
             </a>
         </div>
 

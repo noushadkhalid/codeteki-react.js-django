@@ -1,15 +1,15 @@
 {% extends "crm/emails/base_desifirms.html" %}
 
 {% block title %}Quick Follow-Up | Desi Firms{% endblock %}
-{% block preheader %}{{ recipient_name }}, reminder about your free business listing{% endblock %}
-{% block subtitle %}Business Directory{% endblock %}
+{% block preheader %}{{ recipient_name }}, reminder about your free event listing{% endblock %}
+{% block subtitle %}Events Platform{% endblock %}
 
 {% block content %}
 <tr>
     <td style="padding: 40px 30px;">
         <!-- Icon -->
         <div style="text-align: center; margin-bottom: 25px;">
-            <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); border-radius: 50%; margin: 0 auto; display: inline-block; line-height: 70px;">
+            <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #ec4899, #db2777); border-radius: 50%; margin: 0 auto; display: inline-block; line-height: 70px;">
                 <span style="font-size: 35px;">👋</span>
             </div>
         </div>
@@ -26,22 +26,22 @@
 
         <!-- Message -->
         <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            I wanted to follow up on my previous email about listing <strong>{{ recipient_company }}</strong> on Desi Firms.
+            I wanted to follow up on my previous email about listing <strong>{{ recipient_company }}</strong>'s events on Desi Firms.
         </p>
 
         <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
-            We're building a community-focused directory for South Asian businesses in Australia, and early members like you will always have <strong>founding member</strong> status.
+            We're building a vibrant events hub for the South Asian community in Australia, and early partners like you will always have <strong>founding member</strong> status.
         </p>
 
         <!-- Reminder Box -->
-        <div style="background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); border: 1px solid #c4b5fd; border-radius: 12px; padding: 20px; margin: 0 0 25px 0;">
-            <p style="color: #5b21b6; font-size: 14px; font-weight: 600; margin: 0 0 10px 0;">
-                💎 What You Get (100% Free)
+        <div style="background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%); border: 1px solid #f9a8d4; border-radius: 12px; padding: 20px; margin: 0 0 25px 0;">
+            <p style="color: #9d174d; font-size: 14px; font-weight: 600; margin: 0 0 10px 0;">
+                🎉 What You Get (100% Free)
             </p>
-            <p style="color: #5b21b6; font-size: 14px; line-height: 1.6; margin: 0;">
-                ✓ Beautiful business profile page<br>
-                ✓ Featured in our community directory<br>
-                ✓ Connect with the South Asian community<br>
+            <p style="color: #9d174d; font-size: 14px; line-height: 1.6; margin: 0;">
+                ✓ Unlimited event listings<br>
+                ✓ Featured in our events calendar<br>
+                ✓ Direct enquiries from attendees<br>
                 ✓ No fees, no catches - forever free
             </p>
         </div>
@@ -49,8 +49,8 @@
         <!-- CTA Button -->
         <div style="text-align: center; margin: 25px 0;">
             <a href="https://www.desifirms.com.au/api/register/?next=%2F"
-               style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: #ffffff; text-decoration: none; padding: 14px 35px; border-radius: 10px; font-weight: 600; font-size: 15px;">
-                Claim Your Free Listing →
+               style="display: inline-block; background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); color: #ffffff; text-decoration: none; padding: 14px 35px; border-radius: 10px; font-weight: 600; font-size: 15px;">
+                Start Listing Events →
             </a>
         </div>
 

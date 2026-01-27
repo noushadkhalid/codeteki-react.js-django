@@ -1,0 +1,140 @@
+{% extends "crm/emails/base_desifirms.html" %}
+
+{% block title %}Don't Miss Out | Desi Firms{% endblock %}
+{% block preheader %}{{ recipient_name }}, your competitors are getting found online - are you?{% endblock %}
+{% block subtitle %}Business Directory{% endblock %}
+
+{% block content %}
+<tr>
+    <td style="padding: 40px 30px;">
+        <!-- Hero Icon -->
+        <div style="text-align: center; margin-bottom: 25px;">
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 50%; margin: 0 auto; display: inline-flex; align-items: center; justify-content: center;">
+                <span style="font-size: 40px;">⏰</span>
+            </div>
+        </div>
+
+        <!-- Heading -->
+        <h1 style="color: #1f2937; font-size: 26px; font-weight: 700; text-align: center; margin: 0 0 10px 0;">
+            Quick Reminder About Your Listing
+        </h1>
+        <p style="color: #d97706; font-size: 16px; font-weight: 600; text-align: center; margin: 0 0 30px 0;">
+            Your customers are searching - can they find you?
+        </p>
+
+        <!-- Dynamic Body Content OR Default Message -->
+        {% if body_html and body_html != '<p style="margin: 0 0 15px 0;"></p>' %}
+        <div style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            {{ body_html|safe }}
+        </div>
+        {% else %}
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            Hi {{ recipient_name }},
+        </p>
+
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            Just a friendly follow-up - I noticed your business listing still isn't complete.
+        </p>
+
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            Every day without a listing means potential customers can't find you. Meanwhile, <strong>your competitors</strong> are showing up in searches and winning that business.
+        </p>
+        {% endif %}
+
+        <!-- Urgency Box -->
+        <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 16px; padding: 24px; margin: 0 0 30px 0; border: 1px solid #f59e0b;">
+            <div style="text-align: center;">
+                <span style="font-size: 32px;">💡</span>
+                <h3 style="color: #92400e; font-size: 18px; font-weight: 700; margin: 10px 0;">
+                    Did You Know?
+                </h3>
+                <p style="color: #78350f; font-size: 15px; line-height: 1.6; margin: 0;">
+                    <strong>87% of consumers</strong> search online before visiting a local business.<br>
+                    If you're not listed, you're invisible to them.
+                </p>
+            </div>
+        </div>
+
+        <!-- What You're Missing -->
+        <div style="background: #f9fafb; border-radius: 12px; padding: 24px; margin: 0 0 30px 0; border: 1px solid #e5e7eb;">
+            <h3 style="color: #1f2937; font-size: 15px; font-weight: 700; margin: 0 0 16px 0; text-transform: uppercase; letter-spacing: 1px;">
+                What You're Missing:
+            </h3>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td style="padding: 10px 0; vertical-align: top; width: 40px;">
+                        <div style="width: 32px; height: 32px; background: #ef4444; border-radius: 8px; text-align: center; line-height: 32px;">
+                            <span style="font-size: 16px;">👁️</span>
+                        </div>
+                    </td>
+                    <td style="padding: 10px 0 10px 12px; vertical-align: middle;">
+                        <span style="color: #1f2937; font-size: 15px; font-weight: 600;">Free Exposure</span><br>
+                        <span style="color: #6b7280; font-size: 13px;">10,000+ monthly visitors looking for businesses like yours</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px 0; vertical-align: top; width: 40px;">
+                        <div style="width: 32px; height: 32px; background: #ef4444; border-radius: 8px; text-align: center; line-height: 32px;">
+                            <span style="font-size: 16px;">⭐</span>
+                        </div>
+                    </td>
+                    <td style="padding: 10px 0 10px 12px; vertical-align: middle;">
+                        <span style="color: #1f2937; font-size: 15px; font-weight: 600;">Reputation Building</span><br>
+                        <span style="color: #6b7280; font-size: 13px;">Customer reviews building your credibility</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px 0; vertical-align: top; width: 40px;">
+                        <div style="width: 32px; height: 32px; background: #ef4444; border-radius: 8px; text-align: center; line-height: 32px;">
+                            <span style="font-size: 16px;">📞</span>
+                        </div>
+                    </td>
+                    <td style="padding: 10px 0 10px 12px; vertical-align: middle;">
+                        <span style="color: #1f2937; font-size: 15px; font-weight: 600;">Direct Enquiries</span><br>
+                        <span style="color: #6b7280; font-size: 13px;">Interested customers reaching out directly</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px 0; vertical-align: top; width: 40px;">
+                        <div style="width: 32px; height: 32px; background: #ef4444; border-radius: 8px; text-align: center; line-height: 32px;">
+                            <span style="font-size: 16px;">📈</span>
+                        </div>
+                    </td>
+                    <td style="padding: 10px 0 10px 12px; vertical-align: middle;">
+                        <span style="color: #1f2937; font-size: 15px; font-weight: 600;">SEO Boost</span><br>
+                        <span style="color: #6b7280; font-size: 13px;">Quality backlinks improving your Google ranking</span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- CTA Button -->
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="https://www.desifirms.com.au/dashboard/add-business"
+               style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; text-decoration: none; padding: 18px 48px; border-radius: 12px; font-weight: 700; font-size: 17px; box-shadow: 0 8px 25px rgba(245, 158, 11, 0.35); letter-spacing: 0.5px;">
+                Complete My Listing Now →
+            </a>
+        </div>
+
+        <p style="color: #9ca3af; font-size: 13px; text-align: center; margin: 20px 0 0 0;">
+            It only takes 5 minutes • 100% free • No credit card
+        </p>
+
+        <!-- Signature -->
+        <div style="margin-top: 35px; padding-top: 25px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0;">
+                Here to help if you need anything,
+            </p>
+            <p style="color: #1f2937; font-size: 15px; font-weight: 600; margin: 10px 0 5px 0;">
+                Noushad
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0 0 5px 0;">
+                Desi Firms
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                📱 0424 538 777 &nbsp;|&nbsp; 🌐 <a href="https://desifirms.com.au" style="color: #d97706; text-decoration: none;">desifirms.com.au</a>
+            </p>
+        </div>
+    </td>
+</tr>
+{% endblock %}

@@ -23,6 +23,11 @@ EMAIL_TEMPLATES = {
             'agent_responded': 'crm/emails/realestate_responded.html',
             'agent_registered': 'crm/emails/realestate_registered.html',
             'agent_listing': 'crm/emails/realestate_listing.html',
+            # For registered but inactive users (both names work)
+            'agent_nudge': 'crm/emails/realestate_nudge.html',
+            'agent_nudge_2': 'crm/emails/realestate_nudge2.html',
+            'realestate_nudge': 'crm/emails/realestate_nudge.html',  # Email Composer option
+            'realestate_nudge_2': 'crm/emails/realestate_nudge2.html',
         },
         'business': {
             'directory_invitation': 'crm/emails/business_invitation.html',
@@ -31,10 +36,38 @@ EMAIL_TEMPLATES = {
             'business_responded': 'crm/emails/business_responded.html',
             'business_signedup': 'crm/emails/business_signedup.html',
             'business_listed': 'crm/emails/business_listed.html',
+            # For registered but inactive users
+            'business_nudge': 'crm/emails/business_nudge.html',
+            'business_nudge_2': 'crm/emails/business_nudge2.html',
         },
         'backlink': {
             'backlink_pitch': 'crm/emails/backlink_pitch.html',
             'backlink_followup': 'crm/emails/backlink_followup.html',
+        },
+        'events': {
+            'events_invitation': 'crm/emails/events_invitation.html',
+            'events_followup_1': 'crm/emails/events_followup1.html',
+            'events_followup_2': 'crm/emails/events_followup2.html',
+            'events_responded': 'crm/emails/events_responded.html',
+            'events_signedup': 'crm/emails/events_signedup.html',
+            'events_listed': 'crm/emails/events_listed.html',
+            # For registered but inactive users
+            'events_nudge': 'crm/emails/events_nudge.html',
+            'events_nudge_2': 'crm/emails/events_nudge2.html',
+        },
+        # For registered but inactive users (general - detects user type)
+        'registered_users': {
+            'business_nudge': 'crm/emails/business_nudge.html',
+            'business_nudge_2': 'crm/emails/business_nudge2.html',
+            'realestate_nudge': 'crm/emails/realestate_nudge.html',
+            'realestate_nudge_2': 'crm/emails/realestate_nudge2.html',
+            'events_nudge': 'crm/emails/events_nudge.html',
+            'events_nudge_2': 'crm/emails/events_nudge2.html',
+            # Aliases - 'invitation' maps to the appropriate nudge template
+            'invitation': 'crm/emails/business_nudge.html',
+            'directory_invitation': 'crm/emails/business_nudge.html',
+            'agent_invitation': 'crm/emails/realestate_nudge.html',
+            'events_invitation': 'crm/emails/events_nudge.html',
         },
         # Fallback template for any Desi Firms email
         '_default': 'crm/emails/desifirms_generic.html',
@@ -138,6 +171,36 @@ def get_email_type_for_stage(stage_name: str, pipeline_type: str = None) -> Opti
         if stage_lower in business_map:
             return business_map[stage_lower]
 
+    elif pipeline_type == 'events':
+        events_map = {
+            'invited': 'events_invitation',
+            'follow up 1': 'events_followup_1',
+            'follow up 2': 'events_followup_2',
+            'responded': 'events_responded',
+            'signed up': 'events_signedup',
+            'listed': 'events_listed',
+            'nudge 1': 'events_nudge',
+            'nudge 2': 'events_nudge_2',
+        }
+        if stage_lower in events_map:
+            return events_map[stage_lower]
+
+    elif pipeline_type == 'registered_users':
+        # For registered but inactive users - generic pipeline
+        registered_map = {
+            'business nudge 1': 'business_nudge',
+            'business nudge 2': 'business_nudge_2',
+            'realestate nudge 1': 'realestate_nudge',
+            'realestate nudge 2': 'realestate_nudge_2',
+            'events nudge 1': 'events_nudge',
+            'events nudge 2': 'events_nudge_2',
+            # Simple stage names
+            'nudge 1': 'business_nudge',  # Default to business
+            'nudge 2': 'business_nudge_2',
+        }
+        if stage_lower in registered_map:
+            return registered_map[stage_lower]
+
     # Fall back to generic mapping
     return STAGE_TO_EMAIL_TYPE.get(stage_lower)
 
@@ -150,12 +213,16 @@ def get_pipeline_type_from_name(pipeline_name: str) -> str:
         pipeline_name: Name of the pipeline
 
     Returns:
-        Pipeline type (realestate, business, backlink, sales)
+        Pipeline type (realestate, business, backlink, sales, events, registered_users)
     """
     name_lower = pipeline_name.lower()
 
     if 'real estate' in name_lower or 'realestate' in name_lower:
         return 'realestate'
+    elif 'event' in name_lower:
+        return 'events'
+    elif 'registered' in name_lower or 'inactive' in name_lower or 'nudge' in name_lower:
+        return 'registered_users'
     elif 'business' in name_lower or 'directory' in name_lower:
         return 'business'
     elif 'backlink' in name_lower or 'seo' in name_lower:
@@ -182,15 +249,70 @@ def get_template_for_email(
     Returns:
         Template path or None if not found
     """
-    brand_templates = EMAIL_TEMPLATES.get(brand_slug, {})
+    # Normalize brand_slug to handle variations
+    brand_slug_normalized = brand_slug.lower().replace('-', '').replace('_', '') if brand_slug else 'desifirms'
+    if 'desi' in brand_slug_normalized:
+        brand_slug_normalized = 'desifirms'
+    elif 'codeteki' in brand_slug_normalized:
+        brand_slug_normalized = 'codeteki'
+
+    logger.info(f"Template lookup: brand={brand_slug} (normalized={brand_slug_normalized}), pipeline={pipeline_type}, email_type={email_type}")
+
+    brand_templates = EMAIL_TEMPLATES.get(brand_slug_normalized, {})
 
     # Try specific pipeline + email type
     pipeline_templates = brand_templates.get(pipeline_type, {})
     template = pipeline_templates.get(email_type)
 
     if template:
+        logger.info(f"Found template (direct): {template}")
         return template
 
+    logger.info(f"No direct match. Available pipeline types: {list(brand_templates.keys())}")
+
+    # Smart fallback: determine pipeline type from email_type prefix
+    email_type_lower = email_type.lower()
+    fallback_types = []
+
+    if email_type_lower.startswith('business') or email_type_lower.startswith('directory'):
+        fallback_types = ['business', 'registered_users']
+    elif email_type_lower.startswith('realestate') or email_type_lower.startswith('agent'):
+        fallback_types = ['realestate', 'registered_users']
+    elif email_type_lower.startswith('events'):
+        fallback_types = ['events', 'registered_users']
+    elif email_type_lower.startswith('backlink'):
+        fallback_types = ['backlink']
+    elif email_type_lower.startswith('sales') or email_type_lower.startswith('services'):
+        fallback_types = ['sales']
+
+    # Try fallback pipeline types
+    for fallback_type in fallback_types:
+        if fallback_type != pipeline_type:  # Don't retry the same type
+            fallback_templates = brand_templates.get(fallback_type, {})
+            template = fallback_templates.get(email_type)
+            if template:
+                logger.info(f"Found template via fallback: {brand_slug_normalized}/{fallback_type}/{email_type}")
+                return template
+
+    # If still not found and it's a generic email_type like 'invitation', try mapping to specific type
+    if email_type_lower in ['invitation', 'followup', 'followup_1', 'followup_2']:
+        logger.info(f"Generic email_type '{email_type}' - trying to map to specific template")
+        # Map based on pipeline_type
+        type_mapping = {
+            'business': 'directory_invitation',
+            'realestate': 'agent_invitation',
+            'events': 'events_invitation',
+            'registered_users': 'invitation',  # Already handled above
+        }
+        mapped_type = type_mapping.get(pipeline_type)
+        if mapped_type:
+            pipeline_templates = brand_templates.get(pipeline_type, {})
+            template = pipeline_templates.get(mapped_type)
+            if template:
+                logger.info(f"Found template via type mapping: {brand_slug_normalized}/{pipeline_type}/{mapped_type}")
+                return template
+
+    logger.warning(f"No template found, using brand default for {brand_slug_normalized}/{pipeline_type}/{email_type}")
     # Try brand default
     return brand_templates.get('_default')
 
@@ -241,6 +363,30 @@ def render_email_html(
         return None
 
 
+def strip_signature_from_body(body: str) -> str:
+    """
+    Remove common email signatures from AI-generated body content.
+    This prevents duplicate signatures when templates add their own.
+    """
+    import re
+
+    # Common signature patterns to remove
+    signature_patterns = [
+        # "Warm regards," followed by name and contact info
+        r'\n\n*(?:Warm regards|Best regards|Kind regards|Regards|Cheers|Best|Thanks|Thank you),?\s*\n+.*?(?:Noushad|Desi Firms|📱|🌐|desifirms).*$',
+        # Just the closing with name
+        r'\n\n*(?:Warm regards|Best regards|Kind regards|Regards|Cheers|Best),?\s*\n+\s*Noushad\s*(?:\n.*)?$',
+        # Phone/website line at the end
+        r'\n+📱.*?(?:desifirms|codeteki).*$',
+    ]
+
+    cleaned = body
+    for pattern in signature_patterns:
+        cleaned = re.sub(pattern, '', cleaned, flags=re.IGNORECASE | re.DOTALL)
+
+    return cleaned.strip()
+
+
 def get_styled_email(
     brand_slug: str,
     pipeline_type: str,
@@ -269,8 +415,16 @@ def get_styled_email(
     Returns:
         Dict with 'html' and 'plain' versions of the email
     """
+    # Strip signature from body if template will add one
+    # Keep original for plain text version
+    body_for_template = strip_signature_from_body(body)
+
+    # Also remove the greeting if it starts with "Hi Name," since template adds it
+    import re
+    body_for_template = re.sub(r'^Hi\s+[^,]+,?\s*\n+', '', body_for_template, flags=re.IGNORECASE)
+
     # Convert plain text body to HTML (preserve paragraphs and line breaks)
-    body_html = body.replace('\n\n', '</p><p style="margin: 0 0 15px 0;">').replace('\n', '<br>')
+    body_html = body_for_template.replace('\n\n', '</p><p style="margin: 0 0 15px 0;">').replace('\n', '<br>')
     if body_html and not body_html.startswith('<p'):
         body_html = f'<p style="margin: 0 0 15px 0;">{body_html}</p>'
 

@@ -1114,7 +1114,9 @@ class UnsubscribeView(View):
             })
 
         # Find and unsubscribe contact from this specific brand
-        contact = Contact.objects.filter(email__iexact=email).first()
+        from crm.models import Brand
+        brand = Brand.objects.filter(slug__iexact=brand_slug).first()
+        contact = Contact.objects.filter(email__iexact=email, brand=brand).first() if brand else None
 
         if contact:
             # Use brand-specific unsubscribe (doesn't affect other brands)
@@ -1134,9 +1136,7 @@ class UnsubscribeView(View):
                     deal.ai_notes = (deal.ai_notes or '') + f'\n[AUTO] Unsubscribed from {brand_slug} via link on {timezone.now().strftime("%Y-%m-%d")}'
                     deal.save()
         else:
-            # Create contact record to track opt-out for future
-            from crm.models import Brand
-            brand = Brand.objects.filter(slug=brand_slug).first()
+            # Create contact record to track opt-out for future (brand already fetched above)
             Contact.objects.create(
                 email=email,
                 name=email.split('@')[0],
@@ -1167,7 +1167,13 @@ def check_can_email(email: str, brand_slug: str = None) -> dict:
     Returns:
         {'can_email': bool, 'reason': str}
     """
-    contact = Contact.objects.filter(email__iexact=email).first()
+    # Find contact for specific brand if provided, otherwise check any contact with that email
+    if brand_slug:
+        from crm.models import Brand
+        brand = Brand.objects.filter(slug__iexact=brand_slug).first()
+        contact = Contact.objects.filter(email__iexact=email, brand=brand).first() if brand else None
+    else:
+        contact = Contact.objects.filter(email__iexact=email).first()
     if not contact:
         return {'can_email': True, 'reason': ''}
 

@@ -1,0 +1,146 @@
+{% extends "crm/emails/base_desifirms.html" %}
+
+{% block title %}Complete Your Agent Profile | Desi Firms{% endblock %}
+{% block preheader %}{{ recipient_name }}, start listing properties for free - your profile is waiting!{% endblock %}
+{% block subtitle %}Real Estate Platform{% endblock %}
+
+{% block content %}
+<tr>
+    <td style="padding: 40px 30px;">
+        <!-- Hero Icon -->
+        <div style="text-align: center; margin-bottom: 25px;">
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #0093E9, #80D0C7); border-radius: 50%; margin: 0 auto; display: inline-flex; align-items: center; justify-content: center;">
+                <span style="font-size: 40px;">🏠</span>
+            </div>
+        </div>
+
+        <!-- Heading -->
+        <h1 style="color: #1f2937; font-size: 26px; font-weight: 700; text-align: center; margin: 0 0 10px 0;">
+            Your Agent Profile Awaits!
+        </h1>
+        <p style="color: #0093E9; font-size: 16px; font-weight: 600; text-align: center; margin: 0 0 30px 0;">
+            List Unlimited Properties for Free
+        </p>
+
+        <!-- Dynamic Body Content OR Default Message -->
+        {% if body_html and body_html != '<p style="margin: 0 0 15px 0;"></p>' %}
+        <div style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            {{ body_html|safe }}
+        </div>
+        {% else %}
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            Hi {{ recipient_name }},
+        </p>
+
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            I noticed you created a Desi Firms account but haven't completed your real estate agent registration yet.
+        </p>
+
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            Once registered, you can start listing properties and connecting with buyers in the South Asian community - all for <strong>free</strong>.
+        </p>
+        {% endif %}
+
+        <!-- Benefits Box with Icons -->
+        <div style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-radius: 16px; padding: 28px; margin: 0 0 30px 0; border: 1px solid #7dd3fc;">
+            <h3 style="color: #0369a1; font-size: 15px; font-weight: 700; margin: 0 0 20px 0; text-transform: uppercase; letter-spacing: 1px; text-align: center;">
+                What You Can Do
+            </h3>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td style="padding: 10px 0; vertical-align: top; width: 40px;">
+                        <div style="width: 32px; height: 32px; background: #0284c7; border-radius: 8px; text-align: center; line-height: 32px;">
+                            <span style="font-size: 16px;">🏡</span>
+                        </div>
+                    </td>
+                    <td style="padding: 10px 0 10px 12px; vertical-align: middle;">
+                        <span style="color: #1f2937; font-size: 15px; font-weight: 600;">Unlimited Listings</span><br>
+                        <span style="color: #6b7280; font-size: 13px;">List as many properties as you want - no limits</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px 0; vertical-align: top; width: 40px;">
+                        <div style="width: 32px; height: 32px; background: #0284c7; border-radius: 8px; text-align: center; line-height: 32px;">
+                            <span style="font-size: 16px;">👥</span>
+                        </div>
+                    </td>
+                    <td style="padding: 10px 0 10px 12px; vertical-align: middle;">
+                        <span style="color: #1f2937; font-size: 15px; font-weight: 600;">Direct Enquiries</span><br>
+                        <span style="color: #6b7280; font-size: 13px;">Buyers contact you directly - no middleman</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px 0; vertical-align: top; width: 40px;">
+                        <div style="width: 32px; height: 32px; background: #0284c7; border-radius: 8px; text-align: center; line-height: 32px;">
+                            <span style="font-size: 16px;">🌟</span>
+                        </div>
+                    </td>
+                    <td style="padding: 10px 0 10px 12px; vertical-align: middle;">
+                        <span style="color: #1f2937; font-size: 15px; font-weight: 600;">Build Your Profile</span><br>
+                        <span style="color: #6b7280; font-size: 13px;">Establish your reputation in the community</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 10px 0; vertical-align: top; width: 40px;">
+                        <div style="width: 32px; height: 32px; background: #22c55e; border-radius: 8px; text-align: center; line-height: 32px;">
+                            <span style="font-size: 16px;">💰</span>
+                        </div>
+                    </td>
+                    <td style="padding: 10px 0 10px 12px; vertical-align: middle;">
+                        <span style="color: #1f2937; font-size: 15px; font-weight: 600;">Zero Fees</span><br>
+                        <span style="color: #6b7280; font-size: 13px;">No commission, no listing fees, no catch</span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Stats Banner -->
+        <div style="background: #1f2937; border-radius: 12px; padding: 20px; margin: 0 0 30px 0; text-align: center;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td style="width: 33%; text-align: center; padding: 10px;">
+                        <div style="color: #80D0C7; font-size: 28px; font-weight: 700;">150+</div>
+                        <div style="color: #9ca3af; font-size: 12px; text-transform: uppercase;">Agents Registered</div>
+                    </td>
+                    <td style="width: 33%; text-align: center; padding: 10px; border-left: 1px solid #374151; border-right: 1px solid #374151;">
+                        <div style="color: #80D0C7; font-size: 28px; font-weight: 700;">500+</div>
+                        <div style="color: #9ca3af; font-size: 12px; text-transform: uppercase;">Properties Listed</div>
+                    </td>
+                    <td style="width: 33%; text-align: center; padding: 10px;">
+                        <div style="color: #80D0C7; font-size: 28px; font-weight: 700;">Free</div>
+                        <div style="color: #9ca3af; font-size: 12px; text-transform: uppercase;">Always & Forever</div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- CTA Button -->
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="https://www.desifirms.com.au/real-estate/register"
+               style="display: inline-block; background: linear-gradient(135deg, #0093E9 0%, #80D0C7 100%); color: #ffffff; text-decoration: none; padding: 18px 48px; border-radius: 12px; font-weight: 700; font-size: 17px; box-shadow: 0 8px 25px rgba(0, 147, 233, 0.35); letter-spacing: 0.5px;">
+                Complete Agent Registration →
+            </a>
+        </div>
+
+        <p style="color: #9ca3af; font-size: 13px; text-align: center; margin: 20px 0 0 0;">
+            Takes less than 5 minutes • Approval within 24 hours
+        </p>
+
+        <!-- Signature -->
+        <div style="margin-top: 35px; padding-top: 25px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0;">
+                Looking forward to seeing your listings,
+            </p>
+            <p style="color: #1f2937; font-size: 15px; font-weight: 600; margin: 10px 0 5px 0;">
+                Noushad
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0 0 5px 0;">
+                Desi Firms
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                📱 0424 538 777 &nbsp;|&nbsp; 🌐 <a href="https://desifirms.com.au" style="color: #0093E9; text-decoration: none;">desifirms.com.au</a>
+            </p>
+        </div>
+    </td>
+</tr>
+{% endblock %}

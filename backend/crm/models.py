@@ -101,7 +101,7 @@ class Contact(models.Model):
         blank=True,
         help_text="Which brand this contact belongs to"
     )
-    email = models.EmailField(unique=True)
+    email = models.EmailField()  # Unique per brand, not globally
     name = models.CharField(max_length=255, blank=True, help_text="Leave blank to auto-extract from email/domain")
     company = models.CharField(max_length=255, blank=True)
     website = models.URLField(blank=True)
@@ -158,6 +158,8 @@ class Contact(models.Model):
         ordering = ['-created_at']
         verbose_name = 'Contact'
         verbose_name_plural = 'Contacts'
+        # Same email can exist for different brands, but unique within a brand
+        unique_together = [('brand', 'email')]
 
     def __str__(self):
         return f"{self.name} ({self.email})"
@@ -376,6 +378,7 @@ class Pipeline(models.Model):
         ('events', 'Events'),
         ('realestate', 'Real Estate'),
         ('classifieds', 'Classifieds'),
+        ('registered_users', 'Registered Users (Nudge)'),
     ]
 
     brand = models.ForeignKey(
@@ -970,6 +973,13 @@ class EmailDraft(models.Model):
             ('free_listing', 'Free Property Listing'),
             # Desi Firms - Classifieds
             ('classifieds_invitation', 'Classifieds Invitation'),
+            # Desi Firms - Nudge (Registered but inactive users)
+            ('business_nudge', '🔔 Nudge: List Your Business'),
+            ('business_nudge_2', '🔔 Nudge 2: Business Reminder'),
+            ('realestate_nudge', '🔔 Nudge: Become an Agent'),
+            ('realestate_nudge_2', '🔔 Nudge 2: Agent Reminder'),
+            ('events_nudge', '🔔 Nudge: Post Your Events'),
+            ('events_nudge_2', '🔔 Nudge 2: Events Reminder'),
             # Codeteki - Sales
             ('services_intro', 'Web/AI Services Introduction'),
             ('seo_services', 'SEO Services Pitch'),
@@ -1025,6 +1035,12 @@ class EmailDraft(models.Model):
     # Template features
     is_template = models.BooleanField(default=False, help_text="Save as reusable template")
     template_name = models.CharField(max_length=100, blank=True, help_text="Name for template")
+
+    # Override skip behavior
+    send_to_pipeline_contacts = models.BooleanField(
+        default=False,
+        help_text="Also send to contacts already in a pipeline (normally skipped)"
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -212,7 +212,7 @@ def queue_deal_email(self, deal_id: str, email_type: str = 'followup'):
     # Send styled HTML email
     send_result = email_service.send(
         to=deal.contact.email,
-        subject=email_result['subject'],
+        subject=subject,  # Use the subject variable (works for both AI and template)
         body=html_body,  # Send HTML version
         tracking_id=str(email_log.tracking_id)
     )
