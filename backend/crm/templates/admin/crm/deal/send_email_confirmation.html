@@ -255,7 +255,7 @@
         Emails will be sent immediately. Make sure you've selected the correct deals.
     </div>
 
-    <form method="post" id="send-form">
+    <form method="post" action="{% url 'admin:crm_deal_changelist' %}" id="send-form">
         {% csrf_token %}
 
         <!-- Pass selected deals -->
@@ -263,9 +263,11 @@
         <input type="hidden" name="{{ action_checkbox_name }}" value="{{ deal.pk }}">
         {% endfor %}
         <input type="hidden" name="action" value="send_email_now">
+        <input type="hidden" name="index" value="0">
+        <input type="hidden" name="select_across" value="0">
 
         <div class="btn-group">
-            <button type="submit" name="confirm_send" class="btn btn-danger" id="send-btn">
+            <button type="submit" name="confirm_send" value="1" class="btn btn-danger" id="send-btn">
                 📤 Send {{ deal_count }} Email{{ deal_count|pluralize }} Now
             </button>
             <a href="{% url 'admin:crm_deal_changelist' %}" class="btn btn-secondary">
@@ -292,21 +294,32 @@
 
 <script>
 (function() {
-    const form = document.getElementById('send-form');
-    const sendBtn = document.getElementById('send-btn');
-    const overlay = document.getElementById('send-loading-overlay');
+    var form = document.getElementById('send-form');
+    var sendBtn = document.getElementById('send-btn');
+    var overlay = document.getElementById('send-loading-overlay');
 
     if (form && sendBtn) {
-        form.addEventListener('submit', function(e) {
-            // Show loading overlay
-            overlay.classList.add('active');
-            document.body.classList.add('sending');
+        sendBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
 
-            // Disable button to prevent double submit
+            // Add confirm_send hidden field (form.submit() doesn't include button values)
+            var confirmInput = document.createElement('input');
+            confirmInput.type = 'hidden';
+            confirmInput.name = 'confirm_send';
+            confirmInput.value = '1';
+            form.appendChild(confirmInput);
+
+            // Show loading overlay
+            if (overlay) {
+                overlay.classList.add('active');
+            }
+            document.body.classList.add('sending');
             sendBtn.disabled = true;
             sendBtn.textContent = '⏳ Sending...';
 
-            console.log('[Send Confirm] Form submitted, showing loading overlay');
+            // Submit form
+            setTimeout(function() { form.submit(); }, 50);
         });
     }
 })();
