@@ -6,6 +6,7 @@ Using Django Unfold for modern Tailwind-based UI
 from django.contrib import admin
 from django.utils.html import format_html
 from django.db.models import Count, Sum
+from django import forms
 
 from unfold.admin import ModelAdmin, TabularInline, StackedInline
 from unfold.decorators import action, display
@@ -226,8 +227,40 @@ class EmailLogInline(TabularInline):
 # CONTACT ADMIN
 # =============================================================================
 
+class ContactAdminForm(forms.ModelForm):
+    """Custom form with duplicate email validation."""
+
+    class Meta:
+        model = Contact
+        fields = '__all__'
+
+    def clean(self):
+        cleaned_data = super().clean()
+        email = cleaned_data.get('email')
+        brand = cleaned_data.get('brand')
+
+        if email and brand:
+            # Normalize email
+            email = Contact.normalize_email(email) if hasattr(Contact, 'normalize_email') else email.lower().strip()
+
+            # Check for existing contact with same email + brand (exclude current instance)
+            qs = Contact.objects.filter(email__iexact=email, brand=brand)
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+
+            if qs.exists():
+                existing = qs.first()
+                raise forms.ValidationError(
+                    f"A contact with email '{email}' already exists for {brand.name}. "
+                    f"Existing contact: {existing.name or 'No name'} (ID: {existing.pk})"
+                )
+
+        return cleaned_data
+
+
 @admin.register(Contact)
 class ContactAdmin(ModelAdmin):
+    form = ContactAdminForm
     list_display = [
         'name',
         'email',
@@ -453,9 +486,42 @@ class ContactAdmin(ModelAdmin):
 # BRAND-SPECIFIC CONTACT ADMINS (Separate Views)
 # =============================================================================
 
+class CodetekiContactAdminForm(forms.ModelForm):
+    """Custom form for Codeteki contacts with duplicate email validation."""
+
+    class Meta:
+        model = Contact
+        fields = '__all__'
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if email:
+            email = Contact.normalize_email(email) if hasattr(Contact, 'normalize_email') else email.lower().strip()
+
+            # Get Codeteki brand
+            try:
+                brand = Brand.objects.get(slug='codeteki')
+            except Brand.DoesNotExist:
+                return email
+
+            # Check for existing contact
+            qs = Contact.objects.filter(email__iexact=email, brand=brand)
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+
+            if qs.exists():
+                existing = qs.first()
+                raise forms.ValidationError(
+                    f"A contact with email '{email}' already exists for Codeteki. "
+                    f"Existing contact: {existing.name or 'No name'} (ID: {existing.pk})"
+                )
+        return email
+
+
 @admin.register(CodetekiContact)
 class CodetekiContactAdmin(ContactAdmin):
     """Codeteki-only contacts view - brand auto-selected."""
+    form = CodetekiContactAdminForm
 
     # Remove brand from fieldsets - it's auto-set
     fieldsets = (
@@ -501,9 +567,42 @@ class CodetekiContactAdmin(ContactAdmin):
         super().save_model(request, obj, form, change)
 
 
+class DesiFirmsContactAdminForm(forms.ModelForm):
+    """Custom form for Desi Firms contacts with duplicate email validation."""
+
+    class Meta:
+        model = Contact
+        fields = '__all__'
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if email:
+            email = Contact.normalize_email(email) if hasattr(Contact, 'normalize_email') else email.lower().strip()
+
+            # Get Desi Firms brand
+            try:
+                brand = Brand.objects.get(slug='desifirms')
+            except Brand.DoesNotExist:
+                return email
+
+            # Check for existing contact
+            qs = Contact.objects.filter(email__iexact=email, brand=brand)
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+
+            if qs.exists():
+                existing = qs.first()
+                raise forms.ValidationError(
+                    f"A contact with email '{email}' already exists for Desi Firms. "
+                    f"Existing contact: {existing.name or 'No name'} (ID: {existing.pk})"
+                )
+        return email
+
+
 @admin.register(DesiFirmsContact)
 class DesiFirmsContactAdmin(ContactAdmin):
     """Desi Firms-only contacts view - brand auto-selected."""
+    form = DesiFirmsContactAdminForm
 
     # Remove brand from fieldsets - it's auto-set
     fieldsets = (
