@@ -255,6 +255,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'crm.tasks.daily_ai_review',
         'schedule': crontab(hour=9, minute=0),  # 9 AM daily
     },
+    'crm-check-scheduled-drafts': {
+        'task': 'crm.tasks.check_scheduled_drafts',
+        'schedule': crontab(minute='*/5'),  # Every 5 minutes - check for scheduled emails
+    },
 }
 
 # Zoho Mail API Configuration (for CRM email outreach)

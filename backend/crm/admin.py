@@ -1599,9 +1599,10 @@ class EmailDraftAdmin(ModelAdmin):
         'recipient_count_display',
         'deals_created_display',
         'sent_status_display',
+        'schedule_status_display',
         'updated_at',
     ]
-    list_filter = ['brand', 'pipeline', 'is_sent', 'email_type', 'created_at']
+    list_filter = ['brand', 'pipeline', 'is_sent', 'schedule_status', 'email_type', 'created_at']
     search_fields = ['contacts__name', 'contacts__email', 'manual_emails', 'template_name', 'generated_subject']
     ordering = ['-updated_at']
     filter_horizontal = ['contacts']  # Nice dual-list selector for multiple contacts
@@ -1628,6 +1629,11 @@ class EmailDraftAdmin(ModelAdmin):
             'fields': ('final_subject', 'final_body'),
             'description': 'This is the first email. After sending, pipeline autopilot handles follow-ups.'
         }),
+        ('Scheduling', {
+            'fields': ('scheduled_for', 'schedule_status', 'schedule_error'),
+            'classes': ['collapse'],
+            'description': 'Schedule email to send at peak business hours (Australia/Sydney timezone)'
+        }),
         ('Status', {
             'fields': ('sent_count', 'deals_created', 'total_recipients', 'is_sent', 'sent_at'),
             'classes': ['collapse'],
@@ -1637,7 +1643,7 @@ class EmailDraftAdmin(ModelAdmin):
             'classes': ['collapse'],
         }),
     )
-    readonly_fields = ['is_sent', 'sent_at', 'sent_count', 'total_recipients', 'deals_created']
+    readonly_fields = ['is_sent', 'sent_at', 'sent_count', 'total_recipients', 'deals_created', 'schedule_status', 'schedule_error']
 
     class Media:
         css = {
@@ -1700,6 +1706,20 @@ class EmailDraftAdmin(ModelAdmin):
         if obj.generated_body:
             return "AI Draft", "info"
         return "Pending", "secondary"
+
+    @display(description="Schedule", label=True)
+    def schedule_status_display(self, obj):
+        if obj.schedule_status == 'scheduled' and obj.scheduled_for:
+            return f"📅 {obj.get_scheduled_time_display()}", "info"
+        elif obj.schedule_status == 'sending':
+            return "Sending...", "warning"
+        elif obj.schedule_status == 'completed':
+            return "Sent", "success"
+        elif obj.schedule_status == 'cancelled':
+            return "Cancelled", "secondary"
+        elif obj.schedule_status == 'failed':
+            return f"Failed", "danger"
+        return "-", "secondary"
 
     @action(description="🤖 Generate AI Email")
     def generate_ai_email(self, request, queryset):
@@ -1860,6 +1880,16 @@ class EmailDraftAdmin(ModelAdmin):
                 return self._execute_send(request, draft, valid_recipients, subject, body_text)
             except Exception as e:
                 self.message_user(request, f"❌ Error sending emails: {str(e)}", messages.ERROR)
+                from django.http import HttpResponseRedirect
+                from django.urls import reverse
+                return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))
+
+        # If schedule requested, schedule for later
+        if 'confirm_schedule' in request.POST:
+            try:
+                return self._schedule_send(request, draft, len(valid_recipients))
+            except Exception as e:
+                self.message_user(request, f"❌ Error scheduling: {str(e)}", messages.ERROR)
                 from django.http import HttpResponseRedirect
                 from django.urls import reverse
                 return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))
@@ -2077,6 +2107,84 @@ class EmailDraftAdmin(ModelAdmin):
         self.message_user(request, msg, messages.SUCCESS if sent_count > 0 else messages.WARNING)
         return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))
 
+    def _schedule_send(self, request, draft, valid_count):
+        """Schedule email to be sent at a future time."""
+        from django.contrib import messages
+        from django.http import HttpResponseRedirect
+        from django.urls import reverse
+        from django.utils import timezone
+        from datetime import datetime, timedelta
+        import pytz
+
+        sydney = pytz.timezone('Australia/Sydney')
+
+        # Get schedule time from form
+        schedule_preset = request.POST.get('schedule_preset', '')
+        schedule_datetime = request.POST.get('schedule_datetime', '')
+
+        scheduled_time = None
+
+        if schedule_preset:
+            # Calculate time from preset
+            now = timezone.now().astimezone(sydney)
+
+            if schedule_preset == 'tomorrow_9':
+                target = now + timedelta(days=1)
+                target = target.replace(hour=9, minute=0, second=0, microsecond=0)
+            elif schedule_preset == 'tomorrow_10':
+                target = now + timedelta(days=1)
+                target = target.replace(hour=10, minute=0, second=0, microsecond=0)
+            elif schedule_preset == 'tomorrow_14':
+                target = now + timedelta(days=1)
+                target = target.replace(hour=14, minute=0, second=0, microsecond=0)
+            elif schedule_preset == 'tomorrow_15':
+                target = now + timedelta(days=1)
+                target = target.replace(hour=15, minute=0, second=0, microsecond=0)
+            elif schedule_preset == 'monday_9':
+                days_until_monday = (7 - now.weekday()) % 7
+                if days_until_monday == 0:
+                    days_until_monday = 7
+                target = now + timedelta(days=days_until_monday)
+                target = target.replace(hour=9, minute=0, second=0, microsecond=0)
+            elif schedule_preset == 'monday_10':
+                days_until_monday = (7 - now.weekday()) % 7
+                if days_until_monday == 0:
+                    days_until_monday = 7
+                target = now + timedelta(days=days_until_monday)
+                target = target.replace(hour=10, minute=0, second=0, microsecond=0)
+            else:
+                raise ValueError(f"Unknown schedule preset: {schedule_preset}")
+
+            scheduled_time = target.astimezone(pytz.UTC)
+
+        elif schedule_datetime:
+            # Parse custom datetime (input is in AEST)
+            naive_dt = datetime.strptime(schedule_datetime, '%Y-%m-%dT%H:%M')
+            local_dt = sydney.localize(naive_dt)
+            scheduled_time = local_dt.astimezone(pytz.UTC)
+
+            # Validate it's in the future
+            if scheduled_time <= timezone.now():
+                raise ValueError("Scheduled time must be in the future")
+        else:
+            raise ValueError("No schedule time selected")
+
+        # Update draft with schedule
+        draft.scheduled_for = scheduled_time
+        draft.schedule_status = 'scheduled'
+        draft.schedule_error = ''
+        draft.save(update_fields=['scheduled_for', 'schedule_status', 'schedule_error'])
+
+        # Format display time
+        display_time = draft.get_scheduled_time_display()
+
+        self.message_user(
+            request,
+            f"📅 Scheduled {valid_count} email(s) for {display_time}",
+            messages.SUCCESS
+        )
+        return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))
+
     @action(description="📋 Save as Template")
     def save_as_template(self, request, queryset):
         """Mark selected drafts as reusable templates."""
@@ -2221,6 +2329,16 @@ class EmailDraftAdmin(ModelAdmin):
                 return self._execute_send(request, draft, valid_recipients, subject, body_text)
             except Exception as e:
                 self.message_user(request, f"❌ Error sending emails: {str(e)}", messages.ERROR)
+                from django.http import HttpResponseRedirect
+                from django.urls import reverse
+                return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))
+
+        # If schedule requested, schedule for later
+        if 'confirm_schedule' in request.POST:
+            try:
+                return self._schedule_send(request, draft, len(valid_recipients))
+            except Exception as e:
+                self.message_user(request, f"❌ Error scheduling: {str(e)}", messages.ERROR)
                 from django.http import HttpResponseRedirect
                 from django.urls import reverse
                 return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))

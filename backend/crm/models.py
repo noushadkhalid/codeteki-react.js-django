@@ -1042,6 +1042,26 @@ class EmailDraft(models.Model):
         help_text="Also send to contacts already in a pipeline (normally skipped)"
     )
 
+    # Scheduling fields
+    SCHEDULE_STATUS_CHOICES = [
+        ('not_scheduled', 'Not Scheduled'),
+        ('scheduled', 'Scheduled'),
+        ('sending', 'Sending'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+        ('failed', 'Failed'),
+    ]
+    scheduled_for = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Schedule email to be sent at this time (Australia/Sydney timezone)"
+    )
+    schedule_status = models.CharField(
+        max_length=20,
+        choices=SCHEDULE_STATUS_CHOICES,
+        default='not_scheduled'
+    )
+    schedule_error = models.TextField(blank=True, help_text="Error message if scheduled send failed")
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -1110,6 +1130,21 @@ class EmailDraft(models.Model):
         """Update the total_recipients field."""
         self.total_recipients = self.get_recipient_count()
         self.save(update_fields=['total_recipients'])
+
+    def get_scheduled_time_display(self):
+        """Get formatted scheduled time in Australia/Sydney timezone."""
+        if not self.scheduled_for:
+            return None
+        import pytz
+        sydney = pytz.timezone('Australia/Sydney')
+        local_time = self.scheduled_for.astimezone(sydney)
+        return local_time.strftime('%a %d %b %Y at %I:%M %p AEST')
+
+    def cancel_schedule(self):
+        """Cancel a scheduled email send."""
+        self.schedule_status = 'cancelled'
+        self.scheduled_for = None
+        self.save(update_fields=['schedule_status', 'scheduled_for'])
 
     # Legacy methods for backward compatibility
     def get_recipient_email(self):

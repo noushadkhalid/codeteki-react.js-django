@@ -646,3 +646,298 @@ def process_backlink_import(self, import_id: str):
 
     logger.info(f"Backlink import {import_id} completed: {result}")
     return result
+
+
+# =============================================================================
+# SCHEDULED EMAIL DRAFT TASKS
+# =============================================================================
+
+@shared_task
+def check_scheduled_drafts():
+    """
+    Check for scheduled EmailDrafts that are due to be sent.
+    Runs every 5 minutes via Celery Beat.
+    """
+    from crm.models import EmailDraft
+
+    logger.info("Checking for scheduled email drafts to send")
+
+    # Find drafts scheduled for now or in the past
+    due_drafts = EmailDraft.objects.filter(
+        schedule_status='scheduled',
+        scheduled_for__lte=timezone.now()
+    )
+
+    queued = 0
+    for draft in due_drafts:
+        # Queue the send task
+        send_scheduled_draft.delay(str(draft.id))
+        queued += 1
+        logger.info(f"Queued scheduled draft {draft.id} for sending")
+
+    if queued:
+        logger.info(f"Queued {queued} scheduled draft(s) for sending")
+
+    return {'queued': queued}
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def send_scheduled_draft(self, draft_id: str):
+    """
+    Send a scheduled EmailDraft at its scheduled time.
+
+    Args:
+        draft_id: UUID of the EmailDraft to send
+    """
+    from crm.models import EmailDraft, Contact, Deal, PipelineStage
+    from crm.services.email_service import ZohoEmailService
+    from crm.services.email_templates import get_styled_email
+    from crm.services.ai_agent import CRMAIAgent
+
+    logger.info(f"Starting scheduled send for draft {draft_id}")
+
+    try:
+        draft = EmailDraft.objects.select_related('brand', 'pipeline').get(id=draft_id)
+    except EmailDraft.DoesNotExist:
+        logger.error(f"EmailDraft {draft_id} not found")
+        return {'success': False, 'error': 'Draft not found'}
+
+    # Check if still scheduled (not cancelled)
+    if draft.schedule_status != 'scheduled':
+        logger.info(f"Draft {draft_id} no longer scheduled (status: {draft.schedule_status})")
+        return {'success': False, 'error': 'Draft no longer scheduled'}
+
+    # Update status to sending
+    draft.schedule_status = 'sending'
+    draft.save(update_fields=['schedule_status'])
+
+    try:
+        # Validate basics
+        if not draft.pipeline:
+            raise ValueError("No pipeline selected")
+
+        subject = draft.final_subject or draft.generated_subject
+        body_text = draft.final_body or draft.generated_body
+
+        if not subject or not body_text:
+            raise ValueError("No email content")
+
+        # Get all valid recipients
+        all_recipients = draft.get_all_recipients()
+        valid_recipients = []
+
+        for recipient in all_recipients:
+            recipient_email = Contact.normalize_email(recipient['email'])
+            if not recipient_email:
+                continue
+
+            contact = recipient.get('contact')
+            if not contact:
+                contact = Contact.objects.filter(
+                    email__iexact=recipient_email,
+                    brand=draft.brand
+                ).first()
+
+            # Check unsubscribed
+            brand_slug = draft.brand.slug if draft.brand else None
+            if contact and (contact.is_unsubscribed or contact.is_unsubscribed_from_brand(brand_slug)):
+                continue
+
+            # Check in pipeline (unless override is set)
+            if contact and not draft.send_to_pipeline_contacts:
+                if Deal.objects.filter(contact=contact, status='active').exists():
+                    continue
+
+            valid_recipients.append({
+                'email': recipient_email,
+                'name': recipient.get('name', ''),
+                'company': recipient.get('company', ''),
+                'website': recipient.get('website', ''),
+                'contact': contact,
+            })
+
+        if not valid_recipients:
+            raise ValueError("No valid recipients")
+
+        # Get pipeline stage
+        invited_stage = PipelineStage.objects.filter(
+            pipeline=draft.pipeline,
+            name__icontains='invited'
+        ).first() or PipelineStage.objects.filter(
+            pipeline=draft.pipeline
+        ).order_by('order').first()
+
+        if not invited_stage:
+            raise ValueError("Pipeline has no stages")
+
+        # Initialize services
+        email_service = ZohoEmailService(brand=draft.brand)
+        if not email_service.enabled:
+            raise ValueError(f"Zoho not configured for {draft.brand.name}")
+
+        ai_agent = CRMAIAgent()
+
+        # Send to each recipient
+        sent_count = 0
+        failed_count = 0
+        total_deals = 0
+
+        for recipient in valid_recipients:
+            try:
+                result = _send_scheduled_to_recipient(
+                    draft, recipient, subject, body_text,
+                    invited_stage, email_service, ai_agent
+                )
+                if result['success']:
+                    sent_count += 1
+                    if result.get('deal_created'):
+                        total_deals += 1
+                else:
+                    failed_count += 1
+            except Exception as e:
+                logger.error(f"Error sending to {recipient['email']}: {e}")
+                failed_count += 1
+
+        # Update draft tracking
+        draft.sent_count = (draft.sent_count or 0) + sent_count
+        draft.deals_created = (draft.deals_created or 0) + total_deals
+        draft.is_sent = True
+        draft.sent_at = timezone.now()
+        draft.schedule_status = 'completed'
+        draft.save(update_fields=[
+            'sent_count', 'deals_created', 'is_sent', 'sent_at', 'schedule_status'
+        ])
+
+        logger.info(f"Scheduled send completed for draft {draft_id}: "
+                   f"{sent_count} sent, {failed_count} failed, {total_deals} deals")
+
+        return {
+            'success': True,
+            'sent_count': sent_count,
+            'failed_count': failed_count,
+            'deals_created': total_deals
+        }
+
+    except Exception as e:
+        logger.error(f"Scheduled send failed for draft {draft_id}: {e}")
+        draft.schedule_status = 'failed'
+        draft.schedule_error = str(e)
+        draft.save(update_fields=['schedule_status', 'schedule_error'])
+        return {'success': False, 'error': str(e)}
+
+
+def _send_scheduled_to_recipient(draft, recipient, subject, body_text, invited_stage,
+                                  email_service, ai_agent):
+    """Helper function to send to a single recipient."""
+    from crm.models import Contact, Deal
+    from crm.services.email_templates import get_styled_email
+
+    recipient_email = recipient['email']
+    recipient_name = recipient.get('name', '')
+    recipient_company = recipient.get('company', '')
+    contact = recipient.get('contact')
+
+    # Generate smart salutation
+    salutation = ai_agent.get_smart_salutation(
+        email=recipient_email,
+        name=recipient_name,
+        company=recipient_company
+    )
+
+    # Personalize body
+    personalized_body = body_text.replace('{{SALUTATION}}', salutation)
+
+    # Extract name for template
+    extracted_name = salutation.replace('Hi ', '').replace(',', '').strip() \
+        if salutation.startswith('Hi ') else 'there'
+    if ' Team' in extracted_name:
+        extracted_name = 'there'
+
+    # Generate styled HTML
+    styled_email = get_styled_email(
+        brand_slug=draft.brand.slug if draft.brand else 'desifirms',
+        pipeline_type=draft.pipeline.pipeline_type if draft.pipeline else 'business',
+        email_type=draft.email_type or 'directory_invitation',
+        recipient_name=extracted_name,
+        recipient_email=recipient_email,
+        recipient_company=recipient_company,
+        subject=subject,
+        body=personalized_body,
+    )
+
+    # Send email
+    result = email_service.send(
+        to=recipient_email,
+        subject=subject,
+        body=styled_email['html'],
+        from_name=draft.brand.from_name
+    )
+
+    if not result.get('success'):
+        return {'success': False, 'error': result.get('error')}
+
+    # Create/update contact and deal
+    deal_created = False
+    if not contact:
+        contact = Contact.objects.filter(
+            email__iexact=recipient_email,
+            brand=draft.brand
+        ).first()
+
+    if not contact:
+        try:
+            with transaction.atomic():
+                contact = Contact.objects.create(
+                    email=recipient_email,
+                    brand=draft.brand,
+                    name=recipient_name or extracted_name,
+                    company=recipient_company,
+                    website=recipient.get('website', ''),
+                    status='contacted',
+                    last_emailed_at=timezone.now(),
+                    email_count=1,
+                    source='email_composer_scheduled'
+                )
+        except Exception:
+            contact = Contact.objects.filter(
+                email__iexact=recipient_email,
+                brand=draft.brand
+            ).first()
+
+    if contact:
+        contact.last_emailed_at = timezone.now()
+        contact.email_count = (contact.email_count or 0) + 1
+        contact.status = 'contacted'
+        contact.save(update_fields=['last_emailed_at', 'email_count', 'status'])
+
+        # Create deal if doesn't exist
+        existing_deal = Deal.objects.filter(
+            contact=contact,
+            pipeline=draft.pipeline,
+            status='active'
+        ).first()
+
+        if existing_deal:
+            existing_deal.emails_sent = (existing_deal.emails_sent or 0) + 1
+            existing_deal.last_contact_date = timezone.now()
+            existing_deal.next_action_date = timezone.now() + timedelta(
+                days=existing_deal.current_stage.days_until_followup
+                if existing_deal.current_stage else 3
+            )
+            existing_deal.save()
+        else:
+            Deal.objects.create(
+                contact=contact,
+                pipeline=draft.pipeline,
+                current_stage=invited_stage,
+                status='active',
+                emails_sent=1,
+                last_contact_date=timezone.now(),
+                next_action_date=timezone.now() + timedelta(
+                    days=invited_stage.days_until_followup or 3
+                ),
+                ai_notes=f"First contact via scheduled Email Composer\nSubject: {subject}"
+            )
+            deal_created = True
+
+    return {'success': True, 'deal_created': deal_created}
