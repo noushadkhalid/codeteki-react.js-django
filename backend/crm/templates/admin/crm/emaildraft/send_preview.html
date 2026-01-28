@@ -337,33 +337,35 @@
         {% if valid_count > 0 %}
         <!-- Scheduling Options -->
         <div class="schedule-options" style="background: #f0f9ff; border: 1px solid #0284c7; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-            <h3 style="margin: 0 0 15px 0; color: #0369a1; font-size: 16px;">📅 Schedule for Peak Business Hours</h3>
+            <h3 style="margin: 0 0 15px 0; color: #0369a1; font-size: 16px;">📅 Schedule Send (Optional)</h3>
 
             <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-end;">
                 <!-- Preset Time Slots -->
                 <div>
                     <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 5px; font-weight: 500;">Quick Schedule (AEST)</label>
                     <select name="schedule_preset" id="schedule-preset" style="padding: 10px 15px; border-radius: 6px; border: 1px solid #d1d5db; min-width: 220px; font-size: 14px;">
-                        <option value="">-- Or choose preset time --</option>
-                        <option value="tomorrow_9">Tomorrow 9:00 AM</option>
-                        <option value="tomorrow_10">Tomorrow 10:00 AM</option>
-                        <option value="tomorrow_14">Tomorrow 2:00 PM</option>
-                        <option value="tomorrow_15">Tomorrow 3:00 PM</option>
-                        <option value="monday_9">Next Monday 9:00 AM</option>
-                        <option value="monday_10">Next Monday 10:00 AM</option>
+                        <option value="">-- Choose preset time --</option>
+                        <option value="tomorrow_9" {% if schedule_preset == 'tomorrow_9' %}selected{% endif %}>Tomorrow 9:00 AM</option>
+                        <option value="tomorrow_10" {% if schedule_preset == 'tomorrow_10' %}selected{% endif %}>Tomorrow 10:00 AM</option>
+                        <option value="tomorrow_14" {% if schedule_preset == 'tomorrow_14' %}selected{% endif %}>Tomorrow 2:00 PM</option>
+                        <option value="tomorrow_15" {% if schedule_preset == 'tomorrow_15' %}selected{% endif %}>Tomorrow 3:00 PM</option>
+                        <option value="monday_9" {% if schedule_preset == 'monday_9' %}selected{% endif %}>Next Monday 9:00 AM</option>
+                        <option value="monday_10" {% if schedule_preset == 'monday_10' %}selected{% endif %}>Next Monday 10:00 AM</option>
                     </select>
                 </div>
 
                 <!-- Custom DateTime -->
                 <div>
-                    <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 5px; font-weight: 500;">Custom Date/Time (AEST)</label>
+                    <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 5px; font-weight: 500;">Or Custom Date/Time (AEST)</label>
                     <input type="datetime-local" name="schedule_datetime" id="schedule-datetime"
+                           value="{{ schedule_datetime }}"
                            style="padding: 10px 15px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 14px;">
                 </div>
             </div>
 
             <p style="font-size: 12px; color: #6b7280; margin-top: 12px; margin-bottom: 0;">
-                <strong>Tip:</strong> Peak business hours are 9-11 AM and 2-4 PM Australia time for best engagement rates.
+                💡 <strong>Peak hours:</strong> 9-11 AM and 2-4 PM Australia time for best engagement.
+                Leave empty to send immediately.
             </p>
         </div>
         {% endif %}

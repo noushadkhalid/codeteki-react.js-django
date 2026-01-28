@@ -278,6 +278,85 @@
     gap: 8px;
 }
 
+/* Schedule Section */
+.schedule-section {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+    margin: 0 20px;
+}
+
+.schedule-toggle {
+    flex-shrink: 0;
+}
+
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #475569;
+}
+
+.toggle-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #0284c7;
+}
+
+.toggle-text {
+    white-space: nowrap;
+}
+
+.schedule-options {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.schedule-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.schedule-select,
+.schedule-datetime {
+    padding: 6px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 12px;
+    background: white;
+}
+
+.schedule-select {
+    min-width: 160px;
+}
+
+.schedule-datetime {
+    min-width: 180px;
+}
+
+.schedule-or {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.schedule-tip {
+    font-size: 11px;
+    color: #0284c7;
+    white-space: nowrap;
+}
+
 /* Right Panel - AI & Settings */
 .ai-panel {
     background: #fafafa;
@@ -637,6 +716,35 @@
             <div class="footer-stats">
                 <div class="footer-stat">Recipients: <span id="recipientCount">0</span></div>
             </div>
+
+            <!-- Scheduling Options -->
+            <div class="schedule-section" id="scheduleSection">
+                <div class="schedule-toggle">
+                    <label class="toggle-label">
+                        <input type="checkbox" id="scheduleToggle">
+                        <span class="toggle-text">📅 Schedule Send</span>
+                    </label>
+                </div>
+                <div class="schedule-options" id="scheduleOptions" style="display: none;">
+                    <div class="schedule-row">
+                        <select id="schedulePreset" class="schedule-select">
+                            <option value="">Quick Pick (AEST)</option>
+                            <option value="tomorrow_9">Tomorrow 9:00 AM</option>
+                            <option value="tomorrow_10">Tomorrow 10:00 AM</option>
+                            <option value="tomorrow_14">Tomorrow 2:00 PM</option>
+                            <option value="tomorrow_15">Tomorrow 3:00 PM</option>
+                            <option value="monday_9">Next Monday 9:00 AM</option>
+                            <option value="monday_10">Next Monday 10:00 AM</option>
+                        </select>
+                        <span class="schedule-or">or</span>
+                        <input type="datetime-local" id="scheduleCustom" class="schedule-datetime" placeholder="Custom time">
+                    </div>
+                    <div class="schedule-tip">
+                        💡 Peak hours: 9-11 AM & 2-4 PM AEST
+                    </div>
+                </div>
+            </div>
+
             <div class="footer-actions">
                 <button type="button" class="btn btn-secondary" id="saveDraftBtn">
                     Save Draft
@@ -1146,6 +1254,30 @@ document.addEventListener('DOMContentLoaded', function() {
         djangoForm.submit();
     });
 
+    // Schedule toggle
+    const scheduleToggle = document.getElementById('scheduleToggle');
+    const scheduleOptions = document.getElementById('scheduleOptions');
+    const schedulePreset = document.getElementById('schedulePreset');
+    const scheduleCustom = document.getElementById('scheduleCustom');
+
+    scheduleToggle.addEventListener('change', () => {
+        scheduleOptions.style.display = scheduleToggle.checked ? 'flex' : 'none';
+        // Update button text
+        if (scheduleToggle.checked) {
+            sendBtn.innerHTML = '📅 Preview & Schedule';
+        } else {
+            sendBtn.innerHTML = 'Send & Add to Pipeline';
+        }
+    });
+
+    // Clear preset when custom is selected and vice versa
+    schedulePreset.addEventListener('change', () => {
+        if (schedulePreset.value) scheduleCustom.value = '';
+    });
+    scheduleCustom.addEventListener('change', () => {
+        if (scheduleCustom.value) schedulePreset.value = '';
+    });
+
     // Send button with loading state
     const sendBtn = document.getElementById('sendBtn');
     let isSending = false;
@@ -1158,6 +1290,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!subjectInput.value.trim()) { showToast('Enter a subject'); return; }
         if (!bodyInput.value.trim()) { showToast('Enter email content'); return; }
 
+        // Check if scheduling is enabled and validate
+        if (scheduleToggle.checked) {
+            if (!schedulePreset.value && !scheduleCustom.value) {
+                showToast('Select a schedule time or uncheck scheduling');
+                return;
+            }
+        }
+
         // Show loading state
         isSending = true;
         const originalText = sendBtn.innerHTML;
@@ -1165,7 +1305,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;">
                 <circle cx="12" cy="12" r="10"></circle>
             </svg>
-            Sending...
+            Loading...
         `;
         sendBtn.style.opacity = '0.7';
         sendBtn.disabled = true;
@@ -1180,6 +1320,24 @@ document.addEventListener('DOMContentLoaded', function() {
         actionInput.name = '_send_and_pipeline';
         actionInput.value = '1';
         djangoForm.appendChild(actionInput);
+
+        // Add schedule data if scheduling is enabled
+        if (scheduleToggle.checked) {
+            if (schedulePreset.value) {
+                const presetInput = document.createElement('input');
+                presetInput.type = 'hidden';
+                presetInput.name = 'schedule_preset';
+                presetInput.value = schedulePreset.value;
+                djangoForm.appendChild(presetInput);
+            }
+            if (scheduleCustom.value) {
+                const customInput = document.createElement('input');
+                customInput.type = 'hidden';
+                customInput.name = 'schedule_datetime';
+                customInput.value = scheduleCustom.value;
+                djangoForm.appendChild(customInput);
+            }
+        }
 
         djangoForm.submit();
     });

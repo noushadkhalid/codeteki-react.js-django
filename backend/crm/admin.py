@@ -1935,6 +1935,9 @@ class EmailDraftAdmin(ModelAdmin):
             'total_count': len(all_recipients),
             'action_checkbox_name': ACTION_CHECKBOX_NAME,
             'opts': self.model._meta,
+            # Schedule context (empty for list action, can be pre-filled from form)
+            'schedule_preset': '',
+            'schedule_datetime': '',
         }
 
         return TemplateResponse(request, 'admin/crm/emaildraft/send_preview.html', context)
@@ -2371,6 +2374,11 @@ class EmailDraftAdmin(ModelAdmin):
 
         # Show preview page
         draft_title = draft.final_subject or draft.generated_subject or draft.get_email_type_display()
+
+        # Check if schedule data was passed from composer
+        schedule_preset = request.POST.get('schedule_preset', '')
+        schedule_datetime = request.POST.get('schedule_datetime', '')
+
         context = {
             **self.admin_site.each_context(request),
             'title': f'Preview: {draft_title}',
@@ -2384,6 +2392,9 @@ class EmailDraftAdmin(ModelAdmin):
             'total_count': len(all_recipients),
             'action_checkbox_name': ACTION_CHECKBOX_NAME,
             'opts': self.model._meta,
+            # Pre-fill schedule if passed from composer
+            'schedule_preset': schedule_preset,
+            'schedule_datetime': schedule_datetime,
         }
 
         return TemplateResponse(request, 'admin/crm/emaildraft/send_preview.html', context)
