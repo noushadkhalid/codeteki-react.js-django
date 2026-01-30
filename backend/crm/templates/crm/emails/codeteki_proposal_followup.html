@@ -1,0 +1,85 @@
+{% extends "crm/emails/base_codeteki.html" %}
+
+{% block title %}Following Up on Our Proposal | Codeteki{% endblock %}
+{% block preheader %}{{ recipient_name }}, just checking in about our proposal{% endblock %}
+{% block subtitle %}Proposal Follow-up{% endblock %}
+
+{% block content %}
+<tr>
+    <td style="padding: 40px 30px; background-color: #ffffff;">
+        <!-- Badge -->
+        <div style="text-align: center; margin-bottom: 20px;">
+            <span style="display: inline-block; background: #ede9fe; color: #5b21b6; font-size: 12px; font-weight: 600; padding: 6px 16px; border-radius: 20px;">
+                📋 Proposal Follow-up
+            </span>
+        </div>
+
+        <!-- Heading -->
+        <h1 style="color: #1f2937; font-size: 26px; font-weight: 700; text-align: center; margin: 0 0 8px 0; line-height: 1.3;">
+            Just Checking In
+        </h1>
+        <p style="color: #6b7280; font-size: 15px; text-align: center; margin: 0 0 30px 0;">
+            Your project is important to us
+        </p>
+
+        <!-- Greeting -->
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            Hi {{ recipient_name }},
+        </p>
+
+        <!-- Message -->
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+            I wanted to follow up on the proposal we sent for {{ recipient_company }}. I hope you've had a chance to review it.
+        </p>
+
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            I understand you're busy, so I wanted to check if you have any questions or if there's anything I can clarify about our approach.
+        </p>
+
+        <!-- Quick recap box -->
+        <div style="background: #fafafa; border-left: 4px solid #f9cd15; border-radius: 0 8px 8px 0; padding: 20px; margin: 0 0 25px 0;">
+            <h3 style="color: #1f2937; font-size: 14px; font-weight: 600; margin: 0 0 12px 0;">
+                Quick Recap of What We Discussed:
+            </h3>
+            <ul style="color: #4b5563; font-size: 15px; line-height: 1.8; margin: 0; padding-left: 20px;">
+                <li>Understanding your current challenges</li>
+                <li>Our recommended solution approach</li>
+                <li>Timeline and investment details</li>
+                <li>Expected outcomes and ROI</li>
+            </ul>
+        </div>
+
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            If you'd like to discuss any aspect further, I'm happy to jump on a quick call at your convenience.
+        </p>
+
+        <!-- CTA Button -->
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="https://codeteki.au/contact"
+               style="display: inline-block; background: #f9cd15; color: #1f2937; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 700; font-size: 16px; box-shadow: 0 4px 14px rgba(249, 205, 21, 0.4);">
+                Schedule a Call →
+            </a>
+        </div>
+
+        <p style="color: #9ca3af; font-size: 14px; text-align: center; margin: 20px 0 0 0;">
+            Or simply reply to this email with your questions!
+        </p>
+
+        <!-- Signature -->
+        <div style="margin-top: 35px; padding-top: 25px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0;">
+                Looking forward to your thoughts,
+            </p>
+            <p style="color: #1f2937; font-size: 15px; font-weight: 600; margin: 10px 0 5px 0;">
+                Noushad
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0 0 5px 0;">
+                Codeteki Digital Services
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                📱 0424 538 777 &nbsp;|&nbsp; 🌐 <a href="https://codeteki.au" style="color: #1f2937; text-decoration: none; font-weight: 500;">codeteki.au</a>
+            </p>
+        </div>
+    </td>
+</tr>
+{% endblock %}

@@ -325,6 +325,60 @@ sudo systemctl enable celery
 sudo systemctl start celery
 ```
 
+### Celery Beat (Scheduled Tasks)
+
+**`/etc/systemd/system/celerybeat.service`:**
+```ini
+[Unit]
+Description=Celery Beat Scheduler for Codeteki
+After=network.target redis.service celery-worker.service
+
+[Service]
+Type=simple
+User=codeteki
+Group=codeteki
+WorkingDirectory=/home/codeteki/codeteki-react.js-django/backend
+Environment="PATH=/usr/bin:/usr/local/bin:/home/codeteki/codeteki-react.js-django/backend/venv/bin"
+Environment="DJANGO_SETTINGS_MODULE=codeteki_site.settings"
+Environment="CELERY_BROKER_URL=redis://localhost:6379/0"
+ExecStart=/home/codeteki/codeteki-react.js-django/backend/venv/bin/celery -A codeteki_site beat --loglevel=info
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+
+
+Celerybeat is now running cleanly - no more warnings.                                                                      
+                                                                                                                             
+  Your scheduled emails will now work automatically. When you schedule an email for a specific time in the Email Composer,   
+  check_scheduled_drafts will check every 5 minutes and send it when the scheduled time arrives.                             
+                                                                                                                             
+  Quick test: Schedule an email for 5-10 minutes from now and verify it sends automatically.                                 
+                                                                                                                             
+  Useful commands to remember:                                                                                               
+                                                                                                                             
+  # Check status                                                                                                             
+  sudo systemctl status celerybeat                                                                                           
+  sudo systemctl status celery-worker                                                                                        
+                                                                                                                             
+  # Restart after code changes                                                                                               
+  sudo systemctl restart celery-worker                                                                                       
+  sudo systemctl restart celerybeat                                                                                          
+                                                                                                                             
+  # View logs                                                                                                                
+  sudo journalctl -u celerybeat -f                                                                                           
+  sudo journalctl -u celery-worker -f                                                                                        
+                                          
+```
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable celerybeat
+sudo systemctl start celerybeat
+sudo systemctl status celerybeat
+```
+
 ---
 
 ## AI Analysis Integration

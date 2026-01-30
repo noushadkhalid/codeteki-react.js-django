@@ -76,16 +76,24 @@ EMAIL_TEMPLATES = {
     'codeteki': {
         'sales': {
             'services_intro': 'crm/emails/codeteki_services.html',
+            'seo_services': 'crm/emails/codeteki_seo.html',
             'sales_followup': 'crm/emails/codeteki_followup.html',
             'sales_followup_2': 'crm/emails/codeteki_followup2.html',
             'sales_responded': 'crm/emails/codeteki_responded.html',
             'discovery_scheduled': 'crm/emails/codeteki_discovery.html',
             'proposal_sent': 'crm/emails/codeteki_proposal.html',
+            'proposal_followup': 'crm/emails/codeteki_proposal_followup.html',
             'welcome_client': 'crm/emails/codeteki_welcome.html',
         },
         'backlink': {
             'backlink_pitch': 'crm/emails/codeteki_backlink.html',
-            'backlink_followup': 'crm/emails/codeteki_backlink.html',  # Same template for follow-up
+            'backlink_followup': 'crm/emails/codeteki_backlink.html',
+            'guest_post': 'crm/emails/codeteki_backlink.html',  # Reuse backlink template
+        },
+        'partnership': {
+            'partnership_intro': 'crm/emails/codeteki_partnership.html',
+            'collaboration': 'crm/emails/codeteki_collaboration.html',
+            'partnership_followup': 'crm/emails/codeteki_followup.html',  # Reuse followup template
         },
         '_default': 'crm/emails/codeteki_generic.html',
     },
@@ -280,9 +288,11 @@ def get_template_for_email(
         fallback_types = ['realestate', 'registered_users']
     elif email_type_lower.startswith('events'):
         fallback_types = ['events', 'registered_users']
-    elif email_type_lower.startswith('backlink'):
+    elif email_type_lower.startswith('backlink') or email_type_lower.startswith('guest'):
         fallback_types = ['backlink']
-    elif email_type_lower.startswith('sales') or email_type_lower.startswith('services'):
+    elif email_type_lower.startswith('partnership') or email_type_lower.startswith('collaboration'):
+        fallback_types = ['partnership', 'sales']
+    elif email_type_lower.startswith('sales') or email_type_lower.startswith('services') or email_type_lower.startswith('seo') or email_type_lower.startswith('proposal'):
         fallback_types = ['sales']
 
     # Try fallback pipeline types
