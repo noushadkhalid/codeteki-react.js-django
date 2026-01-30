@@ -49,8 +49,19 @@ CRITICAL: Desi Firms is a BRAND NEW platform that has JUST LAUNCHED. We are NOT 
 **CODETEKI** (codeteki.au):
 - Established digital agency offering AI-powered web solutions, SEO, development
 - Target: Businesses needing websites, SEO, AI automation
-- Tone: Professional, tech-savvy, solution-oriented
-- Key message: Help businesses grow with modern technology
+- Tone: Professional, confident, consultative (like a trusted advisor)
+- Key message: "We help businesses solve real problems with smart technology"
+
+YOUR APPROACH FOR CODETEKI:
+- Lead with THEIR problem, not our solution - show you understand their world
+- Be specific: "Most [industry] businesses struggle with [specific problem]..."
+- Quantify value when possible: "save hours", "increase leads", "reduce manual work"
+- Use conversational confidence, not corporate speak
+- Ask thought-provoking questions: "When was the last time you got a lead from your website?"
+- Make the next step easy and low-commitment: "quick chat", "15-minute call", "just reply"
+- AVOID: generic phrases, feature lists, buzzwords without context
+- GOOD opener: "I noticed [specific observation about their business]..."
+- BAD opener: "I hope this email finds you well..."
 
 YOUR APPROACH FOR DESI FIRMS:
 - Be HUMBLE - we're a new platform asking for their cooperation
@@ -58,11 +69,6 @@ YOUR APPROACH FOR DESI FIRMS:
 - NEVER sound like we're doing them a favor - THEY would be adding value to US
 - Say things like: "We'd be honored to have you" NOT "We can help you"
 - Keep it genuine, friendly, and non-pushy
-
-YOUR APPROACH FOR CODETEKI:
-- Problem-solving (understand their challenges, offer solutions)
-- Professional and confident
-- Focus on their perspective and needs
 
 CRITICAL RULES:
 1. NEVER mention specific prices in emails (say "FREE" or "affordable plans")
@@ -416,10 +422,31 @@ Desi Firms is a NEW platform, not established. We're inviting businesses to JOIN
         else:
             brand_instructions = """
 BRAND CONTEXT - CODETEKI:
-Professional digital agency offering AI-powered solutions.
-- Tone: Professional, confident, solution-oriented
-- Focus on their challenges and how we can help
-- Be helpful and valuable, not pushy"""
+Established Australian digital agency specializing in AI-powered business solutions.
+
+WRITING APPROACH:
+1. OPEN with a specific observation about THEIR business (website, online presence, industry)
+2. IDENTIFY a likely pain point they face (based on their industry/size)
+3. BRIDGE to how we've helped similar businesses
+4. OFFER low-commitment next step
+
+TONE & STYLE:
+- Consultative and confident (like a trusted advisor, not a salesperson)
+- Conversational but professional
+- Specific > Generic (mention their company name, industry, observed details)
+- Short paragraphs, easy to scan
+
+COMPELLING TECHNIQUES:
+- Use "you" more than "we" (focus on them)
+- Ask a thought-provoking question early
+- Include a subtle proof point: "We recently helped a [similar business] achieve [result]"
+- Make the CTA feel easy: "Just reply" or "Quick 15-min chat"
+
+AVOID:
+- "I hope this finds you well" - too generic
+- Long feature lists - focus on outcomes
+- Pushy language - be helpful, not desperate
+- Jargon without explanation"""
 
         prompt = f"""Write a professional {email_type} email for this {deal.pipeline.pipeline_type} campaign.
 {brand_instructions}
@@ -904,20 +931,133 @@ Context: NEW platform with a classifieds section for the South Asian community.
 - Join from the beginning as we launch''',
 
             # Codeteki - Sales
-            'services_intro': 'an introduction email about Codeteki web development and AI-powered solutions. Focus on how AI can transform their business',
-            'seo_services': 'a pitch email for Codeteki SEO services. Highlight: improved rankings, more traffic, data-driven approach',
-            'sales_followup': 'a follow-up email for a previous sales outreach. Be helpful, offer value, remind of benefits',
-            'proposal_followup': 'a follow-up after sending a proposal. Check interest, offer to answer questions, provide next steps',
+            'services_intro': '''an introduction email about Codeteki's AI-powered business solutions.
+APPROACH:
+- Open with a specific observation about their website or online presence
+- Identify a likely pain point: outdated website, no leads from online, manual processes eating time
+- Ask a thought-provoking question: "When was the last time your website brought in a new customer?"
+- Position AI as the differentiator: "What if your website could answer customer questions 24/7?"
+- Offer a free, no-obligation consultation or website audit
+KEY POINTS TO WEAVE IN:
+- AI chatbots that handle inquiries while they sleep
+- Modern websites that actually convert visitors
+- Automation that saves hours of manual work
+- Data-driven decisions, not guesswork
+CTA: Quick 15-minute discovery call or "just reply with questions"
+Tone: Consultative expert, genuinely curious about their business''',
+
+            'seo_services': '''a pitch email for Codeteki SEO services.
+APPROACH:
+- Open with something specific: "I searched for [their service] in [their area] and noticed..."
+- Paint the problem: competitors showing up first, missing out on ready-to-buy customers
+- Offer proof: "We helped a [similar business] go from page 3 to position 1 in 4 months"
+- Make it tangible: "That's X more people finding you every month"
+KEY POINTS:
+- Technical SEO audit (what's broken under the hood)
+- Local SEO (Google Maps, "near me" searches)
+- Content strategy (ranking for searches your customers actually make)
+- No fluff metrics - focus on leads and revenue
+CTA: Free SEO audit or quick call to discuss opportunities
+Tone: Data-driven expert who speaks in results, not jargon''',
+
+            'sales_followup': '''a follow-up email for a previous outreach.
+APPROACH:
+- Acknowledge you reached out before (briefly, no guilt)
+- Add NEW value: share a tip, insight, or observation about their industry
+- Re-state the core benefit in a fresh way
+- Make it easy to respond
+STRUCTURE:
+1. "I reached out last week about [topic]"
+2. "I was thinking about [their company] and noticed [new observation or tip]"
+3. "If [pain point] is something you're dealing with, I'd love to share how we've helped others"
+4. "No pressure - just reply if you'd like to chat"
+Keep it SHORT - under 100 words. Respect their time.''',
+
+            'proposal_followup': '''a follow-up after sending a proposal.
+APPROACH:
+- Warm, not pushy - they're probably busy
+- Offer to clarify anything in the proposal
+- Subtly remind of the main benefit/outcome
+- Provide an easy next step
+STRUCTURE:
+1. "Just checking in on the proposal I sent for [project]"
+2. "Happy to jump on a quick call if you have questions about [specific section]"
+3. "We're excited about the potential to help [their company] achieve [main goal]"
+4. "What works best for a 15-minute chat this week?"
+Tone: Helpful and patient, not desperate''',
 
             # Codeteki - Backlink
-            'backlink_pitch': 'a backlink outreach email proposing a link partnership. Focus on mutual benefit, quality content, SEO value',
-            'guest_post': 'a guest post pitch offering valuable content in exchange for a backlink. Highlight content quality and relevance',
-            'backlink_followup': 'a follow-up to a previous backlink outreach. Be respectful, remind of the value proposition',
+            'backlink_pitch': '''a backlink outreach email proposing a link partnership.
+APPROACH:
+- Compliment something SPECIFIC about their content (show you actually read it)
+- Explain WHY your content would add value for their readers
+- Make it mutually beneficial - not just asking for a favor
+- Be brief and respectful of their time
+STRUCTURE:
+1. "I came across your article on [topic] and really appreciated [specific point]"
+2. "We recently published [content] that expands on [related topic]"
+3. "I thought your readers might find it valuable because [specific reason]"
+4. "Would you consider linking to it from [specific page]?"
+Tone: Peer-to-peer, respectful, not spammy''',
+
+            'guest_post': '''a guest post pitch offering valuable content.
+APPROACH:
+- Show you understand their audience and content style
+- Pitch a SPECIFIC topic idea (not generic)
+- Highlight your expertise briefly
+- Make it easy to say yes
+STRUCTURE:
+1. "I've been following [their site] and love how you cover [topic area]"
+2. "I'd love to contribute a piece on [specific topic idea]"
+3. "I think your readers would benefit because [reason]"
+4. "Here's a rough outline: [2-3 key points]"
+5. "Let me know if this sounds interesting!"
+Tone: Collaborative, not transactional''',
+
+            'backlink_followup': '''a follow-up to a previous backlink outreach.
+Keep it SHORT and respectful:
+1. "Just floating this back to the top of your inbox"
+2. Re-state the value briefly
+3. "No worries if it's not a fit - appreciate your time either way"
+Tone: Friendly, zero pressure''',
 
             # Codeteki - Partnership
-            'partnership_intro': 'a partnership introduction email exploring collaboration opportunities. Focus on mutual benefits and synergies',
-            'collaboration': 'a collaboration proposal email. Detail specific ways to work together',
-            'partnership_followup': 'a follow-up to a partnership proposal. Check interest, offer to discuss further',
+            'partnership_intro': '''a partnership introduction email.
+APPROACH:
+- Show you've researched their business (mention something specific)
+- Identify a clear synergy or complementary offering
+- Focus on how THEIR clients/customers would benefit
+- Propose a specific partnership model if possible
+STRUCTURE:
+1. "I've been impressed by [specific thing about their company]"
+2. "At Codeteki, we [brief positioning - AI/web/SEO]"
+3. "I see a potential opportunity to [specific partnership idea]"
+4. "This could help your clients [benefit] while you [their benefit]"
+5. "Would you be open to a quick chat to explore this?"
+Tone: Strategic peer, mutual respect''',
+
+            'collaboration': '''a specific collaboration proposal.
+APPROACH:
+- Be concrete about what you're proposing
+- Outline what each party brings to the table
+- Explain the win-win clearly
+- Suggest a clear next step
+STRUCTURE:
+1. Hook: What sparked this idea
+2. The Opportunity: Specific collaboration concept
+3. What We Bring: Our capabilities
+4. What You Bring: Their strengths
+5. The Win-Win: Benefits for both sides
+6. Next Step: "Shall we explore this over a quick call?"
+Tone: Business-minded but personable''',
+
+            'partnership_followup': '''a follow-up to a partnership proposal.
+Keep it brief and add value:
+1. "Circling back on the partnership idea I shared"
+2. Add a new thought or observation if possible
+3. "I'd still love to explore how we could work together"
+4. "Happy to adjust the approach based on what works for you"
+Tone: Patient, flexible, still interested''',
 
             # Re-engagement / Existing Customers
             'existing_customer_update': '''a re-engagement email to an EXISTING customer/user who registered before recent platform updates.
