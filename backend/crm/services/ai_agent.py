@@ -918,44 +918,65 @@ CRITICAL RULES:
 - DO NOT add signature, benefits list, or CTA - template has those
 - DO NOT claim people are "searching" - just state the community exists with no platform''',
 
-            'invitation_followup': '''a friendly follow-up to a previous invitation.
-Context: We're a NEW platform that just reached out. Be gentle and:
-- Remind them of the free opportunity
-- Acknowledge they're busy
-- Reiterate the founding member opportunity
-- No pressure, just checking if they had questions
+            'invitation_followup': '''a SHORT follow-up message ONLY (no signature - template has one).
+HYBRID TEMPLATE: Just write the follow-up message, template handles CTA and signature.
 
-SUBTLE COMMUNITY REMINDER (don't repeat numbers):
-- Reference "our growing community" or "South Asian community in Australia"
-- Can mention "first dedicated platform" or "nothing like this existed before"
-- Focus on the timing: "joining at the beginning" or "early mover advantage"''',
+Write 2-3 short paragraphs:
+1. Acknowledge they're busy, follow up on previous invite
+2. Brief reminder: FREE listing, founding member opportunity
+3. Subtle mention of "growing community" or "first dedicated platform"
+
+Keep it under 80 words. Friendly, not pushy.
+DO NOT include signature, CTA, or benefits list.''',
 
             'onboarding_help': 'a helpful email offering assistance with setting up their business listing. Be supportive and offer step-by-step help',
 
+            # Business Directory Follow-ups
+            'directory_followup_1': '''a SHORT first follow-up message ONLY (no signature - template has one).
+HYBRID TEMPLATE: Just write the follow-up message, template handles reminder box, CTA, and signature.
+
+Write 2-3 short paragraphs:
+1. Acknowledge they're busy, quick follow-up on the business listing opportunity
+2. Brief reminder: FREE listings, founding member status
+3. Reference "building something new for our community"
+
+Keep it under 80 words. Friendly, not pushy.
+DO NOT include signature, CTA, or benefits list - template has those.''',
+
+            'directory_followup_2': '''a SHORT final follow-up message ONLY (no signature - template has one).
+HYBRID TEMPLATE: Just write the message, template handles "door is open" box, CTA, and signature.
+
+Write 2 short paragraphs:
+1. Final follow-up, briefly mention FREE listing opportunity
+2. Respect their decision, leave door open
+
+Keep it under 60 words. Respectful, brief, no pressure.
+DO NOT include signature, CTA, or "door is open" message - template has those.''',
+
             # Desi Firms - Events (NEW PLATFORM)
-            'event_invitation': '''an invitation email to event organizers to list their events on Desi Firms.
-Context: NEW platform just launching a dedicated events section.
+            'event_invitation': '''an INTRO PARAGRAPH ONLY for an events invitation email.
+HYBRID TEMPLATE: Template already has Benefits box, CTA button, and Signature.
+You ONLY write the intro. DO NOT include signature, benefits, or CTA.
 
-WHY WE BUILT THIS (include as a highlight section):
-Our team found:
-- 1.6 million South Asians in Australia - a vibrant community
-- Second generation (200,000+) in their 20s-40s - socially active, digitally native
-- Growing interest from wider Australian community in South Asian cultural events
-- NO dedicated events platform existed for this community - that's the gap
+CONTEXT:
+- Desi Firms = Community platform with an Events section
+- Events is a NEW section we just launched
 
-AVOID FALSE CLAIMS:
-- WRONG: "1.6 million looking for events" (FALSE - not all are looking for events)
-- WRONG: "searching for events like yours" (implies behavior we can't prove)
-- RIGHT: "A community of 1.6 million with no dedicated events platform"
+WRITE THIS STRUCTURE:
 
-HOW TO PRESENT: Add as a highlight:
-"📊 Why This Platform? Our research found 1.6 million South Asians in Australia - with no dedicated events platform. We're changing that."
+{{SALUTATION}}
 
-KEY POINTS:
-- Invite them to be among the first event organizers on the platform
-- Free event listings
-- Reach the South Asian community AND Australians interested in desi culture
-- Build together as the platform grows''',
+We've just launched an Events section on Desi Firms, our community platform for South Asian businesses in Australia, and we'd love to invite [Company/Organizer Name] to list your events with us.
+
+📊 **Why We Built This**
+Our research found that Australia's 1.6 million-strong South Asian community has no dedicated platform to discover local events. We're building that, and we'd be honored to have you as a founding event partner.
+
+---
+
+CRITICAL RULES:
+- Keep the 📊 **Why We Built This** section VISIBLE
+- DO NOT add signature, benefits list, or CTA - template has those
+- Mention their company/organization name if available''',
 
             'event_benefits': '''an email about the benefits of listing events on Desi Firms platform.
 WHY WE BUILT THIS (highlight section):
@@ -969,6 +990,28 @@ AVOID: "searching for events" or "looking for events" (false claims about behavi
 RIGHT: "A community of 1.6 million with no dedicated events platform - until now"
 
 Focus on: free exposure, founding member status, being part of something new for the community''',
+
+            # Events Follow-ups
+            'events_followup_1': '''a SHORT first follow-up message ONLY (no signature - template has one).
+HYBRID TEMPLATE: Just write the follow-up message, template handles CTA and signature.
+
+Write 2-3 short paragraphs:
+1. Acknowledge they're busy, follow up on events listing opportunity
+2. Brief reminder: FREE event listings, founding partner status
+3. Reference "growing community looking for events"
+
+Keep it under 80 words. Friendly, not pushy.
+DO NOT include signature or CTA - template has those.''',
+
+            'events_followup_2': '''a SHORT final follow-up message ONLY (no signature - template has one).
+HYBRID TEMPLATE: Just write the message, template handles CTA and signature.
+
+Write 2 short paragraphs:
+1. Final follow-up, briefly mention FREE event listing opportunity
+2. Respect their decision, leave door open
+
+Keep it under 60 words. Respectful, no pressure.
+DO NOT include signature or CTA - template has those.''',
 
             # Desi Firms - Real Estate (NEW PLATFORM LAUNCHING)
             'agent_invitation': '''an INTRO PARAGRAPH ONLY for a real estate invitation email.
@@ -999,39 +1042,26 @@ CRITICAL RULES:
 - DO NOT add signature, steps, or benefits - template has those
 - The research stats should stand out visually''',
 
-            'agent_followup_1': '''a friendly first follow-up to a real estate agent who hasn't responded to our invitation.
-IMPORTANT: Desi Firms is a NEWLY LAUNCHED platform - NOT established, NOT "leading".
-Context: We sent an initial invitation a few days ago. This is a gentle reminder.
+            'agent_followup_1': '''a SHORT first follow-up message ONLY (no signature - template has one).
+HYBRID TEMPLATE: Just write the follow-up message, template handles reminder box, CTA, and signature.
 
-SUBTLE REMINDER (don't repeat stats, just reinforce the opportunity):
-- Reference "our growing community" or "the South Asian community" (without numbers)
-- Mention we're "building the first dedicated platform" for this community
-- The timing is right - be an early mover before others catch on
+Write 2-3 short paragraphs:
+1. Acknowledge they're busy, quick follow-up on the real estate listing opportunity
+2. Brief reminder: FREE listings, founding member status, we're building something new
+3. Reference "our growing community" - don't repeat the 1.6M stat
 
-Key points:
-- Acknowledge they're busy
-- Brief reminder about the FREE listing opportunity
-- Mention being part of something new from the beginning
-- No pressure, just checking if they had questions
-- Keep it short (under 100 words)
-Tone: Friendly, understanding, not pushy''',
+Keep it under 80 words. Friendly, understanding, not pushy.
+DO NOT include signature, CTA, or reminder box - template has those.''',
 
-            'agent_followup_2': '''a second (final) follow-up to a real estate agent.
-IMPORTANT: Desi Firms is a NEWLY LAUNCHED platform - NOT established, NOT "leading".
-Context: We've reached out twice before with no response. This is our last attempt.
+            'agent_followup_2': '''a SHORT final follow-up message ONLY (no signature - template has one).
+HYBRID TEMPLATE: Just write the message, template handles "door is open" box, CTA, and signature.
 
-FINAL GENTLE NUDGE:
-- Don't repeat stats - just mention "a community that's been underserved"
-- Can mention "nothing like this has existed before" as a soft reminder
-- Emphasize this is simply an opportunity, not a sales pitch
+Write 2 short paragraphs:
+1. Final follow-up, acknowledge they're busy, briefly mention FREE listing opportunity
+2. Respect their decision, leave door open
 
-Key points:
-- Acknowledge this is a final follow-up
-- Briefly restate the value (FREE listings, founding member status)
-- Respect their decision if not interested
-- Leave door open for future
-- Keep it very short (under 75 words)
-Tone: Respectful, brief, no pressure''',
+Keep it under 60 words. Respectful, brief, no pressure.
+DO NOT include signature, CTA, or "door is open" message - template has those.''',
 
             'agent_responded': '''a thank you email after a real estate agent responds positively.
 Context: They showed interest in listing on Desi Firms.
@@ -1334,7 +1364,13 @@ FOR DESI FIRMS - PRESENT RESEARCH AS A HIGHLIGHT (not false claims):
 
         # Hybrid templates - these have their own signature, benefits, steps in the template
         # AI should only write the intro paragraph, NOT include signature
-        hybrid_templates = ['agent_invitation', 'directory_invitation', 'listing_benefits']
+        hybrid_templates = [
+            # Invitations
+            'agent_invitation', 'directory_invitation', 'listing_benefits', 'event_invitation',
+            # Follow-ups
+            'agent_followup_1', 'agent_followup_2', 'directory_followup_1', 'directory_followup_2',
+            'invitation_followup', 'events_followup_1', 'events_followup_2',
+        ]
         is_hybrid = email_type in hybrid_templates
 
         # Build signature instruction based on template type

@@ -19,19 +19,10 @@
             Just Checking In
         </h1>
 
-        <!-- Greeting -->
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            Hi {{ recipient_name }},
-        </p>
-
-        <!-- Message -->
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            I understand how busy things can get, so I wanted to send a quick follow-up about the <strong>free listing opportunity</strong> on Desi Firms.
-        </p>
-
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
-            We're building something new for the South Asian community in Australia, and we'd love for <strong>{{ recipient_company }}</strong> to be part of it from the beginning.
-        </p>
+        <!-- AI-Generated Follow-up Message -->
+        <div style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            {{ body_html|safe }}
+        </div>
 
         <!-- Quick Reminder Box -->
         <div style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 12px; padding: 20px; margin: 0 0 25px 0;">

@@ -12,19 +12,10 @@
             Final Invitation
         </h1>
 
-        <!-- Greeting -->
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            Hi {{ recipient_name }},
-        </p>
-
-        <!-- Message -->
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            This is my final follow-up regarding the free listing opportunity for <strong>{{ recipient_company }}</strong> on Desi Firms.
-        </p>
-
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
-            We've had great response from the business community, and I didn't want you to miss out on being part of our founding members group.
-        </p>
+        <!-- AI-Generated Final Follow-up Message -->
+        <div style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            {{ body_html|safe }}
+        </div>
 
         <!-- Simple Box -->
         <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin: 0 0 25px 0; text-align: center;">

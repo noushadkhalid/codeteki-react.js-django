@@ -19,19 +19,10 @@
             Quick Follow-Up
         </h1>
 
-        <!-- Greeting -->
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            Hi {{ recipient_name }},
-        </p>
-
-        <!-- Message -->
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            I wanted to follow up on my previous email about listing <strong>{{ recipient_company }}</strong> on Desi Firms.
-        </p>
-
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
-            We're building a community-focused directory for South Asian businesses in Australia, and early members like you will always have <strong>founding member</strong> status.
-        </p>
+        <!-- AI-Generated Follow-up Message -->
+        <div style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            {{ body_html|safe }}
+        </div>
 
         <!-- Reminder Box -->
         <div style="background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); border: 1px solid #c4b5fd; border-radius: 12px; padding: 20px; margin: 0 0 25px 0;">
