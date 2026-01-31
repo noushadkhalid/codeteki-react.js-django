@@ -46,14 +46,21 @@ CRITICAL: Desi Firms is a BRAND NEW platform that has JUST LAUNCHED. We are NOT 
 - NEVER say "we understand your challenges" or "we can help you" - be HUMBLE
 - Real Estate section: Just launched, inviting agents to be founding members
 
-COMMUNITY RESEARCH DATA (use strategically - not all at once):
-- 1.6 million South Asians in Australia (6% of the population)
+WHY WE'RE BUILDING THIS (frame as research/market opportunity for THEM, not our user count):
+Our team researched the South Asian community in Australia and found:
+- 1.6 million South Asians live in Australia (6% of population) - this is the MARKET SIZE, not our users
 - Indian community is the second-largest migrant group in Australia
 - 200,000+ Australian-born second generation now in their 20s-40s (digitally native, disposable income)
 - South Asian migration is the primary driver of Australia's population growth
-- NO dedicated platform exists to connect this community with businesses that serve them
-- Growing interest from wider Australian community in South Asian cultural products, services, and events
-- This is a MASSIVE untapped opportunity - businesses can be early movers
+- NO dedicated platform exists to connect this community with businesses - THAT'S WHY we're building Desi Firms
+- Growing interest from wider Australian community in South Asian products/services/events
+
+HOW TO FRAME THIS (CRITICAL):
+- WRONG: "connecting the 1.6 million South Asians" (sounds like we have 1.6M users)
+- RIGHT: "Our research found 1.6 million South Asians in Australia with no dedicated platform to find businesses like yours"
+- RIGHT: "We discovered a gap - 1.6 million potential customers with nowhere to search"
+- RIGHT: "That's why we built Desi Firms - to serve this underserved market"
+- Present stats as YOUR OPPORTUNITY, not our achievement
 
 **CODETEKI** (codeteki.au):
 - Established digital agency offering AI-powered web solutions, SEO, development
@@ -390,13 +397,17 @@ Codeteki Digital Services
 CRITICAL BRAND CONTEXT - DESI FIRMS REAL ESTATE:
 Desi Firms is a BRAND NEW platform that has JUST LAUNCHED. We are NOT established.
 
-THE COMMUNITY OPPORTUNITY (use strategically):
-- 1.6 million South Asians in Australia (6% of population)
-- Indian community is the second-largest migrant group
-- 200,000+ second generation now in their 20s-40s - first-time homebuyers, young families
-- South Asian migration is the primary driver of Australia's population growth
-- NO dedicated real estate platform serves this community - we're building the first
-- Many South Asians prefer working with agents who understand their cultural needs
+WHY WE'RE BUILDING THIS (frame as research findings, not user claims):
+Our team's research found:
+- 1.6 million South Asians in Australia - that's the MARKET you could reach
+- 200,000+ second generation now in their 20s-40s - first-time homebuyers actively searching online
+- NO dedicated real estate platform serves this community - that's the gap we're filling
+- Many in this community prefer agents who understand their cultural needs
+
+FRAMING (CRITICAL):
+- WRONG: "connecting 1.6 million South Asians" (sounds like our user base)
+- RIGHT: "Our research shows 1.6 million potential customers searching for agents like you"
+- RIGHT: "We found a gap in the market - that's why we built this"
 
 TONE & MESSAGING RULES:
 - We are HUMBLY INVITING them to join as FOUNDING MEMBERS
@@ -411,11 +422,12 @@ TONE & MESSAGING RULES:
 GOOD PHRASES TO USE:
 - "We've just launched a dedicated real estate section..."
 - "We're building something new for the South Asian community..."
-- "1.6 million South Asians in Australia - and no dedicated platform to connect them with agents"
+- "Our research found 1.6 million South Asians in Australia searching for property - with no dedicated platform to find agents like you"
+- "We saw this gap and built a real estate section to fill it"
 - "We'd love for [Company] to be part of it from the beginning"
 - "We'd be honored to have you as a founding member"
 - "It's completely FREE - no subscription, no credit card"
-- "The second generation is now buying homes and searching online"
+- "The second generation is now buying homes and searching online - they're your potential clients"
 
 BAD PHRASES - NEVER USE:
 - "I hope this message finds you well"
@@ -439,11 +451,12 @@ Desi Firms is a NEW platform, not established. We're inviting businesses to JOIN
 - NEVER pretend to be established or say "we can help you"
 - Be genuine and inviting, not salesy
 
-COMMUNITY OPPORTUNITY (weave in naturally, not all at once):
-- 1.6 million South Asians in Australia with NO dedicated platform to connect them
-- Second generation (200,000+) now in their 20s-40s - digitally native and actively searching online
-- Growing interest from wider Australian community in South Asian businesses and culture
-- We're building what our community has needed for years"""
+WHY WE BUILT THIS (frame as research, not user claims):
+- Our research found 1.6 million South Asians in Australia - that's THEIR potential customer base
+- Second generation (200,000+) in their 20s-40s actively searching online for businesses like theirs
+- No platform existed to help them find these businesses - that's the gap we're filling
+- WRONG: "connecting 1.6 million" (sounds like our users)
+- RIGHT: "Our research found 1.6 million potential customers with nowhere to search - that's why we built this" """
         else:
             brand_instructions = """
 BRAND CONTEXT - CODETEKI:
@@ -836,12 +849,18 @@ Respond in JSON format:
             'directory_invitation': '''an invitation email to list their business on Desi Firms, a NEWLY LAUNCHING community platform for South Asians in Australia.
 IMPORTANT CONTEXT: Desi Firms is brand new and just launching. We are NOT established yet - we're building this platform for the community.
 
-THE OPPORTUNITY (weave these points naturally):
-- 1.6 million South Asians in Australia - that's 6% of the population
-- NO dedicated platform exists to connect this community with businesses that serve them
-- We're building what our community has needed for decades
-- Second generation (200,000+) now in their 20s-40s - actively searching online for businesses like theirs
+WHY WE BUILT THIS (frame as research findings - their opportunity):
+Our team researched and discovered:
+- 1.6 million South Asians in Australia - potential customers looking for businesses like theirs
+- NO dedicated platform existed to help them find these businesses - that's the gap
+- Second generation (200,000+) now in their 20s-40s - digitally native, actively searching online
 - Growing interest from wider Australian community in South Asian products/services
+
+CRITICAL FRAMING:
+- WRONG: "connecting 1.6 million South Asians" (sounds like we have users)
+- RIGHT: "Our research found 1.6 million South Asians in Australia with no dedicated platform to discover businesses like yours - that's why we built Desi Firms"
+- RIGHT: "We saw a gap and built something to fill it"
+- Present as: THEIR opportunity to reach an underserved market
 
 Key points to convey:
 - We've just built/launched this platform for the South Asian community
@@ -850,25 +869,24 @@ Key points to convey:
 - Their presence would add value to the platform
 - We're building something together for the community
 - Be humble and genuine - we need their cooperation to build this
-- Frame as: "There's been nothing like this for our community - until now"
 Tone: Respectful, humble, inviting them to join from the beginning''',
 
             'listing_benefits': '''an email highlighting the benefits of listing on Desi Firms FREE directory.
-Context: NEW platform just launching. Focus on:
+Context: NEW platform just launching.
 
-THE OPPORTUNITY:
-- 1.6 million South Asians in Australia - a community actively looking for businesses like theirs
-- No dedicated platform has existed to connect them - until now
-- Second generation now in their 20s-40s searching online
-- Growing interest from wider Australian community too
+WHY THIS MATTERS FOR THEM (frame as market opportunity):
+Our research shows:
+- 1.6 million South Asians in Australia searching for businesses - that's their potential customer base
+- No platform existed to help these customers find businesses like theirs - we're changing that
+- Second generation (200,000+) in their 20s-40s actively searching online
 
 BENEFITS TO HIGHLIGHT:
-- Early visibility as platform grows
+- Early visibility as platform grows - be found by customers who couldn't find you before
 - Free plan with no hidden costs
 - Community-focused marketplace
 - Be part of building something our community has needed
 - Founding member recognition
-- Get discovered by customers who are actively searching''',
+- Reach customers who are actively searching but had nowhere to look''',
 
             'invitation_followup': '''a friendly follow-up to a previous invitation.
 Context: We're a NEW platform that just reached out. Be gentle and:
@@ -888,11 +906,16 @@ SUBTLE COMMUNITY REMINDER (don't repeat numbers):
             'event_invitation': '''an invitation email to event organizers to list their events on Desi Firms.
 Context: NEW platform just launching a dedicated events section.
 
-THE OPPORTUNITY:
-- 1.6 million South Asians in Australia looking for cultural events and experiences
-- Second generation (200,000+) in their 20s-40s - socially active, looking for community events
+WHY WE BUILT THIS (frame as research - their audience opportunity):
+Our team found:
+- 1.6 million South Asians in Australia looking for cultural events - that's the audience they could reach
+- Second generation (200,000+) in their 20s-40s - socially active, searching online for community events
 - Growing interest from wider Australian community in South Asian cultural events
-- NO dedicated events platform for this community exists - we're building the first
+- NO dedicated events platform existed for this community - that's why we built one
+
+CRITICAL FRAMING:
+- Present stats as THEIR potential audience, not our user base
+- "Our research found 1.6 million people looking for events like yours - with no platform to find them"
 
 KEY POINTS:
 - Invite them to be among the first event organizers on the platform
@@ -902,24 +925,31 @@ KEY POINTS:
 - Be discovered by people actively searching for events like theirs''',
 
             'event_benefits': '''an email about the benefits of listing events on Desi Firms platform.
-THE OPPORTUNITY:
-- Reach 1.6 million South Asians in Australia
-- Second generation actively searching for cultural events and experiences
+WHY THIS MATTERS FOR THEM:
+Our research shows:
+- 1.6 million South Asians in Australia - potential attendees searching for events like theirs
+- Second generation actively searching online for cultural events and experiences
 - Growing interest from wider Australian community in South Asian events
-- No dedicated events platform has existed for this community - until now
-Focus on community engagement, free exposure, and founding member status as platform grows''',
+- No platform existed to help them find these events - we're filling that gap
+Focus on: reaching an audience that's been searching but couldn't find events, free exposure, founding member status''',
 
             # Desi Firms - Real Estate (NEW PLATFORM LAUNCHING)
             'agent_invitation': '''an invitation email to real estate agents/agencies to list properties on Desi Firms.
 IMPORTANT CONTEXT: Desi Firms has JUST LAUNCHED a dedicated real estate section. We are brand new.
 
-THE OPPORTUNITY (lead with this - it's compelling):
-- 1.6 million South Asians in Australia (6% of population) - many actively buying/renting property
-- NO dedicated real estate platform serves this community
-- Indian community is the second-largest migrant group in Australia
-- Second generation (200,000+) now in their 20s-40s - first-time homebuyers, young families
+WHY WE BUILT THIS (frame as research - their market opportunity):
+Our team researched the market and found:
+- 1.6 million South Asians in Australia - many actively buying/renting property
+- NO dedicated real estate platform existed to serve this community - that's the gap we're filling
+- Second generation (200,000+) now in their 20s-40s - first-time homebuyers searching online
 - South Asian migration is the PRIMARY driver of Australia's population growth
-- This community NEEDS to find agents who understand their needs
+- This community is looking for agents who understand their needs
+
+CRITICAL FRAMING:
+- WRONG: "platform for 1.6 million South Asians" (sounds like our user base)
+- RIGHT: "Our research found 1.6 million South Asians in Australia searching for property - with no dedicated platform to find agents like you"
+- RIGHT: "We saw this gap and built a real estate section to fill it"
+- Present as: THEIR opportunity to reach buyers/renters in this underserved market
 
 Key points:
 - We've recently built DesiFirms for the South Asian community in Australia
@@ -1003,17 +1033,18 @@ Tone: Celebratory, supportive''',
             'free_listing': '''an email emphasizing the FREE property listing opportunity on Desi Firms.
 Context: NEW platform just launched.
 
-THE OPPORTUNITY:
-- 1.6 million South Asians in Australia - many actively buying/selling/renting
+WHY THIS MATTERS FOR THEM (frame as their market opportunity):
+Our research found:
+- 1.6 million South Asians in Australia - potential buyers/sellers/renters looking for agents
 - Second generation (200,000+) now entering property market as first-time buyers
-- No dedicated real estate platform for this community has existed - until now
+- No platform existed to help them find agents - that's the gap we're filling
 
 FOCUS ON:
 - Zero cost, zero obligation - completely FREE
-- Early mover advantage as platform grows
+- Early mover advantage - reach buyers who couldn't find agents before
 - Community-focused real estate marketplace
 - Be part of building something the community has needed
-- Get discovered by buyers who prefer agents who understand their needs''',
+- Get discovered by buyers actively searching for agents who understand their needs''',
 
             # Desi Firms - Classifieds (NEW PLATFORM)
             'classifieds_invitation': '''an invitation to post classified ads on Desi Firms.
@@ -1238,11 +1269,11 @@ Codeteki Digital Services
 - Don't sell features - solve problems
 - Example: Instead of "We have a directory" → "Get found by customers searching for businesses like yours"
 
-FOR DESI FIRMS - THE COMMUNITY OPPORTUNITY:
-- 1.6 million South Asians in Australia with no dedicated platform connecting them to businesses
-- Frame the problem: "Customers are searching but can't easily find businesses like yours"
-- The solution: "We're building the first platform dedicated to this community"
-- Position them as the answer to a real need, not just another listing''',
+FOR DESI FIRMS - FRAME AS RESEARCH/MARKET OPPORTUNITY:
+- "Our research found 1.6 million South Asians in Australia with no platform to find businesses like yours"
+- Frame the problem: "Customers are searching but had nowhere to look - that's why we built this"
+- NEVER say "connecting 1.6 million" (sounds like we have users) - say "reaching 1.6 million potential customers"
+- Position as: we found a gap, we built a solution, they can benefit by being early''',
             'value_driven': '''APPROACH: Value-Driven
 - Lead with clear benefits and outcomes they'll get
 - For Desi Firms: free visibility, community reach, new customers
