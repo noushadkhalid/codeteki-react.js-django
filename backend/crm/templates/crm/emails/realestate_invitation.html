@@ -22,19 +22,10 @@
             Become a Founding Member
         </p>
 
-        <!-- Greeting -->
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            Hi {{ recipient_name }},
-        </p>
-
-        <!-- Message -->
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            We're excited to share that <strong style="color: #0093E9;">Desi Firms</strong> has just launched a dedicated real estate section for the South Asian community in Australia.
-        </p>
-
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
-            We believe that <strong>{{ recipient_company }}</strong> would add tremendous value to our platform, and we'd be honored to have you as one of our <strong>founding members</strong>.
-        </p>
+        <!-- AI-Generated Intro (greeting + personalized message) -->
+        <div style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            {{ body_html|safe }}
+        </div>
 
         <!-- Benefits Box -->
         <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1px solid #86efac; border-radius: 12px; padding: 24px; margin: 0 0 25px 0;">

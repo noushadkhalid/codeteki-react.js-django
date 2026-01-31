@@ -971,45 +971,39 @@ RIGHT: "A community of 1.6 million with no dedicated events platform - until now
 Focus on: free exposure, founding member status, being part of something new for the community''',
 
             # Desi Firms - Real Estate (NEW PLATFORM LAUNCHING)
-            'agent_invitation': '''an invitation email to real estate agents/agencies to list properties on Desi Firms.
-IMPORTANT CONTEXT: Desi Firms has JUST LAUNCHED a dedicated real estate section. We are brand new.
+            'agent_invitation': '''an INTRO PARAGRAPH ONLY for a real estate invitation email.
+IMPORTANT: This is a HYBRID template - the email template already has Benefits, Steps, CTA and Signature sections.
+You are ONLY writing the opening intro paragraph. DO NOT include:
+- Benefits list (template has it)
+- Getting started steps (template has it)
+- CTA/call to action (template has it)
+- Signature (template has it)
 
-WHY WE BUILT THIS (add as a HIGHLIGHT section in the email):
-Our team researched the market and found:
-- 1.6 million South Asians in Australia - a thriving, growing community
-- NO dedicated real estate platform existed for this community
-- Second generation (200,000+) now in their 20s-40s - many entering the property market
-- South Asian migration is the PRIMARY driver of Australia's population growth
+JUST WRITE: A warm, personalized intro paragraph (2-3 short paragraphs max) that:
+1. Greets them personally
+2. Introduces Desi Firms real estate section
+3. Includes the research highlight (see below)
+4. Invites them as founding member
+
+WHY WE BUILT THIS (include as a highlight in your intro):
+"📊 Why This Platform? Our research found 1.6 million South Asians in Australia - with no dedicated real estate platform. That's the gap we're filling."
 
 CRITICAL - AVOID FALSE CLAIMS:
-- WRONG: "1.6 million searching for property" (FALSE - not all are searching)
-- WRONG: "1.6 million actively looking for agents" (FALSE claim about behavior)
-- WRONG: "potential customers searching" (implies behavior we can't prove)
+- WRONG: "1.6 million searching for property" (FALSE)
+- WRONG: "actively looking for agents" (FALSE)
+- RIGHT: "A community of 1.6 million with no dedicated platform"
 
-HOW TO INCLUDE THE RESEARCH (as a highlighted benefit):
-Add a section like:
-"📊 Why This Platform?
-Our research found 1.6 million South Asians in Australia - with no dedicated real estate platform. That's the gap we're filling."
+EXAMPLE FORMAT:
+"Hi [Name],
 
-Or weave in naturally: "We researched the market and found a clear gap - a community of 1.6 million with no dedicated platform to connect with real estate professionals."
+[1-2 sentences intro about launching real estate section]
 
-Key points:
-- We've recently built DesiFirms for the South Asian community in Australia
-- Just launched a comprehensive real estate section
-- Reaching out to established agencies like theirs
-- Their presence would add strong value to this new platform
-- Inviting them to be FOUNDING MEMBERS of this journey
-- Building a trusted, community-focused real estate marketplace TOGETHER
-- Completely FREE: no subscription, no credit card, no obligation
-- Optional premium features with early access for founding agencies
-Include simple signup steps:
-1. Create account or sign up with Google
-2. Access dashboard and select Real Estate
-3. Register as Agent or Agency
-4. Submit details for review
-5. Get approved (usually 12-24 hours)
-6. Start listing properties
-Tone: Respectful, humble, we'd be honoured to have them join from the beginning''',
+📊 Why We Built This: Our research found 1.6 million South Asians in Australia - a thriving community with no dedicated real estate platform. That's the gap we're filling.
+
+[1 sentence inviting them as founding member, mention it's FREE]"
+
+DO NOT add signature, steps, or benefits - the template handles those.
+Tone: Respectful, humble, excited to have them join''',
 
             'agent_followup_1': '''a friendly first follow-up to a real estate agent who hasn't responded to our invitation.
 IMPORTANT: Desi Firms is a NEWLY LAUNCHED platform - NOT established, NOT "leading".
@@ -1344,6 +1338,26 @@ FOR DESI FIRMS - PRESENT RESEARCH AS A HIGHLIGHT (not false claims):
         }
         approach_desc = approach_instructions.get(approach_style, approach_instructions['problem_solving'])
 
+        # Hybrid templates - these have their own signature, benefits, steps in the template
+        # AI should only write the intro paragraph, NOT include signature
+        hybrid_templates = ['agent_invitation']
+        is_hybrid = email_type in hybrid_templates
+
+        # Build signature instruction based on template type
+        if is_hybrid:
+            signature_instruction = """
+DO NOT include a signature - the email template already has one.
+DO NOT include benefits list, steps, or CTA - the template has those.
+ONLY write the intro paragraph as specified above."""
+        else:
+            signature_instruction = f"""10. End with this EXACT signature (copy exactly, including emojis):
+
+Warm regards,
+
+{email_signature}
+
+CRITICAL: Copy the signature EXACTLY as shown above. Do not modify, do not add brackets, do not use placeholders."""
+
         prompt = f"""Write {email_desc} with the following requirements:
 
 {approach_desc}
@@ -1397,13 +1411,7 @@ STRICT FORMATTING RULES:
 7. If recipient company info is available, reference it naturally
 8. NEVER use placeholder text like [Your Name], [Contact], [Your Position], [Your Company] - always use real values
 9. NEVER write URLs in markdown format like [text](url) - write plain URLs
-10. End with this EXACT signature (copy exactly, including emojis):
-
-Warm regards,
-
-{email_signature}
-
-CRITICAL: Copy the signature EXACTLY as shown above. Do not modify, do not add brackets, do not use placeholders.
+{signature_instruction}
 
 Respond in JSON format:
 {{
