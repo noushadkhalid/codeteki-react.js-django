@@ -979,31 +979,29 @@ You are ONLY writing the opening intro paragraph. DO NOT include:
 - CTA/call to action (template has it)
 - Signature (template has it)
 
-JUST WRITE: A warm, personalized intro paragraph (2-3 short paragraphs max) that:
-1. Greets them personally
-2. Introduces Desi Firms real estate section
-3. Includes the research highlight (see below)
-4. Invites them as founding member
+CRITICAL CONTEXT - GET THIS RIGHT:
+- Desi Firms = A community platform for South Asian BUSINESSES in Australia (restaurants, shops, services, etc.)
+- Real Estate = A NEW SECTION we just added to Desi Firms (it's ONE PART of the platform, not the whole thing)
+- We are NOT a "real estate platform" - we are a business directory with a new real estate section
 
-WHY WE BUILT THIS (include as a highlight in your intro):
-"📊 Why This Platform? Our research found 1.6 million South Asians in Australia - with no dedicated real estate platform. That's the gap we're filling."
+WRONG FRAMING:
+- "Desi Firms, a real estate platform" (WRONG - we're not a real estate platform)
+- "platform dedicated to connecting... real estate" (WRONG - confusing)
 
-CRITICAL - AVOID FALSE CLAIMS:
-- WRONG: "1.6 million searching for property" (FALSE)
-- WRONG: "actively looking for agents" (FALSE)
-- RIGHT: "A community of 1.6 million with no dedicated platform"
+RIGHT FRAMING:
+- "Desi Firms is a community platform for South Asian businesses in Australia. We've just launched a dedicated real estate section."
+- "We recently added a real estate section to Desi Firms"
 
-EXAMPLE FORMAT:
-"Hi [Name],
+WHY WE ADDED REAL ESTATE (include as a highlight):
+"📊 Why We Added This: Our research found 1.6 million South Asians in Australia - a growing community entering the property market, with no dedicated space to connect with agents who understand their needs."
 
-[1-2 sentences intro about launching real estate section]
-
-📊 Why We Built This: Our research found 1.6 million South Asians in Australia - a thriving community with no dedicated real estate platform. That's the gap we're filling.
-
-[1 sentence inviting them as founding member, mention it's FREE]"
+JUST WRITE 2-3 short paragraphs:
+1. Intro: Desi Firms is a community platform, we just added a real estate section
+2. Research highlight (why we added it)
+3. Invitation to join as founding member (FREE)
 
 DO NOT add signature, steps, or benefits - the template handles those.
-Tone: Respectful, humble, excited to have them join''',
+Tone: Respectful, humble, clear about what Desi Firms is''',
 
             'agent_followup_1': '''a friendly first follow-up to a real estate agent who hasn't responded to our invitation.
 IMPORTANT: Desi Firms is a NEWLY LAUNCHED platform - NOT established, NOT "leading".
