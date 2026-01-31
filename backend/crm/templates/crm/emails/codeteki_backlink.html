@@ -7,15 +7,61 @@
 {% block content %}
 <tr>
     <td style="padding: 40px 30px; background-color: #ffffff;">
+        <!-- Badge -->
+        <div style="text-align: center; margin-bottom: 20px;">
+            <span style="display: inline-block; background: #ede9fe; color: #5b21b6; font-size: 12px; font-weight: 600; padding: 6px 16px; border-radius: 20px;">
+                🤝 Content Collaboration
+            </span>
+        </div>
+
         <!-- Greeting -->
         <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
             Hi {{ recipient_name }},
         </p>
 
         <!-- AI-Generated Body Content -->
-        <div style="color: #4b5563; font-size: 16px; line-height: 1.7;">
+        <div style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
             {{ body_html|safe }}
         </div>
+
+        <!-- Ideas Box -->
+        <div style="background: #fafafa; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin: 0 0 25px 0;">
+            <h3 style="color: #1f2937; font-size: 14px; font-weight: 600; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 1px;">
+                💡 Collaboration Ideas
+            </h3>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #6366f1; font-size: 16px; margin-right: 10px;">•</span>
+                        <span style="color: #374151; font-size: 14px;"><strong>Guest posts</strong> - Share expertise with both audiences</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #6366f1; font-size: 16px; margin-right: 10px;">•</span>
+                        <span style="color: #374151; font-size: 14px;"><strong>Resource features</strong> - Mutual mentions in relevant content</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #6366f1; font-size: 16px; margin-right: 10px;">•</span>
+                        <span style="color: #374141; font-size: 14px;"><strong>Joint content</strong> - Co-create guides or case studies</span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- CTA Button -->
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="mailto:hello@codeteki.au?subject=Collaboration%20Discussion"
+               style="display: inline-block; background: #f9cd15; color: #1f2937; text-decoration: none; padding: 14px 35px; border-radius: 8px; font-weight: 700; font-size: 15px; box-shadow: 0 4px 14px rgba(249, 205, 21, 0.4);">
+                Let's Connect →
+            </a>
+        </div>
+
+        <p style="color: #9ca3af; font-size: 14px; text-align: center; margin: 20px 0 0 0;">
+            Or simply reply to this email!
+        </p>
 
         <!-- Signature -->
         <div style="margin-top: 35px; padding-top: 25px; border-top: 1px solid #e5e7eb;">
