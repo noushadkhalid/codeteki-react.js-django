@@ -14,7 +14,7 @@
 
         <!-- Greeting -->
         <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            Hi {{ recipient_name }},
+            Hi {{ recipient_name }}{% if recipient_company and recipient_company != 'your business' %} from <strong style="color: #1f2937;">{{ recipient_company }}</strong>{% endif %},
         </p>
 
         <!-- Message -->
