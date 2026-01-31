@@ -6,102 +6,30 @@
 
 {% block content %}
 <tr>
-    <td style="padding: 40px 30px; background-color: #1e293b;">
-        <!-- Icon -->
-        <div style="text-align: center; margin-bottom: 25px;">
-            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #6366f1, #a855f7); border-radius: 50%; margin: 0 auto; display: inline-block; line-height: 80px;">
-                <span style="font-size: 40px;">🤝</span>
-            </div>
-        </div>
-
-        <!-- Heading -->
-        <h1 style="color: #f8fafc; font-size: 24px; font-weight: 700; text-align: center; margin: 0 0 10px 0;">
-            Collaboration Opportunity
-        </h1>
-        <p style="color: #a78bfa; font-size: 16px; font-weight: 600; text-align: center; margin: 0 0 25px 0;">
-            Let's Create Value Together
-        </p>
-
+    <td style="padding: 40px 30px; background-color: #ffffff;">
         <!-- Greeting -->
-        <p style="color: #cbd5e1; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
+        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
             Hi {{ recipient_name }},
         </p>
 
-        <!-- Message -->
-        <p style="color: #cbd5e1; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            I'm Noushad from <strong style="color: #a78bfa;">Codeteki</strong> - we specialize in AI solutions, web development, and digital automation for businesses in Australia.
-        </p>
-
-        <p style="color: #cbd5e1; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            I've been following <strong style="color: #f8fafc;">{{ recipient_company }}</strong> and really appreciate the content you create. I see an opportunity for us to collaborate and bring value to both our audiences.
-        </p>
-
-        <p style="color: #cbd5e1; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
-            Here are some ideas I had in mind:
-        </p>
-
-        <!-- Ideas Box -->
-        <div style="background: rgba(99, 102, 241, 0.15); border: 1px solid #6366f1; border-radius: 12px; padding: 24px; margin: 0 0 25px 0;">
-            <h3 style="color: #a78bfa; font-size: 14px; font-weight: 600; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 1px;">
-                💡 Collaboration Ideas
-            </h3>
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                <tr>
-                    <td style="padding: 8px 0;">
-                        <span style="color: #a78bfa; font-size: 16px; margin-right: 10px;">•</span>
-                        <span style="color: #f1f5f9; font-size: 14px;"><strong>Guest posts</strong> - Share expertise with both audiences</span>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="padding: 8px 0;">
-                        <span style="color: #a78bfa; font-size: 16px; margin-right: 10px;">•</span>
-                        <span style="color: #f1f5f9; font-size: 14px;"><strong>Resource features</strong> - Mutual mentions in relevant content</span>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="padding: 8px 0;">
-                        <span style="color: #a78bfa; font-size: 16px; margin-right: 10px;">•</span>
-                        <span style="color: #f1f5f9; font-size: 14px;"><strong>Joint content</strong> - Co-create guides, case studies, or tools</span>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="padding: 8px 0;">
-                        <span style="color: #a78bfa; font-size: 16px; margin-right: 10px;">•</span>
-                        <span style="color: #f1f5f9; font-size: 14px;"><strong>Expert quotes</strong> - Feature each other's expertise</span>
-                    </td>
-                </tr>
-            </table>
+        <!-- AI-Generated Body Content -->
+        <div style="color: #4b5563; font-size: 16px; line-height: 1.7;">
+            {{ body_html|safe }}
         </div>
-
-        <p style="color: #cbd5e1; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
-            I'm flexible on format - whatever works best for you. Would you be open to a quick chat to explore the possibilities?
-        </p>
-
-        <!-- CTA Button -->
-        <div style="text-align: center; margin: 30px 0;">
-            <a href="mailto:hello@codeteki.au?subject=Collaboration%20Discussion"
-               style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 10px; font-weight: 600; font-size: 16px; box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);">
-                Let's Connect →
-            </a>
-        </div>
-
-        <p style="color: #94a3b8; font-size: 14px; text-align: center; margin: 20px 0 0 0;">
-            Or simply reply to this email!
-        </p>
 
         <!-- Signature -->
-        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #334155;">
-            <p style="color: #cbd5e1; font-size: 15px; line-height: 1.6; margin: 0;">
+        <div style="margin-top: 35px; padding-top: 25px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0;">
                 Looking forward to hearing from you,
             </p>
-            <p style="color: #f8fafc; font-size: 15px; font-weight: 600; margin: 10px 0 5px 0;">
+            <p style="color: #1f2937; font-size: 15px; font-weight: 600; margin: 10px 0 5px 0;">
                 Noushad
             </p>
-            <p style="color: #94a3b8; font-size: 14px; margin: 0 0 5px 0;">
+            <p style="color: #6b7280; font-size: 14px; margin: 0 0 5px 0;">
                 Codeteki Digital Services
             </p>
-            <p style="color: #94a3b8; font-size: 14px; margin: 0;">
-                📱 0424 538 777 &nbsp;|&nbsp; 🌐 <a href="https://codeteki.au" style="color: #a78bfa; text-decoration: none;">codeteki.au</a>
+            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                📱 0424 538 777 &nbsp;|&nbsp; 🌐 <a href="https://codeteki.au" style="color: #1f2937; text-decoration: none; font-weight: 500;">codeteki.au</a>
             </p>
         </div>
     </td>

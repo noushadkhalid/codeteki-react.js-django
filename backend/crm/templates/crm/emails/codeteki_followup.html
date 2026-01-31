@@ -7,64 +7,15 @@
 {% block content %}
 <tr>
     <td style="padding: 40px 30px; background-color: #ffffff;">
-        <!-- Heading -->
-        <h1 style="color: #1f2937; font-size: 24px; font-weight: 700; text-align: center; margin: 0 0 25px 0;">
-            Quick Follow-Up 👋
-        </h1>
-
         <!-- Greeting -->
         <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
             Hi {{ recipient_name }},
         </p>
 
-        <!-- Message -->
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            I wanted to follow up on my previous email about how <strong style="color: #1f2937;">Codeteki</strong> can help <strong style="color: #1f2937;">{{ recipient_company }}</strong> leverage technology for growth.
-        </p>
-
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
-            I understand you're busy, so I'll keep this brief. Many businesses we work with have seen:
-        </p>
-
-        <!-- Results Box -->
-        <div style="background: #fef9e7; border-left: 4px solid #f9cd15; border-radius: 8px; padding: 20px 24px; margin: 0 0 25px 0;">
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                <tr>
-                    <td style="padding: 8px 0;">
-                        <span style="color: #16a34a; font-size: 16px; margin-right: 10px;">✓</span>
-                        <span style="color: #374151; font-size: 15px;">60% reduction in customer support time</span>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="padding: 8px 0;">
-                        <span style="color: #16a34a; font-size: 16px; margin-right: 10px;">✓</span>
-                        <span style="color: #374151; font-size: 15px;">3x more leads from their website</span>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="padding: 8px 0;">
-                        <span style="color: #16a34a; font-size: 16px; margin-right: 10px;">✓</span>
-                        <span style="color: #374151; font-size: 15px;">Hours saved weekly through automation</span>
-                    </td>
-                </tr>
-            </table>
+        <!-- AI-Generated Body Content -->
+        <div style="color: #4b5563; font-size: 16px; line-height: 1.7;">
+            {{ body_html|safe }}
         </div>
-
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
-            Would a quick 15-minute chat be helpful? I'd love to understand your specific challenges and see if we can help.
-        </p>
-
-        <!-- CTA Button -->
-        <div style="text-align: center; margin: 25px 0;">
-            <a href="https://codeteki.au/contact"
-               style="display: inline-block; background: #f9cd15; color: #1f2937; text-decoration: none; padding: 14px 35px; border-radius: 8px; font-weight: 700; font-size: 15px; box-shadow: 0 4px 14px rgba(249, 205, 21, 0.4);">
-                Let's Chat →
-            </a>
-        </div>
-
-        <p style="color: #9ca3af; font-size: 14px; text-align: center; margin: 20px 0 0 0;">
-            Or simply reply to this email!
-        </p>
 
         <!-- Signature -->
         <div style="margin-top: 35px; padding-top: 25px; border-top: 1px solid #e5e7eb;">
