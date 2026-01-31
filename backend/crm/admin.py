@@ -1894,10 +1894,11 @@ class EmailDraftAdmin(ModelAdmin):
                 from django.urls import reverse
                 return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))
 
-        # Generate preview HTML for first valid recipient
+        # Generate preview HTML for first recipient (use any recipient for preview, even if in pipeline)
         preview_html = None
-        if valid_recipients:
-            first = valid_recipients[0]
+        preview_recipients = valid_recipients if valid_recipients else all_recipients
+        if preview_recipients:
+            first = preview_recipients[0]
             from crm.services.ai_agent import CRMAIAgent
             ai_agent = CRMAIAgent()
             salutation = ai_agent.get_smart_salutation(
@@ -2346,10 +2347,11 @@ class EmailDraftAdmin(ModelAdmin):
                 from django.urls import reverse
                 return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))
 
-        # Generate preview HTML for first valid recipient
+        # Generate preview HTML for first recipient (use any recipient for preview, even if in pipeline)
         preview_html = None
-        if valid_recipients:
-            first = valid_recipients[0]
+        preview_recipients = valid_recipients if valid_recipients else all_recipients
+        if preview_recipients:
+            first = preview_recipients[0]
             from crm.services.ai_agent import CRMAIAgent
             ai_agent = CRMAIAgent()
             salutation = ai_agent.get_smart_salutation(
