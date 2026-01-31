@@ -31,6 +31,7 @@ EMAIL_TEMPLATES = {
         },
         'business': {
             'directory_invitation': 'crm/emails/business_invitation.html',
+            'listing_benefits': 'crm/emails/business_invitation.html',  # Uses same styled template
             'directory_followup_1': 'crm/emails/business_followup1.html',
             'directory_followup_2': 'crm/emails/business_followup2.html',
             'business_responded': 'crm/emails/business_responded.html',

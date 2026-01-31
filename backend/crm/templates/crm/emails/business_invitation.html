@@ -22,19 +22,10 @@
             Be a Founding Member of Desi Firms
         </p>
 
-        <!-- Greeting -->
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            Hi {{ recipient_name }},
-        </p>
-
-        <!-- Message -->
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            We've just launched <strong style="color: #0093E9;">Desi Firms</strong> - a new community platform dedicated to connecting South Asian businesses in Australia.
-        </p>
-
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
-            We'd love to invite <strong>{{ recipient_company }}</strong> to join us as a <strong>founding member</strong>. Your presence would greatly enrich our community.
-        </p>
+        <!-- AI-Generated Intro (greeting + personalized message with research highlight) -->
+        <div style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            {{ body_html|safe }}
+        </div>
 
         <!-- Benefits Box -->
         <div style="background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%); border: 1px solid #c4b5fd; border-radius: 12px; padding: 24px; margin: 0 0 25px 0;">

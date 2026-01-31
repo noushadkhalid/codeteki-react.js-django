@@ -866,57 +866,57 @@ Respond in JSON format:
         # Map email types to descriptions
         email_type_descriptions = {
             # Desi Firms - Business Listings (NEW PLATFORM LAUNCHING)
-            'directory_invitation': '''an invitation email to list their business on Desi Firms, a NEWLY LAUNCHING community platform for South Asians in Australia.
-IMPORTANT CONTEXT: Desi Firms is brand new and just launching. We are NOT established yet - we're building this platform for the community.
+            'directory_invitation': '''an INTRO PARAGRAPH ONLY for a business directory invitation email.
+IMPORTANT: This is a HYBRID template - the template already has Benefits box, CTA button, and Signature.
+You are ONLY writing the opening intro. DO NOT include signature, benefits list, or CTA.
 
-WHY WE BUILT THIS (add as a HIGHLIGHT section, not false claims):
-Our team researched and discovered:
-- 1.6 million South Asians in Australia - a thriving community
-- NO dedicated platform existed to connect this community with businesses
-- Second generation (200,000+) now in their 20s-40s - digitally native
-- Growing interest from wider Australian community in South Asian products/services
+CONTEXT:
+- Desi Firms = Community platform for South Asian BUSINESSES in Australia
+- This is a NEW platform we just launched
 
-CRITICAL - AVOID FALSE CLAIMS:
-- WRONG: "1.6 million looking for businesses like yours" (FALSE - implies active searching)
-- WRONG: "potential customers searching" (FALSE claim about behavior)
-- WRONG: "actively searching online" (can't prove this)
+WRITE THIS EXACT STRUCTURE:
 
-HOW TO INCLUDE RESEARCH (as a highlighted benefit):
-Add a section like:
-"📊 Why We Built This:
-Our research found 1.6 million South Asians in Australia - a vibrant community with no dedicated business directory. That's the gap we're filling."
+{{SALUTATION}}
 
-Or: "Built on research: A community of 1.6 million with no dedicated platform - until now."
+We've just launched Desi Firms, a community platform dedicated to connecting South Asian businesses in Australia, and we'd love to invite [Company Name] to be among our founding members.
 
-Key points to convey:
-- We've just built/launched this platform for the South Asian community
-- Inviting established businesses like theirs to be FOUNDING MEMBERS
-- Completely FREE to list - no fees, no credit card, no obligation
-- Their presence would add value to the platform
-- We're building something together for the community
-- Be humble and genuine - we need their cooperation to build this
-Tone: Respectful, humble, inviting them to join from the beginning''',
+📊 **Why We Built This**
+Our research found that Australia's 1.6 million-strong South Asian community - with a growing second generation now in their 20s-40s - has no dedicated platform to discover local businesses. We're building that bridge.
 
-            'listing_benefits': '''an email highlighting the benefits of listing on Desi Firms FREE directory.
-Context: NEW platform just launching.
+As a founding member, you'll be part of something new from day one - completely free, no strings attached.
 
-WHY WE BUILT THIS (include as a highlight, not false claims):
-Our research shows:
-- 1.6 million South Asians in Australia - a large community with no dedicated business directory
-- Second generation (200,000+) in their 20s-40s - digitally native, use online search
-- We built this to fill a clear gap in the market
+---
 
-AVOID FALSE CLAIMS:
-- WRONG: "searching for businesses" (implies active behavior)
-- RIGHT: "A community of 1.6 million with no dedicated platform"
+CRITICAL RULES:
+- Keep the 📊 **Why We Built This** section VISIBLE (not buried in paragraph)
+- Mention their company name if available
+- DO NOT add signature, benefits list, or CTA - template has those
+- DO NOT claim people are "searching" or "looking" - just state the community exists''',
 
-BENEFITS TO HIGHLIGHT:
-- Early visibility as platform grows
-- Free plan with no hidden costs
-- Community-focused marketplace
-- Be part of building something our community has needed
-- Founding member recognition
-- Connect with a community that previously had no dedicated platform''',
+            'listing_benefits': '''an INTRO PARAGRAPH ONLY for a business listing benefits email.
+IMPORTANT: This is a HYBRID template - the template already has Benefits box, CTA button, and Signature.
+You are ONLY writing the opening intro. DO NOT include signature, benefits list, or CTA.
+
+CONTEXT:
+- Desi Firms = Community platform for South Asian BUSINESSES in Australia
+- This is a NEW platform - emphasize the FREE listing opportunity
+
+WRITE THIS EXACT STRUCTURE:
+
+{{SALUTATION}}
+
+We'd love to invite [Company Name] to join Desi Firms, a new community platform for South Asian businesses in Australia. Listing is completely FREE - no hidden fees, no credit card required.
+
+📊 **Why We Built This**
+Our research found that Australia's 1.6 million-strong South Asian community has no dedicated platform to discover local businesses like yours. We're changing that, and we'd be honored to have you as a founding member.
+
+---
+
+CRITICAL RULES:
+- Keep the 📊 **Why We Built This** section VISIBLE
+- Emphasize FREE listing
+- DO NOT add signature, benefits list, or CTA - template has those
+- DO NOT claim people are "searching" - just state the community exists with no platform''',
 
             'invitation_followup': '''a friendly follow-up to a previous invitation.
 Context: We're a NEW platform that just reached out. Be gentle and:
@@ -1334,7 +1334,7 @@ FOR DESI FIRMS - PRESENT RESEARCH AS A HIGHLIGHT (not false claims):
 
         # Hybrid templates - these have their own signature, benefits, steps in the template
         # AI should only write the intro paragraph, NOT include signature
-        hybrid_templates = ['agent_invitation']
+        hybrid_templates = ['agent_invitation', 'directory_invitation', 'listing_benefits']
         is_hybrid = email_type in hybrid_templates
 
         # Build signature instruction based on template type
