@@ -972,36 +972,32 @@ Focus on: free exposure, founding member status, being part of something new for
 
             # Desi Firms - Real Estate (NEW PLATFORM LAUNCHING)
             'agent_invitation': '''an INTRO PARAGRAPH ONLY for a real estate invitation email.
-IMPORTANT: This is a HYBRID template - the email template already has Benefits, Steps, CTA and Signature sections.
-You are ONLY writing the opening intro paragraph. DO NOT include:
-- Benefits list (template has it)
-- Getting started steps (template has it)
-- CTA/call to action (template has it)
-- Signature (template has it)
+IMPORTANT: This is a HYBRID template - the template already has Benefits, Steps, CTA and Signature.
+You are ONLY writing the opening intro. DO NOT include signature, steps, or benefits.
 
-CRITICAL CONTEXT - GET THIS RIGHT:
-- Desi Firms = A community platform for South Asian BUSINESSES in Australia (restaurants, shops, services, etc.)
-- Real Estate = A NEW SECTION we just added to Desi Firms (it's ONE PART of the platform, not the whole thing)
-- We are NOT a "real estate platform" - we are a business directory with a new real estate section
+CONTEXT:
+- Desi Firms = Community platform for South Asian BUSINESSES in Australia
+- Real Estate = NEW SECTION we just added (one part of the platform)
 
-WRONG FRAMING:
-- "Desi Firms, a real estate platform" (WRONG - we're not a real estate platform)
-- "platform dedicated to connecting... real estate" (WRONG - confusing)
+WRITE THIS EXACT STRUCTURE (copy the format, personalize the content):
 
-RIGHT FRAMING:
-- "Desi Firms is a community platform for South Asian businesses in Australia. We've just launched a dedicated real estate section."
-- "We recently added a real estate section to Desi Firms"
+{{SALUTATION}}
 
-WHY WE ADDED REAL ESTATE (include as a highlight):
-"📊 Why We Added This: Our research found 1.6 million South Asians in Australia - a growing community entering the property market, with no dedicated space to connect with agents who understand their needs."
+We've just launched a dedicated real estate section on Desi Firms, our community platform for South Asian businesses in Australia, and we'd love to invite [Company Name] to be among our founding members.
 
-JUST WRITE 2-3 short paragraphs:
-1. Intro: Desi Firms is a community platform, we just added a real estate section
-2. Research highlight (why we added it)
-3. Invitation to join as founding member (FREE)
+📊 **Why We Built This**
+Our research found that Australia's 1.6 million-strong South Asian community - with 200,000+ second-generation members now entering the property market - has no dedicated platform to connect with real estate professionals. We're building that bridge.
 
-DO NOT add signature, steps, or benefits - the template handles those.
-Tone: Respectful, humble, clear about what Desi Firms is''',
+As a founding member, you'll have the opportunity to connect with this growing community from day one - completely free, no strings attached.
+
+---
+
+CRITICAL RULES:
+- Keep the 📊 **Why We Built This** section as a VISIBLE HIGHLIGHT (not buried in paragraph)
+- Mention their company name if available
+- Keep it warm but professional
+- DO NOT add signature, steps, or benefits - template has those
+- The research stats should stand out visually''',
 
             'agent_followup_1': '''a friendly first follow-up to a real estate agent who hasn't responded to our invitation.
 IMPORTANT: Desi Firms is a NEWLY LAUNCHED platform - NOT established, NOT "leading".
