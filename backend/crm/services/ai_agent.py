@@ -46,6 +46,15 @@ CRITICAL: Desi Firms is a BRAND NEW platform that has JUST LAUNCHED. We are NOT 
 - NEVER say "we understand your challenges" or "we can help you" - be HUMBLE
 - Real Estate section: Just launched, inviting agents to be founding members
 
+COMMUNITY RESEARCH DATA (use strategically - not all at once):
+- 1.6 million South Asians in Australia (6% of the population)
+- Indian community is the second-largest migrant group in Australia
+- 200,000+ Australian-born second generation now in their 20s-40s (digitally native, disposable income)
+- South Asian migration is the primary driver of Australia's population growth
+- NO dedicated platform exists to connect this community with businesses that serve them
+- Growing interest from wider Australian community in South Asian cultural products, services, and events
+- This is a MASSIVE untapped opportunity - businesses can be early movers
+
 **CODETEKI** (codeteki.au):
 - Established digital agency offering AI-powered web solutions, SEO, development
 - Target: Businesses needing websites, SEO, AI automation
@@ -381,6 +390,14 @@ Codeteki Digital Services
 CRITICAL BRAND CONTEXT - DESI FIRMS REAL ESTATE:
 Desi Firms is a BRAND NEW platform that has JUST LAUNCHED. We are NOT established.
 
+THE COMMUNITY OPPORTUNITY (use strategically):
+- 1.6 million South Asians in Australia (6% of population)
+- Indian community is the second-largest migrant group
+- 200,000+ second generation now in their 20s-40s - first-time homebuyers, young families
+- South Asian migration is the primary driver of Australia's population growth
+- NO dedicated real estate platform serves this community - we're building the first
+- Many South Asians prefer working with agents who understand their cultural needs
+
 TONE & MESSAGING RULES:
 - We are HUMBLY INVITING them to join as FOUNDING MEMBERS
 - We are BUILDING something new for the South Asian community
@@ -394,10 +411,11 @@ TONE & MESSAGING RULES:
 GOOD PHRASES TO USE:
 - "We've just launched a dedicated real estate section..."
 - "We're building something new for the South Asian community..."
+- "1.6 million South Asians in Australia - and no dedicated platform to connect them with agents"
 - "We'd love for [Company] to be part of it from the beginning"
 - "We'd be honored to have you as a founding member"
 - "It's completely FREE - no subscription, no credit card"
-- "Just checking in about the free listing opportunity"
+- "The second generation is now buying homes and searching online"
 
 BAD PHRASES - NEVER USE:
 - "I hope this message finds you well"
@@ -410,6 +428,7 @@ FOR FOLLOW-UPS:
 - Keep it short (under 80 words)
 - Acknowledge they're busy
 - Gentle reminder about the FREE opportunity
+- Don't repeat all the stats - just reference "the growing community"
 - No pressure, just checking if they had questions"""
         elif is_desi_firms:
             brand_instructions = """
@@ -418,7 +437,13 @@ Desi Firms is a NEW platform, not established. We're inviting businesses to JOIN
 - Tone: Humble, warm, community-focused
 - Emphasize: FREE listing, founding member opportunity, building together
 - NEVER pretend to be established or say "we can help you"
-- Be genuine and inviting, not salesy"""
+- Be genuine and inviting, not salesy
+
+COMMUNITY OPPORTUNITY (weave in naturally, not all at once):
+- 1.6 million South Asians in Australia with NO dedicated platform to connect them
+- Second generation (200,000+) now in their 20s-40s - digitally native and actively searching online
+- Growing interest from wider Australian community in South Asian businesses and culture
+- We're building what our community has needed for years"""
         else:
             brand_instructions = """
 BRAND CONTEXT - CODETEKI:
@@ -810,6 +835,14 @@ Respond in JSON format:
             # Desi Firms - Business Listings (NEW PLATFORM LAUNCHING)
             'directory_invitation': '''an invitation email to list their business on Desi Firms, a NEWLY LAUNCHING community platform for South Asians in Australia.
 IMPORTANT CONTEXT: Desi Firms is brand new and just launching. We are NOT established yet - we're building this platform for the community.
+
+THE OPPORTUNITY (weave these points naturally):
+- 1.6 million South Asians in Australia - that's 6% of the population
+- NO dedicated platform exists to connect this community with businesses that serve them
+- We're building what our community has needed for decades
+- Second generation (200,000+) now in their 20s-40s - actively searching online for businesses like theirs
+- Growing interest from wider Australian community in South Asian products/services
+
 Key points to convey:
 - We've just built/launched this platform for the South Asian community
 - Inviting established businesses like theirs to be FOUNDING MEMBERS
@@ -817,38 +850,77 @@ Key points to convey:
 - Their presence would add value to the platform
 - We're building something together for the community
 - Be humble and genuine - we need their cooperation to build this
+- Frame as: "There's been nothing like this for our community - until now"
 Tone: Respectful, humble, inviting them to join from the beginning''',
 
             'listing_benefits': '''an email highlighting the benefits of listing on Desi Firms FREE directory.
 Context: NEW platform just launching. Focus on:
+
+THE OPPORTUNITY:
+- 1.6 million South Asians in Australia - a community actively looking for businesses like theirs
+- No dedicated platform has existed to connect them - until now
+- Second generation now in their 20s-40s searching online
+- Growing interest from wider Australian community too
+
+BENEFITS TO HIGHLIGHT:
 - Early visibility as platform grows
 - Free plan with no hidden costs
 - Community-focused marketplace
-- Be part of building something for the community
-- Founding member recognition''',
+- Be part of building something our community has needed
+- Founding member recognition
+- Get discovered by customers who are actively searching''',
 
             'invitation_followup': '''a friendly follow-up to a previous invitation.
 Context: We're a NEW platform that just reached out. Be gentle and:
 - Remind them of the free opportunity
 - Acknowledge they're busy
 - Reiterate the founding member opportunity
-- No pressure, just checking if they had questions''',
+- No pressure, just checking if they had questions
+
+SUBTLE COMMUNITY REMINDER (don't repeat numbers):
+- Reference "our growing community" or "South Asian community in Australia"
+- Can mention "first dedicated platform" or "nothing like this existed before"
+- Focus on the timing: "joining at the beginning" or "early mover advantage"''',
 
             'onboarding_help': 'a helpful email offering assistance with setting up their business listing. Be supportive and offer step-by-step help',
 
             # Desi Firms - Events (NEW PLATFORM)
             'event_invitation': '''an invitation email to event organizers to list their events on Desi Firms.
 Context: NEW platform just launching a dedicated events section.
+
+THE OPPORTUNITY:
+- 1.6 million South Asians in Australia looking for cultural events and experiences
+- Second generation (200,000+) in their 20s-40s - socially active, looking for community events
+- Growing interest from wider Australian community in South Asian cultural events
+- NO dedicated events platform for this community exists - we're building the first
+
+KEY POINTS:
 - Invite them to be among the first event organizers on the platform
 - Free event listings
-- Reach the South Asian community
-- Build together as the platform grows''',
+- Reach the South Asian community AND Australians interested in desi culture
+- Build together as the platform grows
+- Be discovered by people actively searching for events like theirs''',
 
-            'event_benefits': 'an email about the benefits of listing events on Desi Firms platform. Focus on community engagement and free exposure as platform grows',
+            'event_benefits': '''an email about the benefits of listing events on Desi Firms platform.
+THE OPPORTUNITY:
+- Reach 1.6 million South Asians in Australia
+- Second generation actively searching for cultural events and experiences
+- Growing interest from wider Australian community in South Asian events
+- No dedicated events platform has existed for this community - until now
+Focus on community engagement, free exposure, and founding member status as platform grows''',
 
             # Desi Firms - Real Estate (NEW PLATFORM LAUNCHING)
             'agent_invitation': '''an invitation email to real estate agents/agencies to list properties on Desi Firms.
 IMPORTANT CONTEXT: Desi Firms has JUST LAUNCHED a dedicated real estate section. We are brand new.
+
+THE OPPORTUNITY (lead with this - it's compelling):
+- 1.6 million South Asians in Australia (6% of population) - many actively buying/renting property
+- NO dedicated real estate platform serves this community
+- Indian community is the second-largest migrant group in Australia
+- Second generation (200,000+) now in their 20s-40s - first-time homebuyers, young families
+- South Asian migration is the PRIMARY driver of Australia's population growth
+- This community NEEDS to find agents who understand their needs
+
 Key points:
 - We've recently built DesiFirms for the South Asian community in Australia
 - Just launched a comprehensive real estate section
@@ -870,6 +942,12 @@ Tone: Respectful, humble, we'd be honoured to have them join from the beginning'
             'agent_followup_1': '''a friendly first follow-up to a real estate agent who hasn't responded to our invitation.
 IMPORTANT: Desi Firms is a NEWLY LAUNCHED platform - NOT established, NOT "leading".
 Context: We sent an initial invitation a few days ago. This is a gentle reminder.
+
+SUBTLE REMINDER (don't repeat stats, just reinforce the opportunity):
+- Reference "our growing community" or "the South Asian community" (without numbers)
+- Mention we're "building the first dedicated platform" for this community
+- The timing is right - be an early mover before others catch on
+
 Key points:
 - Acknowledge they're busy
 - Brief reminder about the FREE listing opportunity
@@ -881,6 +959,12 @@ Tone: Friendly, understanding, not pushy''',
             'agent_followup_2': '''a second (final) follow-up to a real estate agent.
 IMPORTANT: Desi Firms is a NEWLY LAUNCHED platform - NOT established, NOT "leading".
 Context: We've reached out twice before with no response. This is our last attempt.
+
+FINAL GENTLE NUDGE:
+- Don't repeat stats - just mention "a community that's been underserved"
+- Can mention "nothing like this has existed before" as a soft reminder
+- Emphasize this is simply an opportunity, not a sales pitch
+
 Key points:
 - Acknowledge this is a final follow-up
 - Briefly restate the value (FREE listings, founding member status)
@@ -917,11 +1001,19 @@ Key points:
 Tone: Celebratory, supportive''',
 
             'free_listing': '''an email emphasizing the FREE property listing opportunity on Desi Firms.
-Context: NEW platform just launched. Focus on:
-- Zero cost, zero obligation
+Context: NEW platform just launched.
+
+THE OPPORTUNITY:
+- 1.6 million South Asians in Australia - many actively buying/selling/renting
+- Second generation (200,000+) now entering property market as first-time buyers
+- No dedicated real estate platform for this community has existed - until now
+
+FOCUS ON:
+- Zero cost, zero obligation - completely FREE
 - Early mover advantage as platform grows
 - Community-focused real estate marketplace
-- Be part of building something for South Asian community''',
+- Be part of building something the community has needed
+- Get discovered by buyers who prefer agents who understand their needs''',
 
             # Desi Firms - Classifieds (NEW PLATFORM)
             'classifieds_invitation': '''an invitation to post classified ads on Desi Firms.
@@ -1144,7 +1236,13 @@ Codeteki Digital Services
 - Position our platform/service as a SOLUTION to their specific problem
 - Frame everything from THEIR perspective - "you" not "we"
 - Don't sell features - solve problems
-- Example: Instead of "We have a directory" → "Get found by customers searching for businesses like yours"''',
+- Example: Instead of "We have a directory" → "Get found by customers searching for businesses like yours"
+
+FOR DESI FIRMS - THE COMMUNITY OPPORTUNITY:
+- 1.6 million South Asians in Australia with no dedicated platform connecting them to businesses
+- Frame the problem: "Customers are searching but can't easily find businesses like yours"
+- The solution: "We're building the first platform dedicated to this community"
+- Position them as the answer to a real need, not just another listing''',
             'value_driven': '''APPROACH: Value-Driven
 - Lead with clear benefits and outcomes they'll get
 - For Desi Firms: free visibility, community reach, new customers
