@@ -428,11 +428,21 @@ def get_styled_email(
     """
     # Strip signature from body if template will add one
     # Keep original for plain text version
+    import re
     body_for_template = strip_signature_from_body(body)
 
     # Also remove the greeting if it starts with "Hi Name," since template adds it
-    import re
     body_for_template = re.sub(r'^Hi\s+[^,]+,?\s*\n+', '', body_for_template, flags=re.IGNORECASE)
+
+    # Safety check: if stripping left us with empty content, use original body
+    # This can happen if AI only generated greeting + signature
+    body_for_template = body_for_template.strip()
+    if not body_for_template:
+        # Try using body without signature but keep greeting
+        body_for_template = strip_signature_from_body(body).strip()
+    if not body_for_template:
+        # Last resort: use original body
+        body_for_template = body.strip() if body else ''
 
     # Convert plain text body to HTML (preserve paragraphs and line breaks)
     body_html = body_for_template.replace('\n\n', '</p><p style="margin: 0 0 15px 0;">').replace('\n', '<br>')

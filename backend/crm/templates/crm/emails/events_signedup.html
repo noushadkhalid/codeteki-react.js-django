@@ -2,7 +2,7 @@
 
 {% block title %}Welcome to Desi Firms Events!{% endblock %}
 {% block preheader %}{{ recipient_name }}, your event organiser account is ready!{% endblock %}
-{% block subtitle %}Events Platform{% endblock %}
+{% block subtitle %}Events{% endblock %}
 
 {% block content %}
 <tr>
@@ -22,19 +22,10 @@
             🎖️ You're now a Founding Event Partner!
         </p>
 
-        <!-- Greeting -->
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            Hi {{ recipient_name }},
-        </p>
-
-        <!-- Message -->
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            <strong>Congratulations!</strong> Your Desi Firms Events account has been created successfully. Welcome to Australia's premier South Asian community events platform!
-        </p>
-
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
-            As a founding event partner, you'll always have special recognition on our platform. Now let's get <strong>{{ recipient_company }}</strong>'s events in front of our community!
-        </p>
+        <!-- AI-Generated Welcome Message -->
+        <div style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            {{ body_html|safe }}
+        </div>
 
         <!-- What's Next Box -->
         <div style="background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%); border: 1px solid #f9a8d4; border-radius: 12px; padding: 24px; margin: 0 0 25px 0;">

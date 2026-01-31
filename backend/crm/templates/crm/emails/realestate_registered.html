@@ -2,7 +2,7 @@
 
 {% block title %}Welcome to Desi Firms!{% endblock %}
 {% block preheader %}{{ recipient_name }}, your founding member account is ready!{% endblock %}
-{% block subtitle %}Real Estate Platform{% endblock %}
+{% block subtitle %}Real Estate{% endblock %}
 
 {% block content %}
 <tr>
@@ -22,19 +22,10 @@
             🎖️ You're now a Founding Member!
         </p>
 
-        <!-- Greeting -->
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            Hi {{ recipient_name }},
-        </p>
-
-        <!-- Message -->
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            <strong>Congratulations!</strong> Your account for <strong>{{ recipient_company }}</strong> has been successfully created. Welcome to the Desi Firms real estate community!
-        </p>
-
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
-            As a founding member, you'll always have special recognition on our platform. Thank you for being an early believer in what we're building.
-        </p>
+        <!-- AI-Generated Welcome Message -->
+        <div style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            {{ body_html|safe }}
+        </div>
 
         <!-- What's Next Box -->
         <div style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border: 1px solid #7dd3fc; border-radius: 12px; padding: 24px; margin: 0 0 25px 0;">

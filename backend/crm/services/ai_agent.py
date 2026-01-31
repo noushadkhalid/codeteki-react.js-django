@@ -932,26 +932,48 @@ DO NOT include signature, CTA, or benefits list.''',
             'onboarding_help': 'a helpful email offering assistance with setting up their business listing. Be supportive and offer step-by-step help',
 
             # Business Directory Follow-ups
-            'directory_followup_1': '''a SHORT first follow-up message ONLY (no signature - template has one).
+            'directory_followup_1': '''a follow-up message ONLY for business directory (no signature - template has one).
 HYBRID TEMPLATE: Just write the follow-up message, template handles reminder box, CTA, and signature.
 
-Write 2-3 short paragraphs:
-1. Acknowledge they're busy, quick follow-up on the business listing opportunity
-2. Brief reminder: FREE listings, founding member status
-3. Reference "building something new for our community"
+WRITE THIS STRUCTURE:
 
-Keep it under 80 words. Friendly, not pushy.
-DO NOT include signature, CTA, or benefits list - template has those.''',
+{{SALUTATION}}
 
-            'directory_followup_2': '''a SHORT final follow-up message ONLY (no signature - template has one).
+Quick follow-up on our invitation to list your business on Desi Firms. I know you're busy, so I'll keep this brief.
+
+📊 **The Opportunity**
+Australia's 1.6 million South Asians have no dedicated platform to discover local businesses - we're building that. With a growing second-generation community now in their 20s-40s, there's real demand.
+
+As a founding member, you'd be among the first businesses featured - completely free.
+
+---
+
+CRITICAL RULES:
+- Keep the 📊 **The Opportunity** section VISIBLE
+- Acknowledge they're busy, be respectful
+- Emphasize FREE listing, founding member status
+- DO NOT include signature, CTA, or benefits list - template has those
+- Keep it under 100 words total''',
+
+            'directory_followup_2': '''a FINAL follow-up message ONLY for business directory (no signature - template has one).
 HYBRID TEMPLATE: Just write the message, template handles "door is open" box, CTA, and signature.
 
-Write 2 short paragraphs:
-1. Final follow-up, briefly mention FREE listing opportunity
-2. Respect their decision, leave door open
+WRITE THIS STRUCTURE:
 
-Keep it under 60 words. Respectful, brief, no pressure.
-DO NOT include signature, CTA, or "door is open" message - template has those.''',
+{{SALUTATION}}
+
+This is my final follow-up about listing your business on Desi Firms.
+
+We're building a platform for Australia's 1.6 million South Asian community to discover local businesses like yours. It's completely free with no strings attached.
+
+If timing isn't right, I completely understand.
+
+---
+
+CRITICAL RULES:
+- Keep message brief but mention the opportunity
+- DO NOT include signature, CTA, or "door is open" message - template has those
+- Keep it under 80 words total''',
 
             # Desi Firms - Events (NEW PLATFORM)
             'event_invitation': '''an INTRO PARAGRAPH ONLY for an events invitation email.
@@ -992,26 +1014,48 @@ RIGHT: "A community of 1.6 million with no dedicated events platform - until now
 Focus on: free exposure, founding member status, being part of something new for the community''',
 
             # Events Follow-ups
-            'events_followup_1': '''a SHORT first follow-up message ONLY (no signature - template has one).
+            'events_followup_1': '''a follow-up message ONLY for event organizers (no signature - template has one).
 HYBRID TEMPLATE: Just write the follow-up message, template handles CTA and signature.
 
-Write 2-3 short paragraphs:
-1. Acknowledge they're busy, follow up on events listing opportunity
-2. Brief reminder: FREE event listings, founding partner status
-3. Reference "growing community looking for events"
+WRITE THIS STRUCTURE:
 
-Keep it under 80 words. Friendly, not pushy.
-DO NOT include signature or CTA - template has those.''',
+{{SALUTATION}}
 
-            'events_followup_2': '''a SHORT final follow-up message ONLY (no signature - template has one).
+Quick follow-up on our invitation to list your events on Desi Firms. I know you're busy, so I'll keep this brief.
+
+📊 **The Opportunity**
+Australia's 1.6 million South Asians have no dedicated platform to discover community events - we're building that. With a growing second-generation now in their 20s-40s, there's real demand for cultural and community events.
+
+As a founding event partner, your events would be featured to this engaged community - completely free.
+
+---
+
+CRITICAL RULES:
+- Keep the 📊 **The Opportunity** section VISIBLE
+- Acknowledge they're busy, be respectful
+- Emphasize FREE event listings, founding partner status
+- DO NOT include signature or CTA - template has those
+- Keep it under 100 words total''',
+
+            'events_followup_2': '''a FINAL follow-up message ONLY for event organizers (no signature - template has one).
 HYBRID TEMPLATE: Just write the message, template handles CTA and signature.
 
-Write 2 short paragraphs:
-1. Final follow-up, briefly mention FREE event listing opportunity
-2. Respect their decision, leave door open
+WRITE THIS STRUCTURE:
 
-Keep it under 60 words. Respectful, no pressure.
-DO NOT include signature or CTA - template has those.''',
+{{SALUTATION}}
+
+This is my final follow-up about listing your events on Desi Firms.
+
+We're building a platform for Australia's 1.6 million South Asian community to discover local events. It's completely free with no strings attached.
+
+If timing isn't right, I completely understand.
+
+---
+
+CRITICAL RULES:
+- Keep message brief but mention the opportunity
+- DO NOT include signature or CTA - template has those
+- Keep it under 80 words total''',
 
             # Desi Firms - Real Estate (NEW PLATFORM LAUNCHING)
             'agent_invitation': '''an INTRO PARAGRAPH ONLY for a real estate invitation email.
@@ -1042,26 +1086,49 @@ CRITICAL RULES:
 - DO NOT add signature, steps, or benefits - template has those
 - The research stats should stand out visually''',
 
-            'agent_followup_1': '''a SHORT first follow-up message ONLY (no signature - template has one).
+            'agent_followup_1': '''a follow-up message ONLY for real estate agents (no signature - template has one).
 HYBRID TEMPLATE: Just write the follow-up message, template handles reminder box, CTA, and signature.
 
-Write 2-3 short paragraphs:
-1. Acknowledge they're busy, quick follow-up on the real estate listing opportunity
-2. Brief reminder: FREE listings, founding member status, we're building something new
-3. Reference "our growing community" - don't repeat the 1.6M stat
+WRITE THIS STRUCTURE:
 
-Keep it under 80 words. Friendly, understanding, not pushy.
-DO NOT include signature, CTA, or reminder box - template has those.''',
+{{SALUTATION}}
 
-            'agent_followup_2': '''a SHORT final follow-up message ONLY (no signature - template has one).
+Quick follow-up on our invitation to join Desi Firms' real estate section. I know you're busy, so I'll keep this brief.
+
+📊 **The Opportunity**
+Australia's 1.6 million South Asians have no dedicated real estate platform - and 200,000+ second-generation members are now entering the property market. We built this to fill that gap.
+
+As a founding member, you'd be among the first agents to connect with this underserved community - completely free.
+
+---
+
+CRITICAL RULES:
+- Keep the 📊 **The Opportunity** section VISIBLE (not buried)
+- Acknowledge they're busy, be respectful of their time
+- Emphasize FREE listing, founding member status
+- DO NOT include signature, CTA, or reminder box - template has those
+- Keep it under 100 words total''',
+
+            'agent_followup_2': '''a FINAL follow-up message ONLY for real estate agents (no signature - template has one).
 HYBRID TEMPLATE: Just write the message, template handles "door is open" box, CTA, and signature.
 
-Write 2 short paragraphs:
-1. Final follow-up, acknowledge they're busy, briefly mention FREE listing opportunity
-2. Respect their decision, leave door open
+WRITE THIS STRUCTURE:
 
-Keep it under 60 words. Respectful, brief, no pressure.
-DO NOT include signature, CTA, or "door is open" message - template has those.''',
+{{SALUTATION}}
+
+This is my final follow-up about joining Desi Firms' real estate section.
+
+We're building a platform to connect agents with Australia's 1.6 million South Asian community - a market with no dedicated real estate platform until now. It's completely free with no strings attached.
+
+If timing isn't right, I completely understand.
+
+---
+
+CRITICAL RULES:
+- Keep message brief but mention the opportunity (1.6M community, no dedicated platform)
+- Acknowledge they're busy, respect their time
+- DO NOT include signature, CTA, or "door is open" message - template has those
+- Keep it under 80 words total''',
 
             'agent_responded': '''a thank you email after a real estate agent responds positively.
 Context: They showed interest in listing on Desi Firms.
@@ -1080,6 +1147,171 @@ Key points:
 - Mention available features
 - Offer support if needed
 Tone: Warm, helpful, encouraging''',
+
+            'realestate_registered': '''a WELCOME MESSAGE ONLY for a real estate agent who just registered.
+HYBRID TEMPLATE: Template already has Getting Started box, CTA buttons, and Signature.
+You ONLY write the welcome/greeting paragraph.
+
+Write 2-3 short paragraphs:
+1. Warm welcome, congratulate them on registering
+2. Thank them for joining as a founding member
+3. Express excitement about having them on the platform
+
+DO NOT include signature, steps, CTA, or getting started instructions - template has those.
+Keep it personal and warm, under 80 words.''',
+
+            'business_signedup': '''a WELCOME MESSAGE ONLY for a business owner who just signed up.
+HYBRID TEMPLATE: Template already has Complete Your Listing box, CTA buttons, and Signature.
+You ONLY write the welcome/greeting paragraph.
+
+Write 2-3 short paragraphs:
+1. Warm welcome, congratulate them on creating their account
+2. Thank them for being a founding member
+3. Express excitement about featuring their business
+
+DO NOT include signature, steps, CTA, or listing instructions - template has those.
+Keep it personal and warm, under 80 words.''',
+
+            'events_signedup': '''a WELCOME MESSAGE ONLY for an event organizer who just signed up.
+HYBRID TEMPLATE: Template already has Create Your Event box, CTA buttons, and Signature.
+You ONLY write the welcome/greeting paragraph.
+
+Write 2-3 short paragraphs:
+1. Warm welcome, congratulate them on joining
+2. Thank them for being a founding event partner
+3. Express excitement about their upcoming events
+
+DO NOT include signature, steps, CTA, or event instructions - template has those.
+Keep it personal and warm, under 80 words.''',
+
+            'realestate_listing': '''a CONGRATULATIONS MESSAGE ONLY for an agent who listed their first property.
+HYBRID TEMPLATE: Template already has Pro Tips box, CTA buttons, and Signature.
+You ONLY write the congratulatory message.
+
+Write 2-3 short paragraphs:
+1. Celebrate their first listing - this is a milestone!
+2. Thank them for being active on the platform
+3. Brief mention of their property being visible to the community
+
+DO NOT include signature, tips, CTA, or next steps - template has those.
+Keep it celebratory and encouraging, under 80 words.''',
+
+            'business_listed': '''a CONGRATULATIONS MESSAGE ONLY for a business that went live on the platform.
+HYBRID TEMPLATE: Template already has Tips for Success box, CTA buttons, and Signature.
+You ONLY write the congratulatory message.
+
+Write 2-3 short paragraphs:
+1. Celebrate their business going live!
+2. Thank them for completing their listing
+3. Brief mention of being part of the community now
+
+DO NOT include signature, tips, CTA, or suggestions - template has those.
+Keep it celebratory and encouraging, under 80 words.''',
+
+            'events_listed': '''a CONGRATULATIONS MESSAGE ONLY for an organizer who listed their first event.
+HYBRID TEMPLATE: Template already has Tips for Maximum Reach box, CTA buttons, and Signature.
+You ONLY write the congratulatory message.
+
+Write 2-3 short paragraphs:
+1. Celebrate their event going live!
+2. Thank them for sharing with the community
+3. Brief mention of reaching the South Asian community
+
+DO NOT include signature, tips, CTA, or promotion suggestions - template has those.
+Keep it celebratory and encouraging, under 80 words.''',
+
+            'business_nudge': '''a GENTLE INTRO ONLY for a nudge email to complete their listing.
+HYBRID TEMPLATE: Template already has Benefits box, CTA, and Signature.
+You ONLY write the intro message.
+
+Write 2-3 short paragraphs:
+1. Friendly check-in about their account
+2. Gentle reminder about FREE listing opportunity
+3. We'd love to have their business featured
+
+DO NOT include signature, benefits, CTA - template has those.
+Keep it friendly and non-pushy, under 80 words.''',
+
+            'business_nudge2': '''a SHORT FOLLOW-UP ONLY for final nudge to complete listing.
+HYBRID TEMPLATE: Template already has What You're Missing box, CTA, and Signature.
+You ONLY write the follow-up message.
+
+Write 2 short paragraphs:
+1. Quick follow-up, acknowledge they're busy
+2. Final gentle mention of the opportunity
+
+DO NOT include signature, benefits, or CTA - template has those.
+Keep it brief and respectful, under 60 words.''',
+
+            'realestate_nudge': '''a GENTLE INTRO ONLY for a nudge email to real estate agents.
+HYBRID TEMPLATE: Template already has What You Can Do box, Stats, CTA, and Signature.
+You ONLY write the intro message.
+
+Write 2-3 short paragraphs:
+1. Friendly check-in about their account registration
+2. Gentle reminder about FREE property listings
+3. We'd love to have them listing properties
+
+DO NOT include signature, features, CTA - template has those.
+Keep it friendly and non-pushy, under 80 words.''',
+
+            'realestate_nudge2': '''a SHORT FOLLOW-UP ONLY for final nudge to real estate agents.
+HYBRID TEMPLATE: Template already has Quick Steps box, CTA, and Signature.
+You ONLY write the follow-up message.
+
+Write 2 short paragraphs:
+1. Quick follow-up, acknowledge they're busy
+2. Final gentle mention of the registration opportunity
+
+DO NOT include signature, steps, or CTA - template has those.
+Keep it brief and respectful, under 60 words.''',
+
+            'events_nudge': '''a GENTLE INTRO ONLY for a nudge email to event organizers.
+HYBRID TEMPLATE: Template already has Why List Events box, CTA, and Signature.
+You ONLY write the intro message.
+
+Write 2-3 short paragraphs:
+1. Friendly check-in about listing events
+2. Gentle reminder about FREE event promotion
+3. We'd love to feature their events
+
+DO NOT include signature, benefits, CTA - template has those.
+Keep it friendly and non-pushy, under 80 words.''',
+
+            'events_nudge2': '''a SHORT FOLLOW-UP ONLY for final nudge to event organizers.
+HYBRID TEMPLATE: Template already has Quick Benefits box, CTA, and Signature.
+You ONLY write the follow-up message.
+
+Write 2 short paragraphs:
+1. Quick follow-up, acknowledge they're busy
+2. Final gentle mention of free event listing
+
+DO NOT include signature, benefits, or CTA - template has those.
+Keep it brief and respectful, under 60 words.''',
+
+            'directory_responded': '''a THANK YOU MESSAGE ONLY for a business that responded positively.
+HYBRID TEMPLATE: Template already has Next Steps box, CTA, and Signature.
+You ONLY write the thank you message.
+
+Write 2-3 short paragraphs:
+1. Thank them warmly for their response
+2. Express excitement about having them join
+3. Brief mention of next steps coming
+
+DO NOT include signature, steps, or CTA - template has those.
+Keep it warm and welcoming, under 80 words.''',
+
+            'events_responded': '''a THANK YOU MESSAGE ONLY for an event organizer who responded positively.
+HYBRID TEMPLATE: Template already has Next Steps box, CTA, and Signature.
+You ONLY write the thank you message.
+
+Write 2-3 short paragraphs:
+1. Thank them warmly for their interest
+2. Express excitement about their events
+3. Brief mention of next steps coming
+
+DO NOT include signature, steps, or CTA - template has those.
+Keep it warm and welcoming, under 80 words.''',
 
             'agent_listing': '''a congratulations email after a real estate agent lists their first property.
 Context: They've successfully listed at least one property.
@@ -1370,6 +1602,15 @@ FOR DESI FIRMS - PRESENT RESEARCH AS A HIGHLIGHT (not false claims):
             # Follow-ups
             'agent_followup_1', 'agent_followup_2', 'directory_followup_1', 'directory_followup_2',
             'invitation_followup', 'events_followup_1', 'events_followup_2',
+            # Responded (thank you emails)
+            'agent_responded', 'directory_responded', 'events_responded',
+            # Registered/Signedup (welcome emails)
+            'realestate_registered', 'business_signedup', 'events_signedup',
+            # Listed (congrats emails)
+            'realestate_listing', 'business_listed', 'events_listed',
+            # Nudge emails
+            'business_nudge', 'business_nudge2', 'realestate_nudge', 'realestate_nudge2',
+            'events_nudge', 'events_nudge2',
         ]
         is_hybrid = email_type in hybrid_templates
 

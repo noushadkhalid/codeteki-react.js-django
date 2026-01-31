@@ -2,7 +2,7 @@
 
 {% block title %}Congratulations on Your First Listing!{% endblock %}
 {% block preheader %}{{ recipient_name }}, your property is now live on Desi Firms!{% endblock %}
-{% block subtitle %}Real Estate Platform{% endblock %}
+{% block subtitle %}Real Estate{% endblock %}
 
 {% block content %}
 <tr>
@@ -22,19 +22,10 @@
             Your first listing is now LIVE! 🎉
         </p>
 
-        <!-- Greeting -->
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            Hi {{ recipient_name }},
-        </p>
-
-        <!-- Message -->
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            This is fantastic! <strong>{{ recipient_company }}</strong> has just published their first property listing on Desi Firms. You're officially making an impact in the South Asian community!
-        </p>
-
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
-            Your property is now visible to thousands of potential buyers and renters in our community who are specifically looking for services from agents they can trust.
-        </p>
+        <!-- AI-Generated Congratulations Message -->
+        <div style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            {{ body_html|safe }}
+        </div>
 
         <!-- Tips Box -->
         <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #fcd34d; border-radius: 12px; padding: 24px; margin: 0 0 25px 0;">

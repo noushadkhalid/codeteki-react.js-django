@@ -22,19 +22,10 @@
             {{ recipient_company }} is now on Desi Firms! 🎉
         </p>
 
-        <!-- Greeting -->
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            Hi {{ recipient_name }},
-        </p>
-
-        <!-- Message -->
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            <strong>Fantastic news!</strong> Your business listing for <strong>{{ recipient_company }}</strong> is now live on Desi Firms. Customers can find you through our directory and search.
-        </p>
-
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
-            You're now part of Australia's growing South Asian business community. Here's how to make the most of your listing:
-        </p>
+        <!-- AI-Generated Congratulations Message -->
+        <div style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            {{ body_html|safe }}
+        </div>
 
         <!-- Tips Box -->
         <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 1px solid #fcd34d; border-radius: 12px; padding: 24px; margin: 0 0 25px 0;">
