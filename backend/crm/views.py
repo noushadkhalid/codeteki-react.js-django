@@ -955,13 +955,13 @@ def pipeline_board(request, pipeline_id):
     pipeline = get_object_or_404(Pipeline, id=pipeline_id)
     stages = pipeline.stages.order_by('order')
 
-    # Build columns with deals
+    # Build columns with deals (include both active and won deals)
     columns = []
     for stage in stages:
         deals = Deal.objects.filter(
             pipeline=pipeline,
             current_stage=stage,
-            status='active'
+            status__in=['active', 'won']  # Show both active and won deals
         ).select_related('contact').order_by('-updated_at')[:50]
 
         columns.append({
