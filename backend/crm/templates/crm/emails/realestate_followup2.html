@@ -1,27 +1,39 @@
 {% extends "crm/emails/base_desifirms.html" %}
 
-{% block title %}Final Follow-Up | Desi Firms{% endblock %}
-{% block preheader %}{{ recipient_name }}, last chance to join as a founding member{% endblock %}
+{% block title %}Quick Reminder | Desi Firms{% endblock %}
+{% block preheader %}{{ recipient_name }}, just a friendly reminder about the free listing opportunity{% endblock %}
 {% block subtitle %}Real Estate{% endblock %}
 
 {% block content %}
 <tr>
     <td style="padding: 40px 30px;">
-        <!-- Heading -->
-        <h1 style="color: #1f2937; font-size: 22px; font-weight: 700; text-align: center; margin: 0 0 25px 0;">
-            Final Follow-Up
-        </h1>
+        <!-- Icon -->
+        <div style="text-align: center; margin-bottom: 20px;">
+            <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #0093E9, #80D0C7); border-radius: 50%; margin: 0 auto; display: inline-block; line-height: 60px;">
+                <span style="font-size: 28px;">🔔</span>
+            </div>
+        </div>
 
-        <!-- AI-Generated Final Follow-up Message -->
+        <!-- Heading -->
+        <h1 style="color: #1f2937; font-size: 22px; font-weight: 700; text-align: center; margin: 0 0 8px 0;">
+            Quick Reminder
+        </h1>
+        <p style="color: #6b7280; font-size: 14px; text-align: center; margin: 0 0 25px 0;">
+            The opportunity is still available
+        </p>
+
+        <!-- AI-Generated Follow-up Message -->
         <div style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
             {{ body_html|safe }}
         </div>
 
-        <!-- Simple Box -->
-        <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin: 0 0 25px 0; text-align: center;">
-            <p style="color: #374151; font-size: 15px; line-height: 1.6; margin: 0;">
-                If this isn't the right fit for you, I completely respect your decision. <br>
-                The door is always open if your needs change in the future.
+        <!-- Reminder Box -->
+        <div style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 12px; padding: 20px; margin: 0 0 25px 0; text-align: center; border: 1px solid #6ee7b7;">
+            <p style="color: #059669; font-size: 14px; font-weight: 600; margin: 0 0 8px 0;">
+                🏠 Why Real Estate Agents Love Us
+            </p>
+            <p style="color: #047857; font-size: 15px; line-height: 1.6; margin: 0;">
+                Unlimited free listings • Direct buyer inquiries • 1.6M+ South Asian audience
             </p>
         </div>
 

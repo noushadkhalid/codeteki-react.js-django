@@ -1,7 +1,7 @@
 {% extends "crm/emails/base_desifirms.html" %}
 
-{% block title %}Quick Reminder | Desi Firms{% endblock %}
-{% block preheader %}{{ recipient_name }}, just a friendly reminder about the free listing opportunity{% endblock %}
+{% block title %}Closing the Loop | Desi Firms{% endblock %}
+{% block preheader %}{{ recipient_name }}, just a quick note to close the loop{% endblock %}
 {% block subtitle %}Business Directory{% endblock %}
 
 {% block content %}
@@ -10,30 +10,30 @@
         <!-- Icon -->
         <div style="text-align: center; margin-bottom: 20px;">
             <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); border-radius: 50%; margin: 0 auto; display: inline-block; line-height: 60px;">
-                <span style="font-size: 28px;">🔔</span>
+                <span style="font-size: 28px;">👋</span>
             </div>
         </div>
 
         <!-- Heading -->
         <h1 style="color: #1f2937; font-size: 22px; font-weight: 700; text-align: center; margin: 0 0 8px 0;">
-            Quick Reminder
+            Closing the Loop
         </h1>
         <p style="color: #6b7280; font-size: 14px; text-align: center; margin: 0 0 25px 0;">
-            The opportunity is still available
+            A quick note before I stop following up
         </p>
 
-        <!-- AI-Generated Follow-up Message -->
+        <!-- AI-Generated Closing Message -->
         <div style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
             {{ body_html|safe }}
         </div>
 
-        <!-- Reminder Box -->
-        <div style="background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border-radius: 12px; padding: 20px; margin: 0 0 25px 0; text-align: center; border: 1px solid #c4b5fd;">
+        <!-- Future Contact Box -->
+        <div style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border-radius: 12px; padding: 20px; margin: 0 0 25px 0; text-align: center; border: 1px solid #d8b4fe;">
             <p style="color: #7c3aed; font-size: 14px; font-weight: 600; margin: 0 0 8px 0;">
-                🏪 Why Businesses Love Us
+                📌 Save this email
             </p>
-            <p style="color: #6d28d9; font-size: 15px; line-height: 1.6; margin: 0;">
-                Free forever listing • Direct customer inquiries • 1.6M+ South Asian audience
+            <p style="color: #7c3aed; font-size: 15px; line-height: 1.6; margin: 0;">
+                If you ever want a FREE listing to reach 1.6M+ South Asians, just reply!
             </p>
         </div>
 
@@ -48,7 +48,7 @@
         <!-- Signature -->
         <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
             <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0;">
-                Wishing you all the best,
+                All the best,
             </p>
             <p style="color: #1f2937; font-size: 15px; font-weight: 600; margin: 10px 0 5px 0;">
                 Noushad

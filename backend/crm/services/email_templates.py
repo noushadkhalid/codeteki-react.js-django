@@ -20,6 +20,8 @@ EMAIL_TEMPLATES = {
             'agent_invitation': 'crm/emails/realestate_invitation.html',
             'agent_followup_1': 'crm/emails/realestate_followup1.html',
             'agent_followup_2': 'crm/emails/realestate_followup2.html',
+            'agent_followup_3': 'crm/emails/realestate_followup3.html',
+            'realestate_followup_3': 'crm/emails/realestate_followup3.html',  # Alias
             'agent_responded': 'crm/emails/realestate_responded.html',
             'agent_registered': 'crm/emails/realestate_registered.html',
             'agent_listing': 'crm/emails/realestate_listing.html',
@@ -34,6 +36,7 @@ EMAIL_TEMPLATES = {
             'listing_benefits': 'crm/emails/business_invitation.html',  # Uses same styled template
             'directory_followup_1': 'crm/emails/business_followup1.html',
             'directory_followup_2': 'crm/emails/business_followup2.html',
+            'directory_followup_3': 'crm/emails/business_followup3.html',
             'business_responded': 'crm/emails/business_responded.html',
             'business_signedup': 'crm/emails/business_signedup.html',
             'business_listed': 'crm/emails/business_listed.html',
@@ -49,6 +52,7 @@ EMAIL_TEMPLATES = {
             'events_invitation': 'crm/emails/events_invitation.html',
             'events_followup_1': 'crm/emails/events_followup1.html',
             'events_followup_2': 'crm/emails/events_followup2.html',
+            'events_followup_3': 'crm/emails/events_followup3.html',
             'events_responded': 'crm/emails/events_responded.html',
             'events_signedup': 'crm/emails/events_signedup.html',
             'events_listed': 'crm/emails/events_listed.html',
@@ -109,6 +113,7 @@ STAGE_TO_EMAIL_TYPE = {
     'invited': 'agent_invitation',  # Initial invitation email
     'follow up 1': 'agent_followup_1',  # First follow-up
     'follow up 2': 'agent_followup_2',  # Second follow-up
+    'follow up 3 (final)': 'agent_followup_3',  # Final follow-up (closing the loop)
     'responded': 'agent_responded',  # They replied
     'registered': 'agent_registered',  # They signed up
     'listing properties': 'agent_listing',  # They're listing!
@@ -118,6 +123,7 @@ STAGE_TO_EMAIL_TYPE = {
     'business found': None,  # No email sent
     'follow up 1': 'directory_followup_1',  # Note: same key, context determines template
     'follow up 2': 'directory_followup_2',
+    'follow up 3 (final)': 'directory_followup_3',  # Final follow-up
     'signed up': 'business_signedup',
     'listed': 'business_listed',
 
@@ -139,6 +145,8 @@ STAGE_TO_EMAIL_TYPE = {
     'invitation sent': 'agent_invitation',
     'follow-up 1': 'agent_followup_1',
     'follow-up 2': 'agent_followup_2',
+    'follow-up 3': 'agent_followup_3',
+    'follow-up 3 (final)': 'agent_followup_3',
 }
 
 
@@ -161,6 +169,7 @@ def get_email_type_for_stage(stage_name: str, pipeline_type: str = None) -> Opti
             'invited': 'agent_invitation',
             'follow up 1': 'agent_followup_1',
             'follow up 2': 'agent_followup_2',
+            'follow up 3 (final)': 'agent_followup_3',
             'responded': 'agent_responded',
             'registered': 'agent_registered',
             'listing properties': 'agent_listing',
@@ -173,6 +182,7 @@ def get_email_type_for_stage(stage_name: str, pipeline_type: str = None) -> Opti
             'invited': 'directory_invitation',
             'follow up 1': 'directory_followup_1',
             'follow up 2': 'directory_followup_2',
+            'follow up 3 (final)': 'directory_followup_3',
             'responded': 'business_responded',
             'signed up': 'business_signedup',
             'listed': 'business_listed',
@@ -185,6 +195,7 @@ def get_email_type_for_stage(stage_name: str, pipeline_type: str = None) -> Opti
             'invited': 'events_invitation',
             'follow up 1': 'events_followup_1',
             'follow up 2': 'events_followup_2',
+            'follow up 3 (final)': 'events_followup_3',
             'responded': 'events_responded',
             'signed up': 'events_signedup',
             'listed': 'events_listed',

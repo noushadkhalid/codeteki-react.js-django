@@ -955,25 +955,52 @@ CRITICAL RULES:
 - DO NOT include signature, CTA, or benefits list - template has those
 - Keep it under 100 words total''',
 
-            'directory_followup_2': '''a FINAL follow-up message ONLY for business directory (no signature - template has one).
-HYBRID TEMPLATE: Just write the message, template handles "door is open" box, CTA, and signature.
+            'directory_followup_2': '''a SECOND follow-up / quick reminder message for business directory (no signature - template has one).
+HYBRID TEMPLATE: Just write the message, template handles "Why Businesses Love Us" box, CTA, and signature.
 
 WRITE THIS STRUCTURE:
 
 {{SALUTATION}}
 
-This is my final follow-up about listing your business on Desi Firms.
+Quick reminder about the free business listing opportunity on Desi Firms.
 
-We're building a platform for Australia's 1.6 million South Asian community to discover local businesses like yours. It's completely free with no strings attached.
+📊 **Quick Stats**
+- 1.6 million South Asians in Australia actively looking for local businesses
+- Zero cost, zero commitment - just free visibility for your business
+- Join [X] other businesses already listed
 
-If timing isn't right, I completely understand.
+I know you're busy, but didn't want you to miss this.
 
 ---
 
 CRITICAL RULES:
-- Keep message brief but mention the opportunity
-- DO NOT include signature, CTA, or "door is open" message - template has those
+- Keep the 📊 **Quick Stats** section with compelling numbers
+- Mention it's FREE and emphasize the audience size
+- Be friendly, not pushy
+- DO NOT include signature, CTA, or benefits box - template has those
 - Keep it under 80 words total''',
+
+            'directory_followup_3': '''a CLOSING THE LOOP message for businesses - this is the LAST email before we stop contacting them.
+HYBRID TEMPLATE: Just write a brief message, template handles "save this email" box, CTA, and signature.
+
+WRITE THIS STRUCTURE:
+
+{{SALUTATION}}
+
+Just closing the loop on my previous emails about listing your business on Desi Firms.
+
+I don't want to keep filling your inbox. This is my last message.
+
+If you ever want a FREE listing to reach the 1.6M+ South Asian community in Australia, just reply.
+
+---
+
+CRITICAL RULES:
+- Keep it SHORT (under 60 words)
+- Be respectful, NOT pushy
+- Acknowledge this is the last email
+- Leave door open for future contact
+- DO NOT include signature, CTA, or future contact reminder - template has those''',
 
             # Desi Firms - Events (NEW PLATFORM)
             'event_invitation': '''an INTRO PARAGRAPH ONLY for an events invitation email.
@@ -1037,25 +1064,52 @@ CRITICAL RULES:
 - DO NOT include signature or CTA - template has those
 - Keep it under 100 words total''',
 
-            'events_followup_2': '''a FINAL follow-up message ONLY for event organizers (no signature - template has one).
-HYBRID TEMPLATE: Just write the message, template handles CTA and signature.
+            'events_followup_2': '''a SECOND follow-up / quick reminder message for event organizers (no signature - template has one).
+HYBRID TEMPLATE: Just write the message, template handles "Why Event Organisers Love Us" box, CTA, and signature.
 
 WRITE THIS STRUCTURE:
 
 {{SALUTATION}}
 
-This is my final follow-up about listing your events on Desi Firms.
+Quick reminder about the free event listing opportunity on Desi Firms.
 
-We're building a platform for Australia's 1.6 million South Asian community to discover local events. It's completely free with no strings attached.
+📊 **Quick Stats**
+- 1.6 million South Asians in Australia looking for community events
+- Zero cost - just free promotion for your events
+- Growing second-generation audience in their 20s-40s actively seeking cultural events
 
-If timing isn't right, I completely understand.
+I know you're busy, but didn't want you to miss this.
 
 ---
 
 CRITICAL RULES:
-- Keep message brief but mention the opportunity
-- DO NOT include signature or CTA - template has those
+- Keep the 📊 **Quick Stats** section with compelling numbers
+- Mention it's FREE and emphasize the audience size
+- Be friendly, not pushy
+- DO NOT include signature, CTA, or benefits box - template has those
 - Keep it under 80 words total''',
+
+            'events_followup_3': '''a CLOSING THE LOOP message for event organizers - this is the LAST email before we stop contacting them.
+HYBRID TEMPLATE: Just write a brief message, template handles "save this email" box, CTA, and signature.
+
+WRITE THIS STRUCTURE:
+
+{{SALUTATION}}
+
+Just closing the loop on my previous emails about listing your events on Desi Firms.
+
+I don't want to keep filling your inbox. This is my last message.
+
+If you ever want FREE event promotion to reach 1.6M+ South Asians in Australia, just reply.
+
+---
+
+CRITICAL RULES:
+- Keep it SHORT (under 60 words)
+- Be respectful, NOT pushy
+- Acknowledge this is the last email
+- Leave door open for future contact
+- DO NOT include signature, CTA, or future contact reminder - template has those''',
 
             # Desi Firms - Real Estate (NEW PLATFORM LAUNCHING)
             'agent_invitation': '''an INTRO PARAGRAPH ONLY for a real estate invitation email.
@@ -1109,26 +1163,74 @@ CRITICAL RULES:
 - DO NOT include signature, CTA, or reminder box - template has those
 - Keep it under 100 words total''',
 
-            'agent_followup_2': '''a FINAL follow-up message ONLY for real estate agents (no signature - template has one).
-HYBRID TEMPLATE: Just write the message, template handles "door is open" box, CTA, and signature.
+            'agent_followup_2': '''a SECOND follow-up / quick reminder message for real estate agents (no signature - template has one).
+HYBRID TEMPLATE: Just write the message, template handles "Why Real Estate Agents Love Us" box, CTA, and signature.
 
 WRITE THIS STRUCTURE:
 
 {{SALUTATION}}
 
-This is my final follow-up about joining Desi Firms' real estate section.
+Quick reminder about the free property listing opportunity on Desi Firms.
 
-We're building a platform to connect agents with Australia's 1.6 million South Asian community - a market with no dedicated real estate platform until now. It's completely free with no strings attached.
+📊 **Quick Stats**
+- 1.6 million South Asians in Australia actively looking for properties
+- No dedicated real estate platform for this community - until now
+- Unlimited free listings, direct buyer inquiries
 
-If timing isn't right, I completely understand.
+I know you're busy, but didn't want you to miss being a founding member.
 
 ---
 
 CRITICAL RULES:
-- Keep message brief but mention the opportunity (1.6M community, no dedicated platform)
-- Acknowledge they're busy, respect their time
-- DO NOT include signature, CTA, or "door is open" message - template has those
+- Keep the 📊 **Quick Stats** section with compelling numbers
+- Mention it's FREE and emphasize the audience size (1.6M)
+- Be friendly, not pushy
+- DO NOT include signature, CTA, or benefits box - template has those
 - Keep it under 80 words total''',
+
+            'agent_followup_3': '''a CLOSING THE LOOP message for real estate agents - this is the LAST email before we stop contacting them.
+HYBRID TEMPLATE: Just write a brief message, template handles "save this email" box, CTA, and signature.
+
+WRITE THIS STRUCTURE:
+
+{{SALUTATION}}
+
+Just a quick note to close the loop on my previous emails about Desi Firms.
+
+I know you're busy, and I don't want to keep following up. This will be my last message.
+
+If things change and you'd like to reach 1.6M+ South Asians with your property listings (completely free), just reply to this email.
+
+---
+
+CRITICAL RULES:
+- Keep it SHORT (under 60 words)
+- Be respectful, NOT pushy
+- Acknowledge this is the last email
+- Leave door open for future contact
+- DO NOT include signature, CTA, or future contact reminder - template has those''',
+
+            'realestate_followup_3': '''a CLOSING THE LOOP message for real estate agents - this is the LAST email before we stop contacting them.
+HYBRID TEMPLATE: Just write a brief message, template handles "save this email" box, CTA, and signature.
+
+WRITE THIS STRUCTURE:
+
+{{SALUTATION}}
+
+Just closing the loop on my previous emails about listing properties on Desi Firms.
+
+I don't want to keep filling your inbox. This is my last message.
+
+If you ever want to reach the 1.6M+ South Asian community with your listings (always free), just reply.
+
+---
+
+CRITICAL RULES:
+- Keep it SHORT (under 60 words)
+- Be respectful, NOT pushy
+- Acknowledge this is the last email
+- Leave door open for future contact
+- DO NOT include signature, CTA, or future contact reminder - template has those''',
 
             'agent_responded': '''a thank you email after a real estate agent responds positively.
 Context: They showed interest in listing on Desi Firms.
@@ -1599,9 +1701,12 @@ FOR DESI FIRMS - PRESENT RESEARCH AS A HIGHLIGHT (not false claims):
         hybrid_templates = [
             # Invitations
             'agent_invitation', 'directory_invitation', 'listing_benefits', 'event_invitation',
-            # Follow-ups
-            'agent_followup_1', 'agent_followup_2', 'directory_followup_1', 'directory_followup_2',
-            'invitation_followup', 'events_followup_1', 'events_followup_2',
+            # Follow-ups (1, 2, and 3/Final)
+            'agent_followup_1', 'agent_followup_2', 'agent_followup_3',
+            'directory_followup_1', 'directory_followup_2', 'directory_followup_3',
+            'invitation_followup', 'invitation_followup_3',
+            'events_followup_1', 'events_followup_2', 'events_followup_3',
+            'realestate_followup_3',
             # Responded (thank you emails)
             'agent_responded', 'directory_responded', 'events_responded',
             # Registered/Signedup (welcome emails)

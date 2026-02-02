@@ -41,6 +41,29 @@ def process_pending_deals(self):
     for deal in pending_deals:
         try:
             with transaction.atomic():
+                # Check if this is a "Follow Up 3 (Final)" stage that has expired
+                # If so, automatically move to "Not Interested" without AI analysis
+                stage_name = deal.current_stage.name.lower() if deal.current_stage else ''
+                if 'follow up 3' in stage_name or 'final' in stage_name:
+                    # This is the final follow-up stage - move to Not Interested
+                    not_interested_stage = PipelineStage.objects.filter(
+                        pipeline=deal.pipeline,
+                        name__icontains='not interested'
+                    ).first()
+                    if not_interested_stage:
+                        deal.move_to_stage(not_interested_stage)
+                        deal.status = 'lost'
+                        deal.lost_reason = 'no_response'
+                        deal.save(update_fields=['status', 'lost_reason'])
+                        DealActivity.objects.create(
+                            deal=deal,
+                            activity_type='stage_change',
+                            description=f"Auto-closed: No response after final follow-up"
+                        )
+                        processed += 1
+                        logger.info(f"Deal {deal.id}: Auto-moved to Not Interested after final follow-up")
+                        continue
+
                 # Get AI recommendation
                 result = ai_agent.analyze_deal(deal)
                 action = result.get('action', 'flag_for_review')
@@ -163,10 +186,16 @@ def queue_deal_email(self, deal_id: str, email_type: str = 'followup'):
         subject_map = {
             'agent_invitation': f"Join Desi Firms Real Estate as a Founding Member",
             'agent_followup_1': f"Just checking in - free listing opportunity",
-            'agent_followup_2': f"Final reminder - free real estate listing",
+            'agent_followup_2': f"Quick reminder - free real estate listing",
+            'agent_followup_3': f"Closing the loop - Desi Firms",
+            'realestate_followup_3': f"Closing the loop - Desi Firms",
             'directory_invitation': f"List {recipient_company} on Desi Firms - FREE",
             'directory_followup_1': f"Quick follow-up - free business listing",
-            'directory_followup_2': f"Final reminder - free listing opportunity",
+            'directory_followup_2': f"Quick reminder - free listing opportunity",
+            'directory_followup_3': f"Closing the loop - Desi Firms",
+            'events_followup_1': f"Quick follow-up - free event listing",
+            'events_followup_2': f"Quick reminder - free event listing",
+            'events_followup_3': f"Closing the loop - Desi Firms",
         }
         subject = subject_map.get(template_email_type, 'Following up')
         plain_body = f"(Pre-designed template: {template_email_type})"
