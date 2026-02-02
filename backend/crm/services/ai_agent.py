@@ -981,7 +981,7 @@ CRITICAL RULES:
 - Keep it under 80 words total''',
 
             'directory_followup_3': '''a CLOSING THE LOOP message for businesses - this is the LAST email before we stop contacting them.
-HYBRID TEMPLATE: Just write a brief message, template handles "save this email" box, CTA, and signature.
+HYBRID TEMPLATE: Just write a brief farewell message. Template handles "save this email" box with reply instructions, CTA, and signature.
 
 WRITE THIS STRUCTURE:
 
@@ -989,18 +989,18 @@ WRITE THIS STRUCTURE:
 
 Just closing the loop on my previous emails about listing your business on Desi Firms.
 
-I don't want to keep filling your inbox. This is my last message.
+I don't want to keep filling your inbox. This will be my last message.
 
-If you ever want a FREE listing to reach the 1.6M+ South Asian community in Australia, just reply.
+Wishing you continued success with your business!
 
 ---
 
 CRITICAL RULES:
-- Keep it SHORT (under 60 words)
-- Be respectful, NOT pushy
+- Keep it SHORT (under 50 words)
+- Be respectful and warm
 - Acknowledge this is the last email
-- Leave door open for future contact
-- DO NOT include signature, CTA, or future contact reminder - template has those''',
+- End with a positive wish (NOT "just reply" - template box has that)
+- DO NOT include signature, CTA, or "save this email" message - template has those''',
 
             # Desi Firms - Events (NEW PLATFORM)
             'event_invitation': '''an INTRO PARAGRAPH ONLY for an events invitation email.
@@ -1090,7 +1090,7 @@ CRITICAL RULES:
 - Keep it under 80 words total''',
 
             'events_followup_3': '''a CLOSING THE LOOP message for event organizers - this is the LAST email before we stop contacting them.
-HYBRID TEMPLATE: Just write a brief message, template handles "save this email" box, CTA, and signature.
+HYBRID TEMPLATE: Just write a brief farewell message. Template handles "save this email" box with reply instructions, CTA, and signature.
 
 WRITE THIS STRUCTURE:
 
@@ -1098,18 +1098,18 @@ WRITE THIS STRUCTURE:
 
 Just closing the loop on my previous emails about listing your events on Desi Firms.
 
-I don't want to keep filling your inbox. This is my last message.
+I don't want to keep filling your inbox. This will be my last message.
 
-If you ever want FREE event promotion to reach 1.6M+ South Asians in Australia, just reply.
+Wishing you great success with your upcoming events!
 
 ---
 
 CRITICAL RULES:
-- Keep it SHORT (under 60 words)
-- Be respectful, NOT pushy
+- Keep it SHORT (under 50 words)
+- Be respectful and warm
 - Acknowledge this is the last email
-- Leave door open for future contact
-- DO NOT include signature, CTA, or future contact reminder - template has those''',
+- End with a positive wish (NOT "just reply" - template box has that)
+- DO NOT include signature, CTA, or "save this email" message - template has those''',
 
             # Desi Firms - Real Estate (NEW PLATFORM LAUNCHING)
             'agent_invitation': '''an INTRO PARAGRAPH ONLY for a real estate invitation email.
@@ -1189,29 +1189,29 @@ CRITICAL RULES:
 - Keep it under 80 words total''',
 
             'agent_followup_3': '''a CLOSING THE LOOP message for real estate agents - this is the LAST email before we stop contacting them.
-HYBRID TEMPLATE: Just write a brief message, template handles "save this email" box, CTA, and signature.
+HYBRID TEMPLATE: Just write a brief farewell message. Template handles "save this email" box with reply instructions, CTA, and signature.
 
 WRITE THIS STRUCTURE:
 
 {{SALUTATION}}
 
-Just a quick note to close the loop on my previous emails about Desi Firms.
+Just a quick note to close the loop on my previous emails about listing properties on Desi Firms.
 
-I know you're busy, and I don't want to keep following up. This will be my last message.
+I know you're busy, and I don't want to keep filling your inbox. This will be my last message.
 
-If things change and you'd like to reach 1.6M+ South Asians with your property listings (completely free), just reply to this email.
+Wishing you continued success with your real estate business!
 
 ---
 
 CRITICAL RULES:
-- Keep it SHORT (under 60 words)
-- Be respectful, NOT pushy
+- Keep it SHORT (under 50 words)
+- Be respectful and warm
 - Acknowledge this is the last email
-- Leave door open for future contact
-- DO NOT include signature, CTA, or future contact reminder - template has those''',
+- End with a positive wish (NOT "just reply" - template box has that)
+- DO NOT include signature, CTA, or "save this email" message - template has those''',
 
             'realestate_followup_3': '''a CLOSING THE LOOP message for real estate agents - this is the LAST email before we stop contacting them.
-HYBRID TEMPLATE: Just write a brief message, template handles "save this email" box, CTA, and signature.
+HYBRID TEMPLATE: Just write a brief farewell message. Template handles "save this email" box with reply instructions, CTA, and signature.
 
 WRITE THIS STRUCTURE:
 
@@ -1219,18 +1219,18 @@ WRITE THIS STRUCTURE:
 
 Just closing the loop on my previous emails about listing properties on Desi Firms.
 
-I don't want to keep filling your inbox. This is my last message.
+I don't want to keep filling your inbox. This will be my last message.
 
-If you ever want to reach the 1.6M+ South Asian community with your listings (always free), just reply.
+Wishing you continued success with your real estate business!
 
 ---
 
 CRITICAL RULES:
-- Keep it SHORT (under 60 words)
-- Be respectful, NOT pushy
+- Keep it SHORT (under 50 words)
+- Be respectful and warm
 - Acknowledge this is the last email
-- Leave door open for future contact
-- DO NOT include signature, CTA, or future contact reminder - template has those''',
+- End with a positive wish (NOT "just reply" - template box has that)
+- DO NOT include signature, CTA, or "save this email" message - template has those''',
 
             'agent_responded': '''a thank you email after a real estate agent responds positively.
 Context: They showed interest in listing on Desi Firms.
