@@ -98,12 +98,15 @@ class Command(BaseCommand):
         if not stages:
             return None
         
-        # If deal is won, find "Won" or "Converted" stage
+        # If deal is won, find appropriate success stage
         if deal.status == 'won':
             for stage in stages:
-                if any(word in stage.name.lower() for word in ['won', 'converted', 'closed won', 'success']):
+                if any(word in stage.name.lower() for word in ['won', 'converted', 'registered', 'signed up', 'listed', 'listing']):
                     return stage
-            # Default to last stage
+            # Default to last non-terminal stage before "Not Interested"
+            for stage in reversed(stages):
+                if 'not interested' not in stage.name.lower():
+                    return stage
             return stages[-1]
         
         # If deal is lost, find "Lost" or "Not Interested" stage
