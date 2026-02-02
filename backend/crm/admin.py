@@ -787,6 +787,55 @@ class DealAdmin(ModelAdmin):
                     deal.move_to_stage(next_stage)
         self.message_user(request, f"Moved {queryset.count()} deals to next stage.")
 
+    @action(description="🏆 Mark as Won (stops all automation)")
+    def mark_as_won(self, request, queryset):
+        """Mark deals as won - for contacts who registered/converted. Stops all automation."""
+        from django.contrib import messages
+
+        won_count = 0
+        for deal in queryset:
+            if deal.status != 'won':
+                deal.status = 'won'
+                deal.save(update_fields=['status', 'updated_at'])
+
+                # Log the activity
+                DealActivity.objects.create(
+                    deal=deal,
+                    activity_type='status_change',
+                    description=f"Marked as Won - contact converted/registered"
+                )
+                won_count += 1
+
+        if won_count > 0:
+            self.message_user(request, f"🏆 Marked {won_count} deal(s) as Won! All automation stopped for these deals.", messages.SUCCESS)
+        else:
+            self.message_user(request, "No deals were updated (they may already be won).", messages.WARNING)
+
+    @action(description="❌ Mark as Lost")
+    def mark_as_lost(self, request, queryset):
+        """Mark deals as lost - for contacts who declined or are not interested."""
+        from django.contrib import messages
+
+        lost_count = 0
+        for deal in queryset:
+            if deal.status not in ['won', 'lost']:
+                deal.status = 'lost'
+                deal.lost_reason = 'not_interested'
+                deal.save(update_fields=['status', 'lost_reason', 'updated_at'])
+
+                # Log the activity
+                DealActivity.objects.create(
+                    deal=deal,
+                    activity_type='status_change',
+                    description=f"Marked as Lost - not interested"
+                )
+                lost_count += 1
+
+        if lost_count > 0:
+            self.message_user(request, f"❌ Marked {lost_count} deal(s) as Lost. They won't receive further emails.", messages.SUCCESS)
+        else:
+            self.message_user(request, "No deals were updated (they may already be won/lost).", messages.WARNING)
+
     @action(description="📧 Preview AI Email (select 1 deal)")
     def preview_email(self, request, queryset):
         """Generate and show AI email draft without sending. Select only 1 deal for full preview."""
@@ -1182,7 +1231,7 @@ class DealAdmin(ModelAdmin):
         updated = queryset.filter(status='paused').update(status='active', next_action_date=timezone.now())
         self.message_user(request, f"▶️ Resumed {updated} deal(s). They will be processed in next cycle.")
 
-    actions = ['move_to_next_stage', 'preview_email', 'generate_drafts', 'send_email_now', 'pause_deals', 'resume_deals']
+    actions = ['mark_as_won', 'mark_as_lost', 'move_to_next_stage', 'preview_email', 'generate_drafts', 'send_email_now', 'pause_deals', 'resume_deals']
 
 
 # =============================================================================
