@@ -942,16 +942,16 @@ WRITE THIS STRUCTURE:
 Quick follow-up on our invitation to list your business on Desi Firms. I know you're busy, so I'll keep this brief.
 
 📊 **The Opportunity**
-Australia's 1.6 million South Asians have no dedicated platform to discover local businesses - we're building that. With a growing second-generation community now in their 20s-40s, there's real demand.
+Our research shows 1.6 million South Asians live in Australia with no dedicated business directory - we're building that. With a growing second-generation community now in their 20s-40s, there's real demand.
 
-As a founding member, you'd be among the first businesses featured - completely free.
+As a founding member, you'd be among the first businesses featured on the platform.
 
 ---
 
 CRITICAL RULES:
 - Keep the 📊 **The Opportunity** section VISIBLE
 - Acknowledge they're busy, be respectful
-- Emphasize FREE listing, founding member status
+- Don't promise "free" - focus on the opportunity
 - DO NOT include signature, CTA, or benefits list - template has those
 - Keep it under 100 words total''',
 
@@ -1150,16 +1150,16 @@ WRITE THIS STRUCTURE:
 Quick follow-up on our invitation to join Desi Firms' real estate section. I know you're busy, so I'll keep this brief.
 
 📊 **The Opportunity**
-Australia's 1.6 million South Asians have no dedicated real estate platform - and 200,000+ second-generation members are now entering the property market. We built this to fill that gap.
+Our research shows 1.6 million South Asians live in Australia with no dedicated property platform - and a growing second-generation is now entering the property market. We built this to fill that gap.
 
-As a founding member, you'd be among the first agents to connect with this underserved community - completely free.
+As a founding member, you'd be among the first agents to connect with this community.
 
 ---
 
 CRITICAL RULES:
 - Keep the 📊 **The Opportunity** section VISIBLE (not buried)
 - Acknowledge they're busy, be respectful of their time
-- Emphasize FREE listing, founding member status
+- Don't promise "free" - focus on the opportunity
 - DO NOT include signature, CTA, or reminder box - template has those
 - Keep it under 100 words total''',
 
