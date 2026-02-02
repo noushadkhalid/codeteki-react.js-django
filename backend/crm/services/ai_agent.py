@@ -956,26 +956,26 @@ CRITICAL RULES:
 - Keep it under 100 words total''',
 
             'directory_followup_2': '''a SECOND follow-up / quick reminder message for business directory (no signature - template has one).
-HYBRID TEMPLATE: Just write the message, template handles "Why Businesses Love Us" box, CTA, and signature.
+HYBRID TEMPLATE: Just write the message, template handles benefits box, CTA, and signature.
 
 WRITE THIS STRUCTURE:
 
 {{SALUTATION}}
 
-Quick reminder about the free business listing opportunity on Desi Firms.
+Quick reminder about listing your business on Desi Firms.
 
-📊 **Quick Stats**
-- 1.6 million South Asians in Australia actively looking for local businesses
-- Zero cost, zero commitment - just free visibility for your business
-- Join [X] other businesses already listed
+📊 **Why Desi Firms?**
+- Australia's South Asian community platform - a growing market
+- Get discovered by customers looking for local businesses
+- Direct inquiries from interested customers
 
-I know you're busy, but didn't want you to miss this.
+I know you're busy, but didn't want you to miss this opportunity.
 
 ---
 
 CRITICAL RULES:
-- Keep the 📊 **Quick Stats** section with compelling numbers
-- Mention it's FREE and emphasize the audience size
+- Keep the 📊 section factual (don't claim "1.6M actively looking")
+- Don't promise "free" - just mention the opportunity
 - Be friendly, not pushy
 - DO NOT include signature, CTA, or benefits box - template has those
 - Keep it under 80 words total''',
@@ -1065,26 +1065,26 @@ CRITICAL RULES:
 - Keep it under 100 words total''',
 
             'events_followup_2': '''a SECOND follow-up / quick reminder message for event organizers (no signature - template has one).
-HYBRID TEMPLATE: Just write the message, template handles "Why Event Organisers Love Us" box, CTA, and signature.
+HYBRID TEMPLATE: Just write the message, template handles benefits box, CTA, and signature.
 
 WRITE THIS STRUCTURE:
 
 {{SALUTATION}}
 
-Quick reminder about the free event listing opportunity on Desi Firms.
+Quick reminder about listing your events on Desi Firms.
 
-📊 **Quick Stats**
-- 1.6 million South Asians in Australia looking for community events
-- Zero cost - just free promotion for your events
-- Growing second-generation audience in their 20s-40s actively seeking cultural events
+📊 **Why Desi Firms?**
+- Australia's South Asian community platform - a growing market
+- Connect with people looking for community and cultural events
+- Direct inquiries from interested attendees
 
-I know you're busy, but didn't want you to miss this.
+I know you're busy, but didn't want you to miss this opportunity.
 
 ---
 
 CRITICAL RULES:
-- Keep the 📊 **Quick Stats** section with compelling numbers
-- Mention it's FREE and emphasize the audience size
+- Keep the 📊 section factual (don't claim "1.6M looking for events")
+- Don't promise "free" - just mention the opportunity
 - Be friendly, not pushy
 - DO NOT include signature, CTA, or benefits box - template has those
 - Keep it under 80 words total''',
@@ -1164,26 +1164,26 @@ CRITICAL RULES:
 - Keep it under 100 words total''',
 
             'agent_followup_2': '''a SECOND follow-up / quick reminder message for real estate agents (no signature - template has one).
-HYBRID TEMPLATE: Just write the message, template handles "Why Real Estate Agents Love Us" box, CTA, and signature.
+HYBRID TEMPLATE: Just write the message, template handles benefits box, CTA, and signature.
 
 WRITE THIS STRUCTURE:
 
 {{SALUTATION}}
 
-Quick reminder about the free property listing opportunity on Desi Firms.
+Quick reminder about listing your properties on Desi Firms.
 
-📊 **Quick Stats**
-- 1.6 million South Asians in Australia actively looking for properties
-- No dedicated real estate platform for this community - until now
-- Unlimited free listings, direct buyer inquiries
+📊 **Why Desi Firms?**
+- Australia's South Asian community platform - a growing market
+- No dedicated property platform for this community until now
+- Direct inquiries from interested buyers
 
 I know you're busy, but didn't want you to miss being a founding member.
 
 ---
 
 CRITICAL RULES:
-- Keep the 📊 **Quick Stats** section with compelling numbers
-- Mention it's FREE and emphasize the audience size (1.6M)
+- Keep the 📊 section factual (don't claim "1.6M actively looking for properties")
+- Don't promise "free" or "unlimited" - just mention the opportunity
 - Be friendly, not pushy
 - DO NOT include signature, CTA, or benefits box - template has those
 - Keep it under 80 words total''',
