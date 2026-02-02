@@ -1053,14 +1053,14 @@ Quick follow-up on our invitation to list your events on Desi Firms. I know you'
 📊 **The Opportunity**
 Australia's 1.6 million South Asians have no dedicated platform to discover community events - we're building that. With a growing second-generation now in their 20s-40s, there's real demand for cultural and community events.
 
-As a founding event partner, your events would be featured to this engaged community - completely free.
+As a founding event partner, you'd be among the first to connect with this community.
 
 ---
 
 CRITICAL RULES:
 - Keep the 📊 **The Opportunity** section VISIBLE
 - Acknowledge they're busy, be respectful
-- Emphasize FREE event listings, founding partner status
+- Don't promise "free" - focus on the founding partner opportunity
 - DO NOT include signature or CTA - template has those
 - Keep it under 100 words total''',
 

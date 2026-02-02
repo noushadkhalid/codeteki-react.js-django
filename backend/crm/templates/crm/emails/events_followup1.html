@@ -1,7 +1,7 @@
 {% extends "crm/emails/base_desifirms.html" %}
 
 {% block title %}Quick Follow-Up | Desi Firms{% endblock %}
-{% block preheader %}{{ recipient_name }}, reminder about your free event listing{% endblock %}
+{% block preheader %}{{ recipient_name }}, quick follow-up about listing on Desi Firms{% endblock %}
 {% block subtitle %}Events{% endblock %}
 
 {% block content %}
@@ -19,30 +19,18 @@
             Quick Follow-Up
         </h1>
 
-        <!-- Greeting -->
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            Hi {{ recipient_name }},
-        </p>
-
-        <!-- Message -->
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            I wanted to follow up on my previous email about listing <strong>{{ recipient_company }}</strong>'s events on Desi Firms.
-        </p>
-
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
-            We're building a vibrant events hub for the South Asian community in Australia, and early partners like you will always have <strong>founding member</strong> status.
-        </p>
+        <!-- AI-Generated Follow-up Message -->
+        <div style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
+            {{ body_html|safe }}
+        </div>
 
         <!-- Reminder Box -->
         <div style="background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%); border: 1px solid #f9a8d4; border-radius: 12px; padding: 20px; margin: 0 0 25px 0;">
             <p style="color: #9d174d; font-size: 14px; font-weight: 600; margin: 0 0 10px 0;">
-                🎉 What You Get (100% Free)
+                🎉 Why Desi Firms?
             </p>
             <p style="color: #9d174d; font-size: 14px; line-height: 1.6; margin: 0;">
-                ✓ Unlimited event listings<br>
-                ✓ Featured in our events calendar<br>
-                ✓ Direct enquiries from attendees<br>
-                ✓ No fees, no catches - forever free
+                Our research shows 1.6M South Asians live in Australia with no dedicated events platform - until now. Be among the first event organisers to connect with this community.
             </p>
         </div>
 
@@ -50,7 +38,7 @@
         <div style="text-align: center; margin: 25px 0;">
             <a href="https://www.desifirms.com.au/api/register/?next=%2F"
                style="display: inline-block; background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); color: #ffffff; text-decoration: none; padding: 14px 35px; border-radius: 10px; font-weight: 600; font-size: 15px;">
-                Start Listing Events →
+                Get Started →
             </a>
         </div>
 
