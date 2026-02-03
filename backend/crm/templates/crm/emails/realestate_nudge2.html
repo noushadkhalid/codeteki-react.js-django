@@ -1,7 +1,7 @@
 {% extends "crm/emails/base_desifirms.html" %}
 
-{% block title %}Ready to List Properties? | Desi Firms{% endblock %}
-{% block preheader %}{{ recipient_name }}, buyers are searching - don't miss out on free exposure{% endblock %}
+{% block title %}Quick Question About Your Setup | Desi Firms{% endblock %}
+{% block preheader %}{{ recipient_name }}, anything blocking you from listing your first property?{% endblock %}
 {% block subtitle %}Real Estate{% endblock %}
 
 {% block content %}
@@ -19,7 +19,7 @@
             Quick Check-In
         </h1>
         <p style="color: #d97706; font-size: 16px; font-weight: 600; text-align: center; margin: 0 0 30px 0;">
-            Your account is ready - just need your agent details
+            Is anything blocking your setup?
         </p>
 
         <!-- Dynamic Body Content OR Default Message -->
@@ -33,82 +33,74 @@
         </p>
 
         <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            I noticed you signed up for Desi Firms but haven't completed your agent registration yet. Is there anything I can help with?
+            Just following up - I noticed you haven't had a chance to complete your agency setup yet.
         </p>
 
         <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
-            The registration only takes a few minutes, and once approved, you can start listing properties right away.
+            If you're facing any issues or have questions about the registration process, I'm here to help. Sometimes agents get stuck on things like agency details or license verification - happy to walk you through it.
         </p>
         {% endif %}
 
-        <!-- Quick Steps Box -->
+        <!-- Common Questions Box -->
         <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 16px; padding: 24px; margin: 0 0 30px 0; border: 1px solid #f59e0b;">
-            <h3 style="color: #92400e; font-size: 15px; font-weight: 700; margin: 0 0 16px 0; text-transform: uppercase; letter-spacing: 1px; text-align: center;">
-                📋 Quick Registration Steps
+            <h3 style="color: #92400e; font-size: 15px; font-weight: 700; margin: 0 0 16px 0; text-align: center;">
+                💬 Common Questions I Can Help With
             </h3>
             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                 <tr>
-                    <td style="padding: 8px 0; vertical-align: top; width: 30px;">
-                        <div style="width: 24px; height: 24px; background: #d97706; border-radius: 50%; text-align: center; line-height: 24px; color: white; font-size: 12px; font-weight: 700;">1</div>
+                    <td style="padding: 8px 0; vertical-align: top; width: 24px;">
+                        <span style="color: #d97706; font-size: 14px;">•</span>
                     </td>
-                    <td style="padding: 8px 0 8px 10px;">
-                        <span style="color: #78350f; font-size: 14px;">Log into your account</span>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="padding: 8px 0; vertical-align: top; width: 30px;">
-                        <div style="width: 24px; height: 24px; background: #d97706; border-radius: 50%; text-align: center; line-height: 24px; color: white; font-size: 12px; font-weight: 700;">2</div>
-                    </td>
-                    <td style="padding: 8px 0 8px 10px;">
-                        <span style="color: #78350f; font-size: 14px;">Go to Real Estate → Register as Agent</span>
+                    <td style="padding: 8px 0 8px 8px;">
+                        <span style="color: #78350f; font-size: 14px;">"What agency details do I need to provide?"</span>
                     </td>
                 </tr>
                 <tr>
-                    <td style="padding: 8px 0; vertical-align: top; width: 30px;">
-                        <div style="width: 24px; height: 24px; background: #d97706; border-radius: 50%; text-align: center; line-height: 24px; color: white; font-size: 12px; font-weight: 700;">3</div>
+                    <td style="padding: 8px 0; vertical-align: top; width: 24px;">
+                        <span style="color: #d97706; font-size: 14px;">•</span>
                     </td>
-                    <td style="padding: 8px 0 8px 10px;">
-                        <span style="color: #78350f; font-size: 14px;">Add your details (license, agency info)</span>
-                    </td>
-                </tr>
-                <tr>
-                    <td style="padding: 8px 0; vertical-align: top; width: 30px;">
-                        <div style="width: 24px; height: 24px; background: #d97706; border-radius: 50%; text-align: center; line-height: 24px; color: white; font-size: 12px; font-weight: 700;">4</div>
-                    </td>
-                    <td style="padding: 8px 0 8px 10px;">
-                        <span style="color: #78350f; font-size: 14px;">Submit for approval (12-24 hours)</span>
+                    <td style="padding: 8px 0 8px 8px;">
+                        <span style="color: #78350f; font-size: 14px;">"How do I add my first property listing?"</span>
                     </td>
                 </tr>
                 <tr>
-                    <td style="padding: 8px 0; vertical-align: top; width: 30px;">
-                        <div style="width: 24px; height: 24px; background: #22c55e; border-radius: 50%; text-align: center; line-height: 24px; color: white; font-size: 12px; font-weight: 700;">✓</div>
+                    <td style="padding: 8px 0; vertical-align: top; width: 24px;">
+                        <span style="color: #d97706; font-size: 14px;">•</span>
                     </td>
-                    <td style="padding: 8px 0 8px 10px;">
-                        <span style="color: #78350f; font-size: 14px; font-weight: 600;">Start listing properties!</span>
+                    <td style="padding: 8px 0 8px 8px;">
+                        <span style="color: #78350f; font-size: 14px;">"What info shows on my public agent profile?"</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; vertical-align: top; width: 24px;">
+                        <span style="color: #d97706; font-size: 14px;">•</span>
+                    </td>
+                    <td style="padding: 8px 0 8px 8px;">
+                        <span style="color: #78350f; font-size: 14px;">"How do enquiries from buyers work?"</span>
                     </td>
                 </tr>
             </table>
         </div>
 
-        <!-- Why Now Box -->
-        <div style="background: #f9fafb; border-radius: 12px; padding: 20px; margin: 0 0 30px 0; border: 1px solid #e5e7eb; text-align: center;">
-            <span style="font-size: 28px;">💡</span>
-            <p style="color: #374151; font-size: 15px; line-height: 1.6; margin: 10px 0 0 0;">
-                <strong>Did you know?</strong><br>
-                Agents who register early get featured on our homepage carousel!
+        <!-- Personal Offer -->
+        <div style="background: #f0f9ff; border-radius: 12px; padding: 20px; margin: 0 0 30px 0; border: 1px solid #bae6fd; text-align: center;">
+            <span style="font-size: 28px;">📞</span>
+            <p style="color: #0369a1; font-size: 15px; line-height: 1.6; margin: 10px 0 0 0; font-weight: 500;">
+                Want me to walk you through it?<br>
+                <span style="color: #374151; font-weight: 400;">Call or WhatsApp me at <strong>0424 538 777</strong></span>
             </p>
         </div>
 
         <!-- CTA Button -->
         <div style="text-align: center; margin: 30px 0;">
-            <a href="https://www.desifirms.com.au/real-estate/register"
+            <a href="https://www.desifirms.com.au/dashboard"
                style="display: inline-block; background: linear-gradient(135deg, #0093E9 0%, #80D0C7 100%); color: #ffffff; text-decoration: none; padding: 18px 48px; border-radius: 12px; font-weight: 700; font-size: 17px; box-shadow: 0 8px 25px rgba(0, 147, 233, 0.35); letter-spacing: 0.5px;">
-                Complete Registration →
+                Complete Setup →
             </a>
         </div>
 
         <p style="color: #9ca3af; font-size: 13px; text-align: center; margin: 20px 0 0 0;">
-            Questions? Just reply - I'm here to help!
+            Or just reply to this email with any questions!
         </p>
 
         <!-- Signature -->
