@@ -1,7 +1,7 @@
 {% extends "crm/emails/base_desifirms.html" %}
 
 {% block title %}Quick Question About Your Setup | Desi Firms{% endblock %}
-{% block preheader %}{{ recipient_name }}, anything blocking you from listing your first property?{% endblock %}
+{% block preheader %}{{ recipient_name }}, is anything blocking your real estate setup? I'm here to help.{% endblock %}
 {% block subtitle %}Real Estate{% endblock %}
 
 {% block content %}
@@ -33,16 +33,16 @@
         </p>
 
         <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            Just following up - I noticed you haven't had a chance to complete your agency setup yet.
+            Just following up - I noticed you haven't had a chance to complete your real estate registration yet.
         </p>
 
         <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
-            If you're facing any issues or have questions about the registration process, I'm here to help. Sometimes agents get stuck on things like agency details or license verification - happy to walk you through it.
+            If you're facing any issues or have questions, I'm here to help. Many agents have questions about the verification process - happy to walk you through it.
         </p>
         {% endif %}
 
         <!-- Common Questions Box -->
-        <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 16px; padding: 24px; margin: 0 0 30px 0; border: 1px solid #f59e0b;">
+        <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 16px; padding: 24px; margin: 0 0 25px 0; border: 1px solid #f59e0b;">
             <h3 style="color: #92400e; font-size: 15px; font-weight: 700; margin: 0 0 16px 0; text-align: center;">
                 💬 Common Questions I Can Help With
             </h3>
@@ -52,7 +52,7 @@
                         <span style="color: #d97706; font-size: 14px;">•</span>
                     </td>
                     <td style="padding: 8px 0 8px 8px;">
-                        <span style="color: #78350f; font-size: 14px;">"What agency details do I need to provide?"</span>
+                        <span style="color: #78350f; font-size: 14px;">"What license details do I need to provide?"</span>
                     </td>
                 </tr>
                 <tr>
@@ -60,7 +60,7 @@
                         <span style="color: #d97706; font-size: 14px;">•</span>
                     </td>
                     <td style="padding: 8px 0 8px 8px;">
-                        <span style="color: #78350f; font-size: 14px;">"How do I add my first property listing?"</span>
+                        <span style="color: #78350f; font-size: 14px;">"Should I register as an agent or agency?"</span>
                     </td>
                 </tr>
                 <tr>
@@ -68,7 +68,7 @@
                         <span style="color: #d97706; font-size: 14px;">•</span>
                     </td>
                     <td style="padding: 8px 0 8px 8px;">
-                        <span style="color: #78350f; font-size: 14px;">"What info shows on my public agent profile?"</span>
+                        <span style="color: #78350f; font-size: 14px;">"How do I add my team members later?"</span>
                     </td>
                 </tr>
                 <tr>
@@ -76,14 +76,53 @@
                         <span style="color: #d97706; font-size: 14px;">•</span>
                     </td>
                     <td style="padding: 8px 0 8px 8px;">
-                        <span style="color: #78350f; font-size: 14px;">"How do enquiries from buyers work?"</span>
+                        <span style="color: #78350f; font-size: 14px;">"How long does verification take?"</span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Quick Steps -->
+        <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin: 0 0 25px 0; border: 1px solid #e2e8f0;">
+            <h4 style="color: #1e293b; font-size: 14px; font-weight: 600; margin: 0 0 12px 0;">📋 Quick Steps to Get Started:</h4>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td style="padding: 6px 0; vertical-align: top; width: 24px;">
+                        <div style="width: 20px; height: 20px; background: #0093E9; border-radius: 50%; text-align: center; line-height: 20px; color: white; font-size: 11px; font-weight: 700;">1</div>
+                    </td>
+                    <td style="padding: 6px 0 6px 10px;">
+                        <span style="color: #374151; font-size: 13px;">Log into your Desi Firms account</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; vertical-align: top; width: 24px;">
+                        <div style="width: 20px; height: 20px; background: #0093E9; border-radius: 50%; text-align: center; line-height: 20px; color: white; font-size: 11px; font-weight: 700;">2</div>
+                    </td>
+                    <td style="padding: 6px 0 6px 10px;">
+                        <span style="color: #374151; font-size: 13px;">Go to Real Estate → Choose Agent or Agency</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; vertical-align: top; width: 24px;">
+                        <div style="width: 20px; height: 20px; background: #0093E9; border-radius: 50%; text-align: center; line-height: 20px; color: white; font-size: 11px; font-weight: 700;">3</div>
+                    </td>
+                    <td style="padding: 6px 0 6px 10px;">
+                        <span style="color: #374151; font-size: 13px;">Add your license details for verification</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 6px 0; vertical-align: top; width: 24px;">
+                        <div style="width: 20px; height: 20px; background: #22c55e; border-radius: 50%; text-align: center; line-height: 20px; color: white; font-size: 11px;">✓</div>
+                    </td>
+                    <td style="padding: 6px 0 6px 10px;">
+                        <span style="color: #374151; font-size: 13px; font-weight: 500;">Start listing properties!</span>
                     </td>
                 </tr>
             </table>
         </div>
 
         <!-- Personal Offer -->
-        <div style="background: #f0f9ff; border-radius: 12px; padding: 20px; margin: 0 0 30px 0; border: 1px solid #bae6fd; text-align: center;">
+        <div style="background: #f0f9ff; border-radius: 12px; padding: 20px; margin: 0 0 25px 0; border: 1px solid #bae6fd; text-align: center;">
             <span style="font-size: 28px;">📞</span>
             <p style="color: #0369a1; font-size: 15px; line-height: 1.6; margin: 10px 0 0 0; font-weight: 500;">
                 Want me to walk you through it?<br>
@@ -93,9 +132,9 @@
 
         <!-- CTA Button -->
         <div style="text-align: center; margin: 30px 0;">
-            <a href="https://www.desifirms.com.au/dashboard"
+            <a href="https://www.desifirms.com.au/real-estate/register"
                style="display: inline-block; background: linear-gradient(135deg, #0093E9 0%, #80D0C7 100%); color: #ffffff; text-decoration: none; padding: 18px 48px; border-radius: 12px; font-weight: 700; font-size: 17px; box-shadow: 0 8px 25px rgba(0, 147, 233, 0.35); letter-spacing: 0.5px;">
-                Complete Setup →
+                Complete Setup Now →
             </a>
         </div>
 

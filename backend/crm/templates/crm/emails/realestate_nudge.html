@@ -1,7 +1,7 @@
 {% extends "crm/emails/base_desifirms.html" %}
 
-{% block title %}Need Help Setting Up Your Agency? | Desi Firms{% endblock %}
-{% block preheader %}{{ recipient_name }}, your Founding Member spot is waiting - let's get your agency live!{% endblock %}
+{% block title %}Complete Your Real Estate Setup | Desi Firms{% endblock %}
+{% block preheader %}{{ recipient_name }}, your Founding Member spot is waiting - unlock your agent dashboard!{% endblock %}
 {% block subtitle %}Real Estate{% endblock %}
 
 {% block content %}
@@ -16,10 +16,10 @@
 
         <!-- Heading -->
         <h1 style="color: #1f2937; font-size: 26px; font-weight: 700; text-align: center; margin: 0 0 10px 0;">
-            Need Help Getting Started?
+            One More Step to Get Started!
         </h1>
         <p style="color: #0093E9; font-size: 16px; font-weight: 600; text-align: center; margin: 0 0 30px 0;">
-            Your Founding Member Spot is Reserved 🎖️
+            Complete Your Real Estate Registration 🎖️
         </p>
 
         <!-- Dynamic Body Content OR Default Message -->
@@ -33,94 +33,118 @@
         </p>
 
         <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            I noticed you signed up for Desi Firms - welcome aboard! 🎉
+            Great news - your Desi Firms account is active! 🎉
         </p>
 
         <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
-            I wanted to check in and see if you need any help setting up your agency profile. Many agents have questions about the registration process, so I'm here to help if you're stuck anywhere.
+            To start listing properties and receiving enquiries, you just need to complete your <strong>Real Estate registration</strong>. This unlocks your full agent dashboard with all the tools you need.
         </p>
         {% endif %}
 
-        <!-- What's Next Box -->
-        <div style="background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-radius: 16px; padding: 28px; margin: 0 0 30px 0; border: 1px solid #7dd3fc;">
-            <h3 style="color: #0369a1; font-size: 15px; font-weight: 700; margin: 0 0 20px 0; text-transform: uppercase; letter-spacing: 1px; text-align: center;">
-                🚀 Quick Setup Checklist
+        <!-- Why We Built This -->
+        <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 16px; padding: 24px; margin: 0 0 25px 0; border: 1px solid #86efac;">
+            <h3 style="color: #166534; font-size: 15px; font-weight: 700; margin: 0 0 12px 0;">
+                📊 Why We Built This
+            </h3>
+            <p style="color: #374151; font-size: 14px; line-height: 1.7; margin: 0;">
+                Australia's <strong>1.6 million-strong South Asian community</strong> - with a growing second generation now in their 20s-40s - had no dedicated platform to find trusted local agents. We're building that bridge.
+            </p>
+            <p style="color: #166534; font-size: 14px; font-weight: 600; margin: 12px 0 0 0;">
+                As a founding member, you'll be part of something new from day one.
+            </p>
+        </div>
+
+        <!-- Two Paths Box -->
+        <div style="background: #f8fafc; border-radius: 16px; padding: 24px; margin: 0 0 25px 0; border: 1px solid #e2e8f0;">
+            <h3 style="color: #1e293b; font-size: 15px; font-weight: 700; margin: 0 0 16px 0; text-align: center;">
+                🚀 Choose Your Path
             </h3>
             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                 <tr>
-                    <td style="padding: 10px 0; vertical-align: top; width: 40px;">
-                        <div style="width: 32px; height: 32px; background: #22c55e; border-radius: 8px; text-align: center; line-height: 32px;">
-                            <span style="font-size: 16px;">✓</span>
+                    <td style="width: 48%; vertical-align: top; padding-right: 8px;">
+                        <div style="background: white; border-radius: 12px; padding: 16px; border: 2px solid #0093E9; height: 100%;">
+                            <div style="font-weight: 700; color: #0093E9; font-size: 14px; margin-bottom: 10px;">👤 Individual Agent</div>
+                            <ul style="color: #4b5563; font-size: 12px; line-height: 1.6; margin: 0; padding-left: 16px;">
+                                <li>List properties for sale or rent</li>
+                                <li>Receive direct buyer enquiries</li>
+                                <li>Build your professional profile</li>
+                            </ul>
                         </div>
                     </td>
-                    <td style="padding: 10px 0 10px 12px; vertical-align: middle;">
-                        <span style="color: #1f2937; font-size: 15px; font-weight: 600; text-decoration: line-through; opacity: 0.6;">Create Account</span><br>
-                        <span style="color: #22c55e; font-size: 13px; font-weight: 500;">Done! You're a Founding Member</span>
+                    <td style="width: 48%; vertical-align: top; padding-left: 8px;">
+                        <div style="background: white; border-radius: 12px; padding: 16px; border: 2px solid #8b5cf6; height: 100%;">
+                            <div style="font-weight: 700; color: #8b5cf6; font-size: 14px; margin-bottom: 10px;">🏢 Agency Owner</div>
+                            <ul style="color: #4b5563; font-size: 12px; line-height: 1.6; margin: 0; padding-left: 16px;">
+                                <li>Add multiple agent accounts</li>
+                                <li>Team lead management</li>
+                                <li>Agency branding & profile</li>
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+            <p style="color: #64748b; font-size: 11px; text-align: center; margin: 12px 0 0 0;">
+                🔒 License verification required (1-2 business days)
+            </p>
+        </div>
+
+        <!-- Dashboard Preview -->
+        <div style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); border-radius: 16px; padding: 24px; margin: 0 0 25px 0;">
+            <h3 style="color: white; font-size: 15px; font-weight: 700; margin: 0 0 16px 0; text-align: center;">
+                🎯 Your Dashboard Will Include
+            </h3>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                    <td style="width: 50%; padding: 6px 8px 6px 0;">
+                        <span style="color: #80D0C7; font-size: 13px;">📋 My Properties</span>
+                    </td>
+                    <td style="width: 50%; padding: 6px 0 6px 8px;">
+                        <span style="color: #80D0C7; font-size: 13px;">➕ Add Property</span>
                     </td>
                 </tr>
                 <tr>
-                    <td style="padding: 10px 0; vertical-align: top; width: 40px;">
-                        <div style="width: 32px; height: 32px; background: #0284c7; border-radius: 8px; text-align: center; line-height: 32px;">
-                            <span style="font-size: 16px;">👤</span>
-                        </div>
+                    <td style="padding: 6px 8px 6px 0;">
+                        <span style="color: #80D0C7; font-size: 13px;">📩 Enquiries & Leads</span>
                     </td>
-                    <td style="padding: 10px 0 10px 12px; vertical-align: middle;">
-                        <span style="color: #1f2937; font-size: 15px; font-weight: 600;">Complete Your Profile</span><br>
-                        <span style="color: #6b7280; font-size: 13px;">Add your photo and bio</span>
+                    <td style="padding: 6px 0 6px 8px;">
+                        <span style="color: #80D0C7; font-size: 13px;">👤 Agent Profile</span>
                     </td>
                 </tr>
                 <tr>
-                    <td style="padding: 10px 0; vertical-align: top; width: 40px;">
-                        <div style="width: 32px; height: 32px; background: #0284c7; border-radius: 8px; text-align: center; line-height: 32px;">
-                            <span style="font-size: 16px;">🏢</span>
-                        </div>
+                    <td style="padding: 6px 8px 6px 0;">
+                        <span style="color: #80D0C7; font-size: 13px;">🎨 Custom Branding</span>
                     </td>
-                    <td style="padding: 10px 0 10px 12px; vertical-align: middle;">
-                        <span style="color: #1f2937; font-size: 15px; font-weight: 600;">Add Agency Details</span><br>
-                        <span style="color: #6b7280; font-size: 13px;">Logo, description, and contact info</span>
+                    <td style="padding: 6px 0 6px 8px;">
+                        <span style="color: #80D0C7; font-size: 13px;">👥 Team Invitations</span>
                     </td>
                 </tr>
                 <tr>
-                    <td style="padding: 10px 0; vertical-align: top; width: 40px;">
-                        <div style="width: 32px; height: 32px; background: #0284c7; border-radius: 8px; text-align: center; line-height: 32px;">
-                            <span style="font-size: 16px;">🏡</span>
-                        </div>
+                    <td style="padding: 6px 8px 6px 0;">
+                        <span style="color: #80D0C7; font-size: 13px;">📊 Agency Dashboard</span>
                     </td>
-                    <td style="padding: 10px 0 10px 12px; vertical-align: middle;">
-                        <span style="color: #1f2937; font-size: 15px; font-weight: 600;">List Your First Property</span><br>
-                        <span style="color: #6b7280; font-size: 13px;">Takes less than 5 minutes!</span>
+                    <td style="padding: 6px 0 6px 8px;">
+                        <span style="color: #80D0C7; font-size: 13px;">🔗 CRM & API Access</span>
                     </td>
                 </tr>
             </table>
         </div>
 
-        <!-- Benefits Reminder -->
-        <div style="background: #f9fafb; border-radius: 12px; padding: 20px; margin: 0 0 30px 0; border: 1px solid #e5e7eb;">
-            <h4 style="color: #374151; font-size: 14px; font-weight: 600; margin: 0 0 12px 0;">As a Founding Member, you'll get:</h4>
-            <ul style="color: #4b5563; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
-                <li>Direct enquiries from buyers in the South Asian community</li>
-                <li>Your own agent profile page with portfolio</li>
-                <li>Early access to new features before others</li>
-                <li>Priority support whenever you need help</li>
-            </ul>
-        </div>
-
-        <!-- CTA Buttons -->
+        <!-- CTA Button -->
         <div style="text-align: center; margin: 30px 0;">
-            <a href="https://www.desifirms.com.au/dashboard"
+            <a href="https://www.desifirms.com.au/real-estate/register"
                style="display: inline-block; background: linear-gradient(135deg, #0093E9 0%, #80D0C7 100%); color: #ffffff; text-decoration: none; padding: 18px 48px; border-radius: 12px; font-weight: 700; font-size: 17px; box-shadow: 0 8px 25px rgba(0, 147, 233, 0.35); letter-spacing: 0.5px;">
-                Go to Dashboard →
+                Complete Real Estate Setup →
             </a>
         </div>
 
         <p style="color: #6b7280; font-size: 14px; text-align: center; margin: 20px 0 0 0;">
-            <strong>Stuck somewhere?</strong> Just reply to this email or call me directly at <strong>0424 538 777</strong> - I'm happy to help!
+            <strong>Need help?</strong> Reply to this email or call me at <strong>0424 538 777</strong>
         </p>
 
         <!-- Signature -->
         <div style="margin-top: 35px; padding-top: 25px; border-top: 1px solid #e5e7eb;">
             <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0;">
-                Welcome aboard,
+                Looking forward to seeing your listings,
             </p>
             <p style="color: #1f2937; font-size: 15px; font-weight: 600; margin: 10px 0 5px 0;">
                 Noushad
