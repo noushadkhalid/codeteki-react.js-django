@@ -110,3 +110,96 @@ def log_deal_stage_change(sender, instance, created, **kwargs):
             activity_type='stage_change',
             description=f"Deal created in stage: {instance.current_stage.name if instance.current_stage else 'Unknown'}",
         )
+
+
+@receiver(post_save, sender=Deal)
+def move_won_deal_to_registered_pipeline(sender, instance, created, **kwargs):
+    """
+    When a deal is marked as 'won', create a new deal in the appropriate
+    Registered Users pipeline for nurturing/follow-up.
+
+    Maps:
+    - Desi Firms Real Estate → Registered Users - Real Estate
+    - Desi Firms Business Directory → Registered Users - Business
+    - etc.
+    """
+    # Skip if just created or not won
+    if created or instance.status != 'won':
+        return
+
+    # Skip if already in a registered users pipeline (avoid infinite loop)
+    pipeline_name = instance.pipeline.name.lower() if instance.pipeline else ''
+    if 'registered users' in pipeline_name or 'nudge' in pipeline_name:
+        return
+
+    # Determine the target registered users pipeline based on source pipeline type
+    source_type = instance.pipeline.pipeline_type if instance.pipeline else None
+    if not source_type:
+        return
+
+    # Map source pipeline type to registered users pipeline
+    pipeline_mapping = {
+        'realestate': 'Registered Users - Real Estate',
+        'business': 'Registered Users - Business',
+        'events': 'Registered Users - Events',
+    }
+
+    target_pipeline_name = pipeline_mapping.get(source_type)
+    if not target_pipeline_name:
+        return
+
+    try:
+        # Find the target pipeline
+        target_pipeline = Pipeline.objects.filter(
+            name__iexact=target_pipeline_name,
+            is_active=True
+        ).first()
+
+        if not target_pipeline:
+            # Try partial match
+            target_pipeline = Pipeline.objects.filter(
+                name__icontains=target_pipeline_name.split(' - ')[1] if ' - ' in target_pipeline_name else target_pipeline_name,
+                pipeline_type='registered_users',
+                is_active=True
+            ).first()
+
+        if not target_pipeline:
+            return
+
+        # Check if contact already has an active deal in target pipeline
+        existing_deal = Deal.objects.filter(
+            contact=instance.contact,
+            pipeline=target_pipeline,
+            status='active'
+        ).exists()
+
+        if existing_deal:
+            return
+
+        # Get first stage (usually "Registered")
+        first_stage = target_pipeline.stages.order_by('order').first()
+        if not first_stage:
+            return
+
+        # Create new deal in registered users pipeline
+        new_deal = Deal.objects.create(
+            contact=instance.contact,
+            pipeline=target_pipeline,
+            current_stage=first_stage,
+            status='active',
+            next_action_date=timezone.now(),
+            ai_notes=f"Auto-created from won deal in {instance.pipeline.name}",
+        )
+
+        # Log the activity
+        DealActivity.objects.create(
+            deal=new_deal,
+            activity_type='stage_change',
+            description=f"Deal created from won deal in {instance.pipeline.name}",
+        )
+
+    except Exception as e:
+        # Don't break the save if this fails
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to create registered users deal: {e}")
