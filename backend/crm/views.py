@@ -955,13 +955,13 @@ def pipeline_board(request, pipeline_id):
     pipeline = get_object_or_404(Pipeline, id=pipeline_id)
     stages = pipeline.stages.order_by('order')
 
-    # Build columns with deals (include both active and won deals)
+    # Build columns with deals (include active, won, and paused deals)
     columns = []
     for stage in stages:
         deals = Deal.objects.filter(
             pipeline=pipeline,
             current_stage=stage,
-            status__in=['active', 'won']  # Show both active and won deals
+            status__in=['active', 'won', 'paused']  # Show active, won, and paused deals
         ).select_related('contact').order_by('-updated_at')[:50]
 
         columns.append({
@@ -974,6 +974,7 @@ def pipeline_board(request, pipeline_id):
     total_active = Deal.objects.filter(pipeline=pipeline, status='active').count()
     total_won = Deal.objects.filter(pipeline=pipeline, status='won').count()
     total_lost = Deal.objects.filter(pipeline=pipeline, status='lost').count()
+    total_paused = Deal.objects.filter(pipeline=pipeline, status='paused').count()
 
     # Lost deals grouped by reason
     lost_deals = Deal.objects.filter(
@@ -999,6 +1000,7 @@ def pipeline_board(request, pipeline_id):
         'total_active': total_active,
         'total_won': total_won,
         'total_lost': total_lost,
+        'total_paused': total_paused,
         'lost_by_reason': lost_by_reason,
         'today': timezone.now().date(),
     }

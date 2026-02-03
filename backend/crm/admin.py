@@ -791,8 +791,18 @@ class DealAdmin(ModelAdmin):
     def mark_as_won(self, request, queryset):
         """Mark deals as won - for contacts who registered/converted. Stops all automation."""
         from django.contrib import messages
+        from django.utils import timezone
+
+        # Pipeline type to Registered Users pipeline mapping
+        pipeline_mapping = {
+            'realestate': 'Registered Users - Real Estate',
+            'business': 'Registered Users - Business',
+            'events': 'Registered Users - Events',
+        }
 
         won_count = 0
+        moved_count = 0
+
         for deal in queryset:
             if deal.status != 'won':
                 deal.status = 'won'
@@ -806,8 +816,67 @@ class DealAdmin(ModelAdmin):
                 )
                 won_count += 1
 
+                # Move to Registered Users pipeline
+                source_type = deal.pipeline.pipeline_type if deal.pipeline else None
+                pipeline_name_lower = deal.pipeline.name.lower() if deal.pipeline else ''
+
+                # Skip if already in registered users pipeline
+                if 'registered users' in pipeline_name_lower or 'nudge' in pipeline_name_lower:
+                    continue
+
+                target_pipeline_name = pipeline_mapping.get(source_type)
+                if not target_pipeline_name:
+                    continue
+
+                try:
+                    # Find target pipeline
+                    target_pipeline = Pipeline.objects.filter(
+                        name__iexact=target_pipeline_name,
+                        is_active=True
+                    ).first()
+
+                    if not target_pipeline:
+                        continue
+
+                    # Check if already exists
+                    if Deal.objects.filter(
+                        contact=deal.contact,
+                        pipeline=target_pipeline,
+                        status='active'
+                    ).exists():
+                        continue
+
+                    # Get first stage
+                    first_stage = target_pipeline.stages.order_by('order').first()
+                    if not first_stage:
+                        continue
+
+                    # Create new deal in registered users pipeline
+                    new_deal = Deal.objects.create(
+                        contact=deal.contact,
+                        pipeline=target_pipeline,
+                        current_stage=first_stage,
+                        status='active',
+                        next_action_date=timezone.now(),
+                        ai_notes=f"Auto-created from won deal in {deal.pipeline.name}",
+                    )
+
+                    DealActivity.objects.create(
+                        deal=new_deal,
+                        activity_type='stage_change',
+                        description=f"Deal created from won deal in {deal.pipeline.name}",
+                    )
+                    moved_count += 1
+
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).error(f"Failed to move won deal: {e}")
+
         if won_count > 0:
-            self.message_user(request, f"🏆 Marked {won_count} deal(s) as Won! All automation stopped for these deals.", messages.SUCCESS)
+            msg = f"🏆 Marked {won_count} deal(s) as Won!"
+            if moved_count > 0:
+                msg += f" Moved {moved_count} to Registered Users pipeline for nurturing."
+            self.message_user(request, msg, messages.SUCCESS)
         else:
             self.message_user(request, "No deals were updated (they may already be won).", messages.WARNING)
 

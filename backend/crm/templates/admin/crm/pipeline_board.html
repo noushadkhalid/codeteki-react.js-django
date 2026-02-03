@@ -36,6 +36,10 @@
                 <div style="font-size: 11px; text-transform: uppercase; opacity: 0.9;">Won</div>
             </div>
             <div>
+                <div style="font-size: 28px; font-weight: 700;">{{ total_paused }}</div>
+                <div style="font-size: 11px; text-transform: uppercase; opacity: 0.9;">Paused</div>
+            </div>
+            <div>
                 <div style="font-size: 28px; font-weight: 700;">{{ total_lost }}</div>
                 <div style="font-size: 11px; text-transform: uppercase; opacity: 0.9;">Lost</div>
             </div>
@@ -56,12 +60,12 @@
             <div style="padding: 12px; flex: 1; overflow-y: auto; max-height: 500px;">
                 {% if col.deals %}
                     {% for deal in col.deals %}
-                    <a href="{% url 'admin:crm_deal_change' deal.id %}" style="display: block; background: {% if deal.status == 'won' %}#f0fdf4{% else %}white{% endif %}; border-radius: 8px; padding: 14px; margin-bottom: 10px; text-decoration: none; border: 1px solid {% if deal.status == 'won' %}#86efac{% else %}#e5e7eb{% endif %}; border-left: 3px solid {% if deal.status == 'won' %}#22c55e{% else %}{% cycle '#6b7280' '#3b82f6' '#8b5cf6' '#f59e0b' '#22c55e' '#06b6d4' '#ec4899' '#ef4444' %}{% endif %}; transition: all 0.15s;"
+                    <a href="{% url 'admin:crm_deal_change' deal.id %}" style="display: block; background: {% if deal.status == 'won' %}#f0fdf4{% elif deal.status == 'paused' %}#fefce8{% else %}white{% endif %}; border-radius: 8px; padding: 14px; margin-bottom: 10px; text-decoration: none; border: 1px solid {% if deal.status == 'won' %}#86efac{% elif deal.status == 'paused' %}#fde047{% else %}#e5e7eb{% endif %}; border-left: 3px solid {% if deal.status == 'won' %}#22c55e{% elif deal.status == 'paused' %}#eab308{% else %}{% cycle '#6b7280' '#3b82f6' '#8b5cf6' '#f59e0b' '#22c55e' '#06b6d4' '#ec4899' '#ef4444' %}{% endif %}; transition: all 0.15s;"
                        onmouseover="this.style.boxShadow='0 4px 8px rgba(0,0,0,0.08)'; this.style.transform='translateY(-1px)';"
                        onmouseout="this.style.boxShadow='none'; this.style.transform='none';">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                             <div style="font-weight: 600; color: #111827; font-size: 14px;">{{ deal.contact.name|default:"No Name" }}</div>
-                            {% if deal.status == 'won' %}<span style="background: #22c55e; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">WON</span>{% endif %}
+                            {% if deal.status == 'won' %}<span style="background: #22c55e; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">WON</span>{% elif deal.status == 'paused' %}<span style="background: #eab308; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600;">PAUSED</span>{% endif %}
                         </div>
                         <div style="color: #6b7280; font-size: 12px; margin-bottom: 10px; word-break: break-all;">{{ deal.contact.email }}</div>
                         <div style="display: flex; justify-content: space-between; align-items: center;">
