@@ -155,10 +155,11 @@ def queue_deal_email(self, deal_id: str, email_type: str = 'followup'):
     # Determine brand and pipeline info
     brand_slug = brand.slug if brand else 'desifirms'
     pipeline_type = deal.pipeline.pipeline_type if deal.pipeline else 'sales'
+    pipeline_name = deal.pipeline.name if deal.pipeline else ''
 
     # Get the appropriate email type based on current stage and pipeline type
     stage_name = deal.current_stage.name if deal.current_stage else 'follow_up'
-    template_email_type = get_email_type_for_stage(stage_name, pipeline_type) or 'agent_followup_1'
+    template_email_type = get_email_type_for_stage(stage_name, pipeline_type, pipeline_name) or 'agent_followup_1'
 
     # Get recipient info
     recipient_name = contact.name.split()[0] if contact.name else 'there'

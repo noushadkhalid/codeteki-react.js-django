@@ -974,7 +974,7 @@ def send_styled_email(
 
     # Get email type from stage if not provided
     if not email_type and deal.current_stage:
-        email_type = get_email_type_for_stage(deal.current_stage.name)
+        email_type = get_email_type_for_stage(deal.current_stage.name, pipeline_type, pipeline_name)
 
     # If no email type found, use a generic template
     if not email_type:

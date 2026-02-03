@@ -150,18 +150,20 @@ STAGE_TO_EMAIL_TYPE = {
 }
 
 
-def get_email_type_for_stage(stage_name: str, pipeline_type: str = None) -> Optional[str]:
+def get_email_type_for_stage(stage_name: str, pipeline_type: str = None, pipeline_name: str = None) -> Optional[str]:
     """
     Get the email type for a given pipeline stage.
 
     Args:
         stage_name: Name of the pipeline stage
         pipeline_type: Type of pipeline (realestate, business, etc.) for context
+        pipeline_name: Name of the pipeline for additional context
 
     Returns:
         Email type string or None if no email should be sent
     """
     stage_lower = stage_name.lower()
+    pipeline_name_lower = (pipeline_name or '').lower()
 
     # Context-aware mapping for stages shared across pipelines
     if pipeline_type == 'realestate':
@@ -206,7 +208,20 @@ def get_email_type_for_stage(stage_name: str, pipeline_type: str = None) -> Opti
             return events_map[stage_lower]
 
     elif pipeline_type == 'registered_users':
-        # For registered but inactive users - generic pipeline
+        # For registered but inactive users - determine sub-type from pipeline name
+        is_realestate = 'real estate' in pipeline_name_lower or 'realestate' in pipeline_name_lower
+        is_events = 'event' in pipeline_name_lower
+
+        # Map stages to appropriate nudge templates based on sub-type
+        if stage_lower == 'registered':
+            # "Registered" stage in registered_users pipeline = first nudge
+            if is_realestate:
+                return 'realestate_nudge'
+            elif is_events:
+                return 'events_nudge'
+            else:
+                return 'business_nudge'
+
         registered_map = {
             'business nudge 1': 'business_nudge',
             'business nudge 2': 'business_nudge_2',
@@ -214,9 +229,9 @@ def get_email_type_for_stage(stage_name: str, pipeline_type: str = None) -> Opti
             'realestate nudge 2': 'realestate_nudge_2',
             'events nudge 1': 'events_nudge',
             'events nudge 2': 'events_nudge_2',
-            # Simple stage names
-            'nudge 1': 'business_nudge',  # Default to business
-            'nudge 2': 'business_nudge_2',
+            # Simple stage names - determine from pipeline name
+            'nudge 1': 'realestate_nudge' if is_realestate else ('events_nudge' if is_events else 'business_nudge'),
+            'nudge 2': 'realestate_nudge_2' if is_realestate else ('events_nudge_2' if is_events else 'business_nudge_2'),
         }
         if stage_lower in registered_map:
             return registered_map[stage_lower]

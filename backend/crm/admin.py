@@ -946,8 +946,9 @@ class DealAdmin(ModelAdmin):
 
                 # Determine email type based on stage
                 pipeline_type = deal.pipeline.pipeline_type if deal.pipeline else 'sales'
+                pipeline_name = deal.pipeline.name if deal.pipeline else ''
                 stage_name = deal.current_stage.name if deal.current_stage else 'follow_up'
-                email_type = get_email_type_for_stage(stage_name, pipeline_type) or 'agent_followup_1'
+                email_type = get_email_type_for_stage(stage_name, pipeline_type, pipeline_name) or 'agent_followup_1'
 
                 # Get recipient info
                 recipient_name = contact.name.split()[0] if contact.name else 'there'
@@ -1112,8 +1113,9 @@ class DealAdmin(ModelAdmin):
                 # Determine brand and pipeline info
                 brand_slug = preview_deal.pipeline.brand.slug if preview_deal.pipeline and preview_deal.pipeline.brand else 'desifirms'
                 pipeline_type = preview_deal.pipeline.pipeline_type if preview_deal.pipeline else 'realestate'
+                pipeline_name = preview_deal.pipeline.name if preview_deal.pipeline else ''
                 stage_name = preview_deal.current_stage.name if preview_deal.current_stage else 'follow_up'
-                email_type = get_email_type_for_stage(stage_name, pipeline_type) or 'agent_followup_1'
+                email_type = get_email_type_for_stage(stage_name, pipeline_type, pipeline_name) or 'agent_followup_1'
 
                 # Get recipient info
                 recipient_name = preview_deal.contact.name.split()[0] if preview_deal.contact.name else 'there'
