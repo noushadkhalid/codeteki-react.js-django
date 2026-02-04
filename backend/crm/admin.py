@@ -1255,7 +1255,93 @@ class DealAdmin(ModelAdmin):
         updated = queryset.filter(status='paused').update(status='active', next_action_date=timezone.now())
         self.message_user(request, f"▶️ Resumed {updated} deal(s). They will be processed in next cycle.")
 
-    actions = ['mark_as_won', 'mark_as_lost', 'move_to_next_stage', 'preview_email', 'generate_drafts', 'send_email_now', 'pause_deals', 'resume_deals']
+    # =========================================================================
+    # AGENTS & AGENCIES PIPELINE ACTIONS
+    # =========================================================================
+
+    @action(description="👤 Agent: Profile Completed")
+    def agent_profile_complete(self, request, queryset):
+        """Move agent to 'Profile Complete' stage."""
+        self._progress_agent_deals(request, queryset, 'Profile Complete')
+
+    @action(description="🏢 Agent: Agency Created")
+    def agent_agency_created(self, request, queryset):
+        """Move agent to 'Agency Created' stage."""
+        self._progress_agent_deals(request, queryset, 'Agency Created')
+
+    @action(description="👥 Agent: Team Invited")
+    def agent_team_invited(self, request, queryset):
+        """Move agent to 'Team Invited' stage."""
+        self._progress_agent_deals(request, queryset, 'Team Invited')
+
+    @action(description="🏠 Agent: First Listing Added")
+    def agent_first_listing(self, request, queryset):
+        """Move agent to 'First Listing' stage."""
+        self._progress_agent_deals(request, queryset, 'First Listing')
+
+    @action(description="⭐ Agent: Active Lister (Complete)")
+    def agent_active_lister(self, request, queryset):
+        """Move agent to 'Active Lister' stage and mark as won."""
+        self._progress_agent_deals(request, queryset, 'Active Lister', mark_won=True)
+
+    def _progress_agent_deals(self, request, queryset, target_stage_name, mark_won=False):
+        """Helper to progress deals to a specific stage in Agents & Agencies pipeline."""
+        from django.contrib import messages
+        from django.utils import timezone
+
+        moved = 0
+        skipped = 0
+
+        for deal in queryset:
+            # Check if this is an Agents & Agencies pipeline deal
+            if not deal.pipeline or 'agents' not in deal.pipeline.name.lower():
+                skipped += 1
+                continue
+
+            # Find target stage
+            target_stage = deal.pipeline.stages.filter(name__iexact=target_stage_name).first()
+            if not target_stage:
+                skipped += 1
+                continue
+
+            # Skip if already at or past this stage
+            if deal.current_stage and deal.current_stage.order >= target_stage.order:
+                skipped += 1
+                continue
+
+            old_stage = deal.current_stage.name if deal.current_stage else 'Unknown'
+            deal.current_stage = target_stage
+            deal.stage_entered_at = timezone.now()
+
+            if mark_won or target_stage.is_terminal:
+                deal.status = 'won'
+                deal.next_action_date = None
+            elif target_stage.days_until_followup:
+                deal.next_action_date = timezone.now() + timezone.timedelta(days=target_stage.days_until_followup)
+
+            deal.save()
+
+            DealActivity.objects.create(
+                deal=deal,
+                activity_type='stage_change',
+                description=f"Progressed: {old_stage} → {target_stage_name}"
+            )
+            moved += 1
+
+        if moved > 0:
+            status = "marked as Won" if mark_won else "moved"
+            self.message_user(request, f"✅ {moved} deal(s) {status} to '{target_stage_name}'", messages.SUCCESS)
+        if skipped > 0:
+            self.message_user(request, f"⚠️ {skipped} deal(s) skipped (not in Agents pipeline or already past this stage)", messages.WARNING)
+
+    actions = [
+        'mark_as_won', 'mark_as_lost', 'move_to_next_stage',
+        'preview_email', 'generate_drafts', 'send_email_now',
+        'pause_deals', 'resume_deals',
+        # Agents & Agencies actions
+        'agent_profile_complete', 'agent_agency_created', 'agent_team_invited',
+        'agent_first_listing', 'agent_active_lister',
+    ]
 
 
 # =============================================================================
