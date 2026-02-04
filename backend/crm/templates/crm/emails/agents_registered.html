@@ -1,7 +1,7 @@
 {% extends "crm/emails/base_desifirms.html" %}
 
-{% block title %}Welcome to Desi Firms | Complete Your Profile{% endblock %}
-{% block preheader %}{{ recipient_name }}, complete your agent profile to start receiving enquiries!{% endblock %}
+{% block title %}List Your First Property | Desi Firms{% endblock %}
+{% block preheader %}{{ recipient_name }}, your agency is ready - time to add your first listing!{% endblock %}
 {% block subtitle %}Real Estate{% endblock %}
 
 {% block content %}
@@ -10,16 +10,16 @@
         <!-- Hero Icon -->
         <div style="text-align: center; margin-bottom: 25px;">
             <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #0093E9, #80D0C7); border-radius: 50%; margin: 0 auto; display: inline-flex; align-items: center; justify-content: center;">
-                <span style="font-size: 40px;">👋</span>
+                <span style="font-size: 40px;">🏠</span>
             </div>
         </div>
 
         <!-- Heading -->
         <h1 style="color: #1f2937; font-size: 26px; font-weight: 700; text-align: center; margin: 0 0 10px 0;">
-            Welcome to Desi Firms!
+            Your Agency is Ready!
         </h1>
         <p style="color: #0093E9; font-size: 16px; font-weight: 600; text-align: center; margin: 0 0 30px 0;">
-            You're officially a Founding Member 🎖️
+            Time to List Your First Property 🏠
         </p>
 
         <!-- Dynamic Body Content OR Default Message -->
@@ -33,25 +33,27 @@
         </p>
 
         <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            Thanks for joining Desi Firms! Your account is now active. 🎉
+            Great news - your agency and agent profile are all set up! 🎉
         </p>
 
         <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
-            To start receiving enquiries from buyers and renters, let's complete your <strong>agent profile</strong>. It only takes 2 minutes!
+            Now it's time to <strong>add your first property listing</strong> and start receiving enquiries from our South Asian community!
         </p>
         {% endif %}
 
-        <!-- Next Step Box -->
-        <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 16px; padding: 24px; margin: 0 0 25px 0; border: 1px solid #fcd34d;">
-            <h3 style="color: #92400e; font-size: 15px; font-weight: 700; margin: 0 0 12px 0;">
-                📝 Step 1: Complete Your Profile
+        <!-- Quick Start Box -->
+        <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 16px; padding: 24px; margin: 0 0 25px 0; border: 1px solid #86efac;">
+            <h3 style="color: #166534; font-size: 15px; font-weight: 700; margin: 0 0 12px 0;">
+                🚀 Get Started in 3 Simple Steps
             </h3>
-            <ul style="color: #78350f; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
-                <li>Add your professional photo</li>
-                <li>Write a short bio about your experience</li>
-                <li>Add your contact details</li>
-                <li>Upload your real estate license</li>
+            <ul style="color: #15803d; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+                <li><strong>Add Property</strong> - Upload photos & details</li>
+                <li><strong>Set Price</strong> - Sale or rental listing</li>
+                <li><strong>Publish</strong> - Go live & receive enquiries!</li>
             </ul>
+            <p style="color: #166534; font-size: 13px; margin: 12px 0 0 0;">
+                ⏱️ Takes less than 5 minutes
+            </p>
         </div>
 
         <!-- Dashboard Preview -->
@@ -62,10 +64,10 @@
             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
                 <tr>
                     <td style="width: 50%; padding: 8px;">
-                        <div style="background: rgba(255,255,255,0.1); border-radius: 10px; padding: 14px; text-align: center;">
+                        <div style="background: linear-gradient(135deg, #0093E9, #80D0C7); border-radius: 10px; padding: 14px; text-align: center; border: 2px solid #80D0C7;">
                             <div style="font-size: 24px; margin-bottom: 6px;">➕</div>
-                            <div style="color: #80D0C7; font-size: 12px; font-weight: 600;">Add Property</div>
-                            <div style="color: #94a3b8; font-size: 10px;">List a new property</div>
+                            <div style="color: white; font-size: 12px; font-weight: 600;">Add Property</div>
+                            <div style="color: rgba(255,255,255,0.8); font-size: 10px;">← Start here!</div>
                         </div>
                     </td>
                     <td style="width: 50%; padding: 8px;">
@@ -85,10 +87,10 @@
                         </div>
                     </td>
                     <td style="width: 50%; padding: 8px;">
-                        <div style="background: linear-gradient(135deg, #0093E9, #80D0C7); border-radius: 10px; padding: 14px; text-align: center; border: 2px solid #80D0C7;">
-                            <div style="font-size: 24px; margin-bottom: 6px;">👤</div>
-                            <div style="color: white; font-size: 12px; font-weight: 600;">Agent Profile</div>
-                            <div style="color: rgba(255,255,255,0.8); font-size: 10px;">← Start here!</div>
+                        <div style="background: rgba(255,255,255,0.1); border-radius: 10px; padding: 14px; text-align: center;">
+                            <div style="font-size: 24px; margin-bottom: 6px;">👥</div>
+                            <div style="color: #80D0C7; font-size: 12px; font-weight: 600;">Invite Team</div>
+                            <div style="color: #94a3b8; font-size: 10px;">Add agents</div>
                         </div>
                     </td>
                 </tr>
@@ -97,9 +99,9 @@
 
         <!-- CTA Button -->
         <div style="text-align: center; margin: 30px 0;">
-            <a href="https://desifirms.com.au/realestate/dashboard/profile/"
+            <a href="https://desifirms.com.au/realestate/dashboard/properties/add/"
                style="display: inline-block; background: linear-gradient(135deg, #0093E9 0%, #80D0C7 100%); color: #ffffff; text-decoration: none; padding: 18px 48px; border-radius: 12px; font-weight: 700; font-size: 17px; box-shadow: 0 8px 25px rgba(0, 147, 233, 0.35); letter-spacing: 0.5px;">
-                Complete My Profile →
+                Add My First Property →
             </a>
         </div>
 
@@ -110,7 +112,7 @@
         <!-- Signature -->
         <div style="margin-top: 35px; padding-top: 25px; border-top: 1px solid #e5e7eb;">
             <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0;">
-                Welcome aboard,
+                Looking forward to your first listing,
             </p>
             <p style="color: #1f2937; font-size: 15px; font-weight: 600; margin: 10px 0 5px 0;">
                 Noushad

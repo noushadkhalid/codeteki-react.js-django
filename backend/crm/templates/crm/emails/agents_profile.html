@@ -1,7 +1,7 @@
 {% extends "crm/emails/base_desifirms.html" %}
 
-{% block title %}Profile Complete! Now Create Your Agency{% endblock %}
-{% block preheader %}{{ recipient_name }}, your profile looks great! Ready to set up your agency?{% endblock %}
+{% block title %}Ready to List Properties | Desi Firms{% endblock %}
+{% block preheader %}{{ recipient_name }}, your setup is complete - start listing properties today!{% endblock %}
 {% block subtitle %}Real Estate{% endblock %}
 
 {% block content %}
@@ -10,16 +10,16 @@
         <!-- Hero Icon -->
         <div style="text-align: center; margin-bottom: 25px;">
             <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #8b5cf6, #a78bfa); border-radius: 50%; margin: 0 auto; display: inline-flex; align-items: center; justify-content: center;">
-                <span style="font-size: 40px;">🏢</span>
+                <span style="font-size: 40px;">🏠</span>
             </div>
         </div>
 
         <!-- Heading -->
         <h1 style="color: #1f2937; font-size: 26px; font-weight: 700; text-align: center; margin: 0 0 10px 0;">
-            Your Profile is Complete!
+            You're All Set Up!
         </h1>
         <p style="color: #8b5cf6; font-size: 16px; font-weight: 600; text-align: center; margin: 0 0 30px 0;">
-            Step 2: Set Up Your Agency 🏢
+            Time to List Your First Property 🏠
         </p>
 
         <!-- Dynamic Body Content OR Default Message -->
@@ -33,77 +33,80 @@
         </p>
 
         <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 20px 0;">
-            Awesome work completing your profile! 🎉 You're one step closer to listing properties.
+            Your agency and agent profile are looking great! 🎉
         </p>
 
         <p style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 25px 0;">
-            Now let's set up your <strong>agency profile</strong>. This helps buyers recognise your brand and builds trust.
+            Now it's time to <strong>list your first property</strong> and start receiving enquiries from our South Asian community!
         </p>
         {% endif %}
 
-        <!-- Agency Setup Box -->
+        <!-- Why List Box -->
         <div style="background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border-radius: 16px; padding: 24px; margin: 0 0 25px 0; border: 1px solid #c4b5fd;">
             <h3 style="color: #5b21b6; font-size: 15px; font-weight: 700; margin: 0 0 12px 0;">
-                🏢 Create Your Agency
+                🌟 Why List on Desi Firms?
             </h3>
             <ul style="color: #6d28d9; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
-                <li>Upload your agency logo</li>
-                <li>Add agency description & services</li>
-                <li>Set office address & contact details</li>
-                <li>Choose your agency branding colours</li>
+                <li><strong>Targeted audience</strong> - reach South Asian property seekers</li>
+                <li><strong>Free listings</strong> - no listing fees to get started</li>
+                <li><strong>Built-in CRM</strong> - manage leads from your dashboard</li>
+                <li><strong>Team support</strong> - invite agents to list under your agency</li>
             </ul>
         </div>
 
-        <!-- Dashboard Preview - Agency Profile -->
+        <!-- Dashboard Preview - Add Property -->
         <div style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); border-radius: 16px; padding: 24px; margin: 0 0 25px 0;">
             <h3 style="color: white; font-size: 15px; font-weight: 700; margin: 0 0 16px 0; text-align: center;">
-                🏢 Your Agency Dashboard Preview
+                🏠 Your Properties Dashboard
             </h3>
-            <!-- Agency Card Preview -->
-            <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.1);">
-                <div style="display: flex; align-items: center; margin-bottom: 12px;">
-                    <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #8b5cf6, #a78bfa); border-radius: 8px; margin-right: 12px;"></div>
-                    <div>
-                        <div style="color: white; font-size: 14px; font-weight: 600;">Your Agency Name</div>
-                        <div style="color: #94a3b8; font-size: 11px;">Agency Enterprise</div>
-                    </div>
-                </div>
-                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
-                    <tr>
-                        <td style="width: 50%; text-align: center; padding: 8px;">
-                            <div style="color: #a78bfa; font-size: 20px; font-weight: 700;">0</div>
-                            <div style="color: #94a3b8; font-size: 10px;">Agents</div>
-                        </td>
-                        <td style="width: 50%; text-align: center; padding: 8px;">
-                            <div style="color: #a78bfa; font-size: 20px; font-weight: 700;">0</div>
-                            <div style="color: #94a3b8; font-size: 10px;">Listings</div>
-                        </td>
-                    </tr>
-                </table>
-            </div>
-            <!-- Features -->
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+            <!-- Stats Row -->
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom: 16px;">
                 <tr>
-                    <td style="padding: 6px 0;"><span style="color: #a78bfa; font-size: 13px;">👥 Team Agents</span></td>
-                    <td style="padding: 6px 0;"><span style="color: #a78bfa; font-size: 13px;">🎨 Branding</span></td>
-                </tr>
-                <tr>
-                    <td style="padding: 6px 0;"><span style="color: #a78bfa; font-size: 13px;">🔗 CRM Integration</span></td>
-                    <td style="padding: 6px 0;"><span style="color: #a78bfa; font-size: 13px;">🔑 API Access</span></td>
+                    <td style="width: 25%; text-align: center; padding: 8px;">
+                        <div style="background: rgba(255,255,255,0.1); border-radius: 10px; padding: 12px 8px;">
+                            <div style="color: #a78bfa; font-size: 18px; font-weight: 700;">0</div>
+                            <div style="color: #94a3b8; font-size: 9px;">Total</div>
+                        </div>
+                    </td>
+                    <td style="width: 25%; text-align: center; padding: 8px;">
+                        <div style="background: rgba(255,255,255,0.1); border-radius: 10px; padding: 12px 8px;">
+                            <div style="color: #4ade80; font-size: 18px; font-weight: 700;">0</div>
+                            <div style="color: #94a3b8; font-size: 9px;">Active</div>
+                        </div>
+                    </td>
+                    <td style="width: 25%; text-align: center; padding: 8px;">
+                        <div style="background: rgba(255,255,255,0.1); border-radius: 10px; padding: 12px 8px;">
+                            <div style="color: #fbbf24; font-size: 18px; font-weight: 700;">0</div>
+                            <div style="color: #94a3b8; font-size: 9px;">Pending</div>
+                        </div>
+                    </td>
+                    <td style="width: 25%; text-align: center; padding: 8px;">
+                        <div style="background: rgba(255,255,255,0.1); border-radius: 10px; padding: 12px 8px;">
+                            <div style="color: #60a5fa; font-size: 18px; font-weight: 700;">0</div>
+                            <div style="color: #94a3b8; font-size: 9px;">Inquiries</div>
+                        </div>
+                    </td>
                 </tr>
             </table>
+            <!-- Add Property Button -->
+            <div style="background: linear-gradient(135deg, #8b5cf6, #a78bfa); border-radius: 10px; padding: 14px; text-align: center; border: 2px solid #a78bfa;">
+                <span style="color: white; font-size: 14px; font-weight: 600;">➕ Add Property ← Start here!</span>
+            </div>
+            <p style="color: #94a3b8; font-size: 11px; text-align: center; margin: 12px 0 0 0;">
+                Your listings will appear here with views, inquiries & performance stats
+            </p>
         </div>
 
         <!-- CTA Button -->
         <div style="text-align: center; margin: 30px 0;">
-            <a href="https://desifirms.com.au/realestate/dashboard/agency/"
+            <a href="https://desifirms.com.au/realestate/dashboard/properties/add/"
                style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%); color: #ffffff; text-decoration: none; padding: 18px 48px; border-radius: 12px; font-weight: 700; font-size: 17px; box-shadow: 0 8px 25px rgba(139, 92, 246, 0.35); letter-spacing: 0.5px;">
-                Create My Agency →
+                Add My First Property →
             </a>
         </div>
 
         <p style="color: #6b7280; font-size: 13px; text-align: center; margin: 15px 0 0 0;">
-            Working solo? You can skip this and start listing right away!
+            Have a team? <a href="https://desifirms.com.au/realestate/dashboard/team/" style="color: #8b5cf6; text-decoration: none; font-weight: 600;">Invite them here</a>
         </p>
 
         <p style="color: #6b7280; font-size: 14px; text-align: center; margin: 20px 0 0 0;">
@@ -113,7 +116,7 @@
         <!-- Signature -->
         <div style="margin-top: 35px; padding-top: 25px; border-top: 1px solid #e5e7eb;">
             <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0;">
-                You're making great progress,
+                Looking forward to your first listing,
             </p>
             <p style="color: #1f2937; font-size: 15px; font-weight: 600; margin: 10px 0 5px 0;">
                 Noushad
