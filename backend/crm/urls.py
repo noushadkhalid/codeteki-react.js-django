@@ -35,6 +35,7 @@ from .views import (
     EmailReplyWebhookView,
     UnsubscribeWebhookView,
     UnsubscribeView,
+    AgentProgressionView,
     # Dashboard views
     pipeline_dashboard,
     pipeline_board,
@@ -84,4 +85,7 @@ urlpatterns = [
 
     # Public unsubscribe page (clicked from emails)
     path('unsubscribe/', UnsubscribeView.as_view(), name='unsubscribe'),
+
+    # Agent Progression API (for frontend to call when agents take actions)
+    path('agent/progress/', AgentProgressionView.as_view(), name='agent-progress'),
 ]
