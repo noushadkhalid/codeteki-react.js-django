@@ -1334,11 +1334,125 @@ class DealAdmin(ModelAdmin):
         if skipped > 0:
             self.message_user(request, f"⚠️ {skipped} deal(s) skipped (not in Agents pipeline or already past this stage)", messages.WARNING)
 
+    # =========================================================================
+    # PIPELINE PROGRESSION ACTIONS (Move between pipelines)
+    # =========================================================================
+
+    @action(description="➡️ Move to: Registered Users - Real Estate")
+    def move_to_registered_users_realestate(self, request, queryset):
+        """Move deals to Registered Users - Real Estate pipeline (user registered but needs RE profile)."""
+        self._move_to_pipeline(request, queryset, 'Registered Users - Real Estate', 'Registered')
+
+    @action(description="➡️ Move to: Agents & Agencies")
+    def move_to_agents_agencies(self, request, queryset):
+        """Move deals to Agents & Agencies pipeline (user has RE profile, needs to complete onboarding)."""
+        self._move_to_pipeline(request, queryset, 'Agents & Agencies', 'Registered')
+
+    def _move_to_pipeline(self, request, queryset, target_pipeline_name, target_stage_name):
+        """Helper to move deals to a different pipeline."""
+        from django.contrib import messages
+        from django.utils import timezone
+
+        moved = 0
+        skipped = 0
+        already_exists = 0
+
+        # Find target pipeline
+        target_pipeline = Pipeline.objects.filter(
+            name__iexact=target_pipeline_name,
+            is_active=True
+        ).first()
+
+        if not target_pipeline:
+            self.message_user(request, f"❌ Pipeline '{target_pipeline_name}' not found!", messages.ERROR)
+            return
+
+        # Find target stage
+        target_stage = target_pipeline.stages.filter(name__iexact=target_stage_name).first()
+        if not target_stage:
+            target_stage = target_pipeline.stages.order_by('order').first()
+
+        if not target_stage:
+            self.message_user(request, f"❌ No stages found in '{target_pipeline_name}'!", messages.ERROR)
+            return
+
+        for deal in queryset:
+            # Skip if already in target pipeline
+            if deal.pipeline and deal.pipeline.name.lower() == target_pipeline_name.lower():
+                skipped += 1
+                continue
+
+            # Check if contact already has a deal in target pipeline
+            existing_deal = Deal.objects.filter(
+                contact=deal.contact,
+                pipeline=target_pipeline,
+                status__in=['active', 'paused']
+            ).first()
+
+            if existing_deal:
+                already_exists += 1
+                continue
+
+            source_pipeline = deal.pipeline.name if deal.pipeline else 'Unknown'
+
+            # Mark current deal as completed (moved to next pipeline)
+            deal.status = 'won'
+            deal.next_action_date = None
+            deal.ai_notes = (deal.ai_notes or '') + f'\n[MOVED] → {target_pipeline_name} on {timezone.now().strftime("%Y-%m-%d")}'
+            deal.save()
+
+            # Log activity on old deal
+            DealActivity.objects.create(
+                deal=deal,
+                activity_type='status_change',
+                description=f"Moved to {target_pipeline_name} (progressed from {source_pipeline})"
+            )
+
+            # Create new deal in target pipeline
+            new_deal = Deal.objects.create(
+                contact=deal.contact,
+                pipeline=target_pipeline,
+                current_stage=target_stage,
+                status='active',
+                next_action_date=timezone.now(),
+                ai_notes=f"Progressed from {source_pipeline}",
+            )
+
+            # Log activity on new deal
+            DealActivity.objects.create(
+                deal=new_deal,
+                activity_type='stage_change',
+                description=f"Created from {source_pipeline} → Ready for {target_stage_name}"
+            )
+
+            moved += 1
+
+        if moved > 0:
+            self.message_user(
+                request,
+                f"➡️ Moved {moved} deal(s) to '{target_pipeline_name}' at '{target_stage_name}' stage",
+                messages.SUCCESS
+            )
+        if already_exists > 0:
+            self.message_user(
+                request,
+                f"ℹ️ {already_exists} contact(s) already have active deals in '{target_pipeline_name}'",
+                messages.WARNING
+            )
+        if skipped > 0:
+            self.message_user(
+                request,
+                f"⚠️ {skipped} deal(s) skipped (already in target pipeline)",
+                messages.WARNING
+            )
+
     actions = [
         'mark_as_won', 'mark_as_lost', 'move_to_next_stage',
         'preview_email', 'generate_drafts', 'send_email_now',
         'pause_deals', 'resume_deals',
-        # Agents & Agencies actions
+        # Pipeline progression actions
+        'move_to_registered_users_realestate', 'move_to_agents_agencies',
+        # Agents & Agencies stage actions
         'agent_profile_complete', 'agent_agency_created', 'agent_team_invited',
         'agent_first_listing', 'agent_active_lister',
     ]
