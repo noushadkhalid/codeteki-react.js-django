@@ -68,6 +68,12 @@ EMAIL_TEMPLATES = {
             'realestate_nudge_2': 'crm/emails/realestate_nudge2.html',
             'events_nudge': 'crm/emails/events_nudge.html',
             'events_nudge_2': 'crm/emails/events_nudge2.html',
+            # Agents & Agencies pipeline templates
+            'agents_registered': 'crm/emails/agents_registered.html',
+            'agents_profile': 'crm/emails/agents_profile.html',
+            'agents_agency': 'crm/emails/agents_agency.html',
+            'agents_team': 'crm/emails/agents_team.html',
+            'agents_first_listing': 'crm/emails/agents_first_listing.html',
             # Aliases - 'invitation' maps to the appropriate nudge template
             'invitation': 'crm/emails/business_nudge.html',
             'directory_invitation': 'crm/emails/business_nudge.html',
@@ -211,6 +217,20 @@ def get_email_type_for_stage(stage_name: str, pipeline_type: str = None, pipelin
         # For registered but inactive users - determine sub-type from pipeline name
         is_realestate = 'real estate' in pipeline_name_lower or 'realestate' in pipeline_name_lower
         is_events = 'event' in pipeline_name_lower
+        is_agents = 'agents' in pipeline_name_lower or 'agencies' in pipeline_name_lower
+
+        # Agents & Agencies pipeline - specific stage mapping
+        if is_agents:
+            agents_map = {
+                'registered': 'agents_registered',
+                'profile complete': 'agents_profile',
+                'agency created': 'agents_agency',
+                'team invited': 'agents_team',
+                'first listing': 'agents_first_listing',
+                'active lister': None,  # Terminal - no email
+            }
+            if stage_lower in agents_map:
+                return agents_map[stage_lower]
 
         # Map stages to appropriate nudge templates based on sub-type
         if stage_lower == 'registered':
