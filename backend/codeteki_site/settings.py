@@ -269,6 +269,12 @@ ZOHO_ACCOUNT_ID = os.getenv("ZOHO_ACCOUNT_ID", "")
 ZOHO_FROM_EMAIL = os.getenv("ZOHO_FROM_EMAIL", "outreach@codeteki.au")
 ZOHO_API_DOMAIN = os.getenv("ZOHO_API_DOMAIN", "zoho.com")  # Use zoho.com.au for Australia
 
+# ZeptoMail Configuration (transactional email for high-volume brands like Desi Firms)
+# Set per-brand in Brand admin, or use env vars as fallback
+ZEPTOMAIL_API_KEY = os.getenv("ZEPTOMAIL_API_KEY", "")
+ZEPTOMAIL_HOST = os.getenv("ZEPTOMAIL_HOST", "api.zeptomail.com")  # US: api.zeptomail.com
+ZEPTOMAIL_FROM_EMAIL = os.getenv("ZEPTOMAIL_FROM_EMAIL", "noreply@desifirms.com.au")
+
 # Django Unfold Configuration
 from django.templatetags.static import static
 from django.urls import reverse_lazy

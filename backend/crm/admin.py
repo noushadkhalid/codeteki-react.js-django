@@ -50,7 +50,12 @@ class BrandAdmin(ModelAdmin):
         ('Email Configuration', {
             'fields': ('from_email', 'from_name', 'reply_to_email')
         }),
-        ('Zoho Credentials (Optional - uses global if empty)', {
+        ('ZeptoMail (High-Volume Sending)', {
+            'fields': ('zeptomail_api_key', 'zeptomail_host'),
+            'description': 'If set, ZeptoMail is used instead of Zoho Mail for sending. Better for high-volume outreach.',
+            'classes': ['collapse']
+        }),
+        ('Zoho Mail Credentials (Fallback if no ZeptoMail)', {
             'fields': ('zoho_client_id', 'zoho_client_secret', 'zoho_account_id', 'zoho_refresh_token', 'zoho_api_domain'),
             'classes': ['collapse']
         }),

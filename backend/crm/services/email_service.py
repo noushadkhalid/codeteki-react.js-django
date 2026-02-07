@@ -726,6 +726,198 @@ This email was sent by {brand_name}. We respect your privacy."""
         return None
 
 
+class ZeptoMailService(ZohoEmailService):
+    """
+    Email service using ZeptoMail (Zoho's transactional email API).
+
+    Much higher sending limits than Zoho Mail and simpler API key auth.
+    Inherits helper methods (unsubscribe footer, tracking, salutation) from ZohoEmailService.
+
+    Used for brands that need higher volume (e.g., Desi Firms outreach).
+    """
+
+    def __init__(self, brand: Optional['Brand'] = None):
+        import os
+        from dotenv import load_dotenv
+        load_dotenv()
+
+        self.brand = brand
+        self.api_key = ''
+        self.from_email = ''
+        self.from_name = ''
+        self.api_host = 'api.zeptomail.com'
+
+        if brand:
+            # Brand-specific ZeptoMail credentials
+            self.api_key = getattr(brand, 'zeptomail_api_key', '') or ''
+            self.from_email = brand.from_email or ''
+            self.from_name = brand.from_name or brand.name
+            self.api_host = getattr(brand, 'zeptomail_host', '') or 'api.zeptomail.com'
+
+            if not self.api_key:
+                # Try env vars
+                env_prefix = brand.name.upper().replace(' ', '').replace('-', '').replace('_', '')
+                self.api_key = os.environ.get(f'{env_prefix}_ZEPTOMAIL_API_KEY', '')
+                self.api_host = os.environ.get(f'{env_prefix}_ZEPTOMAIL_HOST', 'api.zeptomail.com')
+
+        if not self.api_key:
+            # Global fallback
+            self.api_key = os.environ.get('ZEPTOMAIL_API_KEY', getattr(settings, 'ZEPTOMAIL_API_KEY', ''))
+            self.api_host = os.environ.get('ZEPTOMAIL_HOST', getattr(settings, 'ZEPTOMAIL_HOST', 'api.zeptomail.com'))
+            if not self.from_email:
+                self.from_email = getattr(settings, 'ZEPTOMAIL_FROM_EMAIL', 'noreply@desifirms.com.au')
+            if not self.from_name:
+                self.from_name = 'Desi Firms'
+
+        logger.info(f"ZeptoMail service initialized for {brand.name if brand else 'default'}, "
+                    f"host={self.api_host}, enabled={self.enabled}")
+
+    @property
+    def enabled(self) -> bool:
+        """Check if ZeptoMail is configured."""
+        return bool(self.api_key and self.from_email)
+
+    def send(
+        self,
+        to: str,
+        subject: str,
+        body: str,
+        from_name: Optional[str] = None,
+        reply_to: Optional[str] = None,
+        tracking_id: Optional[str] = None,
+        bcc: Optional[List[str]] = None
+    ) -> dict:
+        """
+        Send an email via ZeptoMail API.
+
+        Same interface as ZohoEmailService.send() for drop-in replacement.
+        """
+        if not self.enabled:
+            brand_info = f" for brand {self.brand.name}" if self.brand else ""
+            logger.warning(f"ZeptoMail not configured{brand_info} - email not sent")
+            return {
+                'success': False,
+                'message_id': None,
+                'error': f'ZeptoMail not configured{brand_info}.'
+            }
+
+        # Check if recipient is unsubscribed (brand-specific)
+        from crm.models import Contact
+        contact = Contact.objects.filter(email__iexact=to).first()
+        if contact:
+            brand_slug = self.brand.slug if self.brand else None
+            if contact.is_unsubscribed:
+                logger.info(f"Skipping email to {to} - recipient is globally unsubscribed")
+                return {
+                    'success': False,
+                    'message_id': None,
+                    'error': f'Recipient {to} is unsubscribed.'
+                }
+            elif brand_slug and contact.is_unsubscribed_from_brand(brand_slug):
+                logger.info(f"Skipping email to {to} - unsubscribed from {brand_slug}")
+                return {
+                    'success': False,
+                    'message_id': None,
+                    'error': f'Recipient {to} is unsubscribed from {brand_slug} emails.'
+                }
+
+        sender_name = from_name or self.from_name
+
+        # Add unsubscribe footer (inherited from ZohoEmailService)
+        body = self._add_unsubscribe_footer(body, to)
+
+        # Add tracking pixel if tracking_id provided
+        if tracking_id:
+            tracking_url = self._get_tracking_url(tracking_id)
+            body = self._inject_tracking_pixel(body, tracking_url)
+
+        # Build ZeptoMail API payload
+        payload = {
+            'from': {
+                'address': self.from_email,
+                'name': sender_name,
+            },
+            'to': [{
+                'email_address': {
+                    'address': to,
+                }
+            }],
+            'subject': subject,
+        }
+
+        # Detect HTML vs plain text
+        if '<' in body and '>' in body:
+            payload['htmlbody'] = body
+        else:
+            payload['textbody'] = body
+
+        # Add reply-to
+        if reply_to:
+            payload['reply_to'] = [{'address': reply_to}]
+
+        # Add BCC recipients
+        if bcc:
+            payload['bcc'] = [{'email_address': {'address': addr}} for addr in bcc]
+
+        # Send via ZeptoMail API
+        url = f"https://{self.api_host}/v1.1/email"
+        headers = {
+            'accept': 'application/json',
+            'content-type': 'application/json',
+            'authorization': self.api_key,
+        }
+
+        try:
+            logger.info(f"ZeptoMail: Sending to {to}, subject: {subject[:50]}...")
+            response = requests.post(url, json=payload, headers=headers, timeout=30)
+            response_data = response.json()
+
+            if response.status_code == 200 or response_data.get('message') == 'OK':
+                message_id = response_data.get('request_id', '')
+                brand_info = f" ({self.brand.name})" if self.brand else ""
+                bcc_count = len(bcc) if bcc else 0
+                logger.info(f"ZeptoMail: Email sent{brand_info} to {to}: {message_id}")
+                return {
+                    'success': True,
+                    'message_id': message_id,
+                    'error': None,
+                    'bcc_count': bcc_count,
+                    'from_email': self.from_email,
+                }
+            else:
+                error_msg = response_data.get('message', '') or response_data.get('error', {}).get('details', [{}])[0].get('message', f'HTTP {response.status_code}')
+                logger.error(f"ZeptoMail: Failed to send to {to}: {error_msg}")
+                logger.error(f"ZeptoMail: Full response: {response.text[:500]}")
+                return {
+                    'success': False,
+                    'message_id': None,
+                    'error': f'ZeptoMail error: {error_msg}',
+                    'from_email': self.from_email,
+                }
+
+        except requests.RequestException as e:
+            logger.error(f"ZeptoMail: Request failed: {e}")
+            return {
+                'success': False,
+                'message_id': None,
+                'error': f'ZeptoMail request failed: {str(e)}',
+                'from_email': self.from_email,
+            }
+
+    # Inbox methods not supported by ZeptoMail (send-only service)
+    def get_inbox_messages(self, since=None, limit=50, folder='inbox') -> List[dict]:
+        """ZeptoMail is send-only. Inbox polling still uses Zoho."""
+        return []
+
+    def get_message_content(self, message_id: str) -> Optional[str]:
+        """ZeptoMail is send-only."""
+        return None
+
+    def match_reply_to_deal(self, from_email: str, subject: str = '') -> Optional['Deal']:
+        """ZeptoMail is send-only. Reply matching still uses Zoho."""
+        return None
+
+
 class MockEmailService:
     """
     Mock email service for testing without Zoho credentials.
@@ -887,15 +1079,20 @@ class MockEmailService:
         return None
 
 
-def get_email_service(brand: Optional['Brand'] = None) -> ZohoEmailService:
+def get_email_service(brand: Optional['Brand'] = None):
     """
     Factory function to get the appropriate email service for a brand.
 
+    Priority:
+    1. ZeptoMail (if brand has zeptomail_api_key) - for high-volume brands
+    2. Zoho Mail (if brand has Zoho credentials) - for standard brands
+    3. MockEmailService (fallback for testing)
+
     Args:
-        brand: Optional Brand object. If provided, uses brand-specific Zoho credentials.
+        brand: Optional Brand object. If provided, uses brand-specific credentials.
 
     Returns:
-        ZohoEmailService if configured, otherwise MockEmailService.
+        ZeptoMailService, ZohoEmailService, or MockEmailService.
     """
     global _brand_service_cache
 
@@ -906,14 +1103,23 @@ def get_email_service(brand: Optional['Brand'] = None) -> ZohoEmailService:
     if cache_key in _brand_service_cache:
         return _brand_service_cache[cache_key]
 
-    # Create new service
+    # Priority 1: Try ZeptoMail (for brands with high volume needs)
+    if brand:
+        zepto_service = ZeptoMailService(brand=brand)
+        if zepto_service.enabled:
+            logger.info(f"Using ZeptoMail for {brand.name}")
+            _brand_service_cache[cache_key] = zepto_service
+            return zepto_service
+
+    # Priority 2: Try Zoho Mail
     zoho_service = ZohoEmailService(brand=brand)
     if zoho_service.enabled:
         _brand_service_cache[cache_key] = zoho_service
         return zoho_service
 
+    # Priority 3: Fallback to Mock
     brand_info = f" for {brand.name}" if brand else ""
-    logger.warning(f"Zoho Mail not configured{brand_info}, using MockEmailService")
+    logger.warning(f"No email service configured{brand_info}, using MockEmailService")
     mock_service = MockEmailService(brand=brand)
     _brand_service_cache[cache_key] = mock_service
     return mock_service

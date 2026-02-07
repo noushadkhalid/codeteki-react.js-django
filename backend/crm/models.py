@@ -31,6 +31,19 @@ class Brand(models.Model):
         help_text="Zoho region: zoho.com (US), zoho.com.au (AU), zoho.eu (EU)"
     )
 
+    # ZeptoMail credentials (alternative to Zoho Mail for higher volume)
+    zeptomail_api_key = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text="ZeptoMail API key (e.g., Zoho-enczapikey ...). If set, uses ZeptoMail instead of Zoho Mail."
+    )
+    zeptomail_host = models.CharField(
+        max_length=100,
+        blank=True,
+        default='api.zeptomail.com',
+        help_text="ZeptoMail API host: api.zeptomail.com (US) or api.zeptomail.com.au (AU)"
+    )
+
     # AI Configuration
     ai_company_description = models.TextField(
         blank=True,
