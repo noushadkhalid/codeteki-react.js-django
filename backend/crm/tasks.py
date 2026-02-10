@@ -720,7 +720,6 @@ def send_scheduled_draft(self, draft_id: str):
         draft_id: UUID of the EmailDraft to send
     """
     from crm.models import EmailDraft, Contact, Deal, PipelineStage
-    from crm.services.email_service import ZohoEmailService
     from crm.services.email_templates import get_styled_email
     from crm.services.ai_agent import CRMAIAgent
 
@@ -800,10 +799,11 @@ def send_scheduled_draft(self, draft_id: str):
         if not invited_stage:
             raise ValueError("Pipeline has no stages")
 
-        # Initialize services
-        email_service = ZohoEmailService(brand=draft.brand)
+        # Initialize services (uses ZeptoMail if configured, else Zoho)
+        from crm.services.email_service import get_email_service
+        email_service = get_email_service(brand=draft.brand)
         if not email_service.enabled:
-            raise ValueError(f"Zoho not configured for {draft.brand.name}")
+            raise ValueError(f"Email service not configured for {draft.brand.name}")
 
         ai_agent = CRMAIAgent()
 

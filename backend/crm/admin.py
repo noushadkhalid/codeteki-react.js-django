@@ -917,7 +917,7 @@ class DealAdmin(ModelAdmin):
     def send_email_now(self, request, queryset):
         """Send follow-up email to selected deals - shows preview first."""
         from crm.services.ai_agent import CRMAIAgent
-        from crm.services.email_service import ZohoEmailService
+        from crm.services.email_service import get_email_service
         from crm.services.email_templates import (
             get_styled_email, get_email_type_for_stage,
             get_template_for_email
@@ -965,9 +965,9 @@ class DealAdmin(ModelAdmin):
                     failed_count += 1
                     continue
 
-                email_service = ZohoEmailService(brand=brand)
+                email_service = get_email_service(brand=brand)
                 if not email_service.enabled:
-                    self.message_user(request, f"❌ Zoho not configured for {brand.name}", messages.ERROR)
+                    self.message_user(request, f"❌ Email not configured for {brand.name}", messages.ERROR)
                     failed_count += 1
                     continue
 
@@ -2075,7 +2075,7 @@ class EmailDraftAdmin(ModelAdmin):
         Send first contact email with preview. Shows all recipients before sending.
         Contacts already in ANY pipeline are SKIPPED (managed by autopilot).
         """
-        from crm.services.email_service import ZohoEmailService
+        from crm.services.email_service import get_email_service
         from crm.models import Contact, Deal, PipelineStage
         from crm.services.email_templates import get_styled_email
         from django.contrib import messages
@@ -2223,7 +2223,7 @@ class EmailDraftAdmin(ModelAdmin):
 
     def _execute_send(self, request, draft, valid_recipients, subject, body_text):
         """Actually send emails after confirmation."""
-        from crm.services.email_service import ZohoEmailService
+        from crm.services.email_service import get_email_service
         from crm.services.email_templates import get_styled_email
         from crm.services.ai_agent import CRMAIAgent
         from crm.models import Contact, Deal, PipelineStage
@@ -2244,9 +2244,9 @@ class EmailDraftAdmin(ModelAdmin):
             self.message_user(request, f"❌ {draft}: Pipeline has no stages!", messages.ERROR)
             return
 
-        email_service = ZohoEmailService(brand=draft.brand)
+        email_service = get_email_service(brand=draft.brand)
         if not email_service.enabled:
-            self.message_user(request, f"❌ Zoho not configured for {draft.brand.name}! Check Brand settings for Zoho credentials.", messages.ERROR)
+            self.message_user(request, f"❌ Email not configured for {draft.brand.name}! Check Brand settings.", messages.ERROR)
             return
 
         ai_agent = CRMAIAgent()
