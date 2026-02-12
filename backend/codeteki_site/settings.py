@@ -266,7 +266,7 @@ ZOHO_CLIENT_ID = os.getenv("ZOHO_CLIENT_ID", "")
 ZOHO_CLIENT_SECRET = os.getenv("ZOHO_CLIENT_SECRET", "")
 ZOHO_REFRESH_TOKEN = os.getenv("ZOHO_REFRESH_TOKEN", "")
 ZOHO_ACCOUNT_ID = os.getenv("ZOHO_ACCOUNT_ID", "")
-ZOHO_FROM_EMAIL = os.getenv("ZOHO_FROM_EMAIL", "outreach@codeteki.au")
+ZOHO_FROM_EMAIL = os.getenv("ZOHO_FROM_EMAIL", "sales@codeteki.au")
 ZOHO_API_DOMAIN = os.getenv("ZOHO_API_DOMAIN", "zoho.com")  # Use zoho.com.au for Australia
 
 # ZeptoMail Configuration (transactional email for high-volume brands like Desi Firms)

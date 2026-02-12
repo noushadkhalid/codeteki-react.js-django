@@ -76,7 +76,7 @@ class BrandAdmin(ModelAdmin):
     @action(description="🔧 Test Email Configuration")
     def test_email_config(self, request, queryset):
         """Send a test email to verify Zoho configuration is working."""
-        from crm.services.email_service import ZohoEmailService
+        from crm.services.email_service import get_email_service
         from django.contrib import messages
         from django.template.response import TemplateResponse
         from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
@@ -95,16 +95,23 @@ class BrandAdmin(ModelAdmin):
                 return
 
             # Initialize email service for this brand
-            email_service = ZohoEmailService(brand=brand)
+            email_service = get_email_service(brand=brand)
 
             # Check configuration
+            service_type = type(email_service).__name__
             config_info = []
             config_info.append(f"Brand: {brand.name}")
+            config_info.append(f"Service: {service_type}")
             config_info.append(f"From Email: {email_service.from_email}")
             config_info.append(f"From Name: {email_service.from_name}")
-            config_info.append(f"API Domain: {email_service.api_domain}")
-            config_info.append(f"Account ID: {email_service.account_id[:8]}..." if email_service.account_id else "Account ID: NOT SET")
-            config_info.append(f"Client ID: {email_service.client_id[:8]}..." if email_service.client_id else "Client ID: NOT SET")
+            if hasattr(email_service, 'api_domain'):
+                config_info.append(f"API Domain: {email_service.api_domain}")
+            if hasattr(email_service, 'api_host'):
+                config_info.append(f"API Host: {email_service.api_host}")
+            if hasattr(email_service, 'account_id'):
+                config_info.append(f"Account ID: {email_service.account_id[:8]}..." if email_service.account_id else "Account ID: NOT SET")
+            if hasattr(email_service, 'client_id'):
+                config_info.append(f"Client ID: {email_service.client_id[:8]}..." if email_service.client_id else "Client ID: NOT SET")
             config_info.append(f"Enabled: {email_service.enabled}")
 
             if not email_service.enabled:
@@ -157,7 +164,7 @@ class BrandAdmin(ModelAdmin):
             return
 
         # Show test email form
-        email_service = ZohoEmailService(brand=brand)
+        email_service = get_email_service(brand=brand)
         context = {
             **self.admin_site.each_context(request),
             'title': f'Test Email Configuration - {brand.name}',
@@ -167,13 +174,14 @@ class BrandAdmin(ModelAdmin):
             'queryset': queryset,
             'email_service': email_service,
             'config': {
+                'service_type': type(email_service).__name__,
                 'from_email': email_service.from_email,
                 'from_name': email_service.from_name,
-                'api_domain': email_service.api_domain,
-                'account_id': f"{email_service.account_id[:8]}..." if email_service.account_id else "NOT SET",
-                'client_id': f"{email_service.client_id[:8]}..." if email_service.client_id else "NOT SET",
-                'client_secret': "SET" if email_service.client_secret else "NOT SET",
-                'refresh_token': "SET" if email_service.refresh_token else "NOT SET",
+                'api_domain': getattr(email_service, 'api_domain', getattr(email_service, 'api_host', 'N/A')),
+                'account_id': f"{email_service.account_id[:8]}..." if getattr(email_service, 'account_id', '') else "NOT SET",
+                'client_id': f"{email_service.client_id[:8]}..." if getattr(email_service, 'client_id', '') else "NOT SET",
+                'client_secret': "SET" if getattr(email_service, 'client_secret', '') else "NOT SET",
+                'refresh_token': "SET" if getattr(email_service, 'refresh_token', '') else "NOT SET",
                 'enabled': email_service.enabled,
             }
         }

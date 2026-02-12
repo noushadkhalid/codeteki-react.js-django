@@ -20,8 +20,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Cache for brand-specific email services
+# Cache for brand-specific email services (with TTL)
 _brand_service_cache = {}
+_brand_cache_timestamps = {}
 
 
 class ZohoEmailService:
@@ -1094,27 +1095,55 @@ def get_email_service(brand: Optional['Brand'] = None):
     Returns:
         ZeptoMailService, ZohoEmailService, or MockEmailService.
     """
-    global _brand_service_cache
+    global _brand_service_cache, _brand_cache_timestamps
 
     # Create cache key
     cache_key = brand.slug if brand else '__default__'
 
-    # Return cached service if available
+    # Return cached service if available and not expired (5 min TTL)
+    cache_ttl = 300  # 5 minutes
     if cache_key in _brand_service_cache:
-        return _brand_service_cache[cache_key]
+        cached_time = _brand_cache_timestamps.get(cache_key, 0)
+        import time
+        if time.time() - cached_time < cache_ttl:
+            return _brand_service_cache[cache_key]
+        else:
+            # Cache expired, remove stale entry
+            del _brand_service_cache[cache_key]
+            del _brand_cache_timestamps[cache_key]
 
-    # Priority 1: Try ZeptoMail (for brands with high volume needs)
+    import time
+    now = time.time()
+
+    # Priority 1: ZeptoMail (mandatory for brands that have it configured)
     if brand:
-        zepto_service = ZeptoMailService(brand=brand)
-        if zepto_service.enabled:
-            logger.info(f"Using ZeptoMail for {brand.name}")
-            _brand_service_cache[cache_key] = zepto_service
-            return zepto_service
+        has_zeptomail_key = getattr(brand, 'zeptomail_api_key', '') or ''
+        if has_zeptomail_key:
+            zepto_service = ZeptoMailService(brand=brand)
+            if zepto_service.enabled:
+                logger.info(f"Using ZeptoMail for {brand.name} (ZeptoMail-only brand)")
+                _brand_service_cache[cache_key] = zepto_service
+                _brand_cache_timestamps[cache_key] = now
+                return zepto_service
+            else:
+                # ZeptoMail is configured but not enabled - DO NOT fall back to Zoho
+                # This prevents accidental Zoho usage which causes rate limit blocks
+                logger.error(
+                    f"ZeptoMail configured for {brand.name} but not enabled! "
+                    f"API key present but service check failed. "
+                    f"Will NOT fall back to Zoho to avoid rate limit blocks."
+                )
+                raise RuntimeError(
+                    f"ZeptoMail is configured for {brand.name} but failed to initialize. "
+                    f"Check the ZeptoMail API key in Brand settings. "
+                    f"Refusing to fall back to Zoho Mail to prevent rate limit blocks."
+                )
 
-    # Priority 2: Try Zoho Mail
+    # Priority 2: Zoho Mail (only for brands WITHOUT ZeptoMail configured)
     zoho_service = ZohoEmailService(brand=brand)
     if zoho_service.enabled:
         _brand_service_cache[cache_key] = zoho_service
+        _brand_cache_timestamps[cache_key] = now
         return zoho_service
 
     # Priority 3: Fallback to Mock
@@ -1122,6 +1151,7 @@ def get_email_service(brand: Optional['Brand'] = None):
     logger.warning(f"No email service configured{brand_info}, using MockEmailService")
     mock_service = MockEmailService(brand=brand)
     _brand_service_cache[cache_key] = mock_service
+    _brand_cache_timestamps[cache_key] = now
     return mock_service
 
 

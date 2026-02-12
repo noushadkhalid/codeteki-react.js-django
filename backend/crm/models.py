@@ -578,7 +578,7 @@ class EmailLog(models.Model):
     # Email content
     subject = models.CharField(max_length=255)
     body = models.TextField()
-    from_email = models.EmailField(default='outreach@codeteki.au')
+    from_email = models.EmailField(default='sales@codeteki.au')
     to_email = models.EmailField()
 
     # Tracking
