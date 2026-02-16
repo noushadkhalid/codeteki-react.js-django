@@ -1133,6 +1133,8 @@ As a founding member, you'll have the opportunity to connect with this growing c
 
 ---
 
+OPTIONAL: If the recipient appears to be an established agent/agency, briefly mention that they can import their entire portfolio from any CRM in under 2 minutes via CSV Bulk Import. Keep it to one sentence.
+
 CRITICAL RULES:
 - Keep the 📊 **Why We Built This** section as a VISIBLE HIGHLIGHT (not buried in paragraph)
 - Mention their company name if available
@@ -1155,6 +1157,8 @@ Our research shows 1.6 million South Asians live in Australia with no dedicated 
 As a founding member, you'd be among the first agents to connect with this community.
 
 ---
+
+OPTIONAL: If relevant, briefly mention our new CSV Bulk Import feature - they can import their entire portfolio from AgentBox, Rex, VaultRE or any CRM in under 2 minutes. This can be a compelling re-engagement hook. Keep it to one sentence.
 
 CRITICAL RULES:
 - Keep the 📊 **The Opportunity** section VISIBLE (not buried)
@@ -1257,7 +1261,7 @@ You ONLY write the welcome/greeting paragraph.
 Write 2-3 short paragraphs:
 1. Warm welcome, congratulate them on registering
 2. Thank them for joining as a founding member
-3. Express excitement about having them on the platform
+3. Brief mention they can start adding properties right away - either one-by-one or by importing via CSV
 
 DO NOT include signature, steps, CTA, or getting started instructions - template has those.
 Keep it personal and warm, under 80 words.''',
@@ -1351,7 +1355,7 @@ You ONLY write the intro message.
 
 Write 2-3 short paragraphs:
 1. Friendly check-in about their account registration
-2. Gentle reminder about FREE property listings
+2. Mention it's easier than they think - they can import their entire property portfolio from any CRM in under 2 minutes via CSV
 3. We'd love to have them listing properties
 
 DO NOT include signature, features, CTA - template has those.
@@ -1363,7 +1367,7 @@ You ONLY write the follow-up message.
 
 Write 2 short paragraphs:
 1. Quick follow-up, acknowledge they're busy
-2. Final gentle mention of the registration opportunity
+2. Final gentle mention - they can import from AgentBox, Rex or any CRM in minutes, no manual entry needed
 
 DO NOT include signature, steps, or CTA - template has those.
 Keep it brief and respectful, under 60 words.''',
