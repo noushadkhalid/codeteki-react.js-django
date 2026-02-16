@@ -1193,7 +1193,7 @@ CRITICAL RULES:
 - Keep it under 80 words total''',
 
             'agent_followup_3': '''a CLOSING THE LOOP message for real estate agents - this is the LAST email before we stop contacting them.
-HYBRID TEMPLATE: Just write a brief farewell message. Template handles "save this email" box with reply instructions, CTA, and signature.
+HYBRID TEMPLATE: Just write a brief farewell message. Template handles new feature box, "save this email" box, CTA, and signature.
 
 WRITE THIS STRUCTURE:
 
@@ -1201,21 +1201,22 @@ WRITE THIS STRUCTURE:
 
 Just a quick note to close the loop on my previous emails about listing properties on Desi Firms.
 
-I know you're busy, and I don't want to keep filling your inbox. This will be my last message.
+I know you're busy, and I don't want to keep filling your inbox. This will be my last message - but one thing has changed: we've added CSV Bulk Import so you can bring your entire portfolio from any CRM in under 2 minutes.
 
 Wishing you continued success with your real estate business!
 
 ---
 
 CRITICAL RULES:
-- Keep it SHORT (under 50 words)
+- Keep it SHORT (under 60 words)
 - Be respectful and warm
 - Acknowledge this is the last email
+- Briefly mention CSV Bulk Import as something new since last contact
 - End with a positive wish (NOT "just reply" - template box has that)
 - DO NOT include signature, CTA, or "save this email" message - template has those''',
 
             'realestate_followup_3': '''a CLOSING THE LOOP message for real estate agents - this is the LAST email before we stop contacting them.
-HYBRID TEMPLATE: Just write a brief farewell message. Template handles "save this email" box with reply instructions, CTA, and signature.
+HYBRID TEMPLATE: Just write a brief farewell message. Template handles new feature box, "save this email" box, CTA, and signature.
 
 WRITE THIS STRUCTURE:
 
@@ -1223,16 +1224,17 @@ WRITE THIS STRUCTURE:
 
 Just closing the loop on my previous emails about listing properties on Desi Firms.
 
-I don't want to keep filling your inbox. This will be my last message.
+I don't want to keep filling your inbox. This will be my last message - but one thing has changed: we've added CSV Bulk Import so you can bring your entire portfolio from any CRM in under 2 minutes.
 
 Wishing you continued success with your real estate business!
 
 ---
 
 CRITICAL RULES:
-- Keep it SHORT (under 50 words)
+- Keep it SHORT (under 60 words)
 - Be respectful and warm
 - Acknowledge this is the last email
+- Briefly mention CSV Bulk Import as something new since last contact
 - End with a positive wish (NOT "just reply" - template box has that)
 - DO NOT include signature, CTA, or "save this email" message - template has those''',
 
