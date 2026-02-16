@@ -3559,3 +3559,31 @@ class GroupAdmin(BaseGroupAdmin, ModelAdmin):
     list_display = ('name',)
     search_fields = ('name',)
     ordering = ('name',)
+
+
+# =============================================================================
+# TWO-FACTOR AUTHENTICATION DEVICE MANAGEMENT
+# =============================================================================
+from django_otp.plugins.otp_totp.models import TOTPDevice
+from django_otp.plugins.otp_static.models import StaticDevice
+
+admin.site.unregister(TOTPDevice)
+admin.site.unregister(StaticDevice)
+
+
+@admin.register(TOTPDevice)
+class TOTPDeviceAdmin(ModelAdmin):
+    """Manage TOTP authenticator devices (superuser only)."""
+    list_display = ('user', 'name', 'confirmed')
+    list_filter = ('confirmed',)
+    search_fields = ('user__username',)
+    raw_id_fields = ('user',)
+
+
+@admin.register(StaticDevice)
+class StaticDeviceAdmin(ModelAdmin):
+    """Manage backup recovery code devices (superuser only)."""
+    list_display = ('user', 'name', 'confirmed')
+    list_filter = ('confirmed',)
+    search_fields = ('user__username',)
+    raw_id_fields = ('user',)

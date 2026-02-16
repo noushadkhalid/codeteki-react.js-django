@@ -61,6 +61,9 @@ INSTALLED_APPS = [
     'ckeditor',  # Rich text editor
     'django_celery_results',  # Store Celery task results in database
     'django_celery_beat',  # Periodic task scheduler
+    'django_otp',  # Two-factor authentication framework
+    'django_otp.plugins.otp_totp',  # TOTP (authenticator app) support
+    'django_otp.plugins.otp_static',  # Backup recovery codes
     'core',
     'crm',  # CRM with AI-powered outreach
 ]
@@ -72,8 +75,10 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django_otp.middleware.OTPMiddleware',  # Adds is_verified() to request.user
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'core.middleware.AdminOTPMiddleware',  # Enforce 2FA on /admin/ pages
 ]
 
 ROOT_URLCONF = 'codeteki_site.urls'
@@ -797,6 +802,16 @@ UNFOLD = {
                         "title": "Groups",
                         "icon": "groups",
                         "link": reverse_lazy("admin:auth_group_changelist"),
+                    },
+                    {
+                        "title": "2FA TOTP Devices",
+                        "icon": "security",
+                        "link": reverse_lazy("admin:otp_totp_totpdevice_changelist"),
+                    },
+                    {
+                        "title": "2FA Backup Codes",
+                        "icon": "key",
+                        "link": reverse_lazy("admin:otp_static_staticdevice_changelist"),
                     },
                 ],
             },

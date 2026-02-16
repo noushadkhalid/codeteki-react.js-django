@@ -38,10 +38,16 @@ def sitemap_view(request, sitemaps, **kwargs):
     return response
 
 from crm.views import pipeline_dashboard, pipeline_board, move_deal_stage, UnsubscribeView
+from core.otp_views import otp_verify_view, otp_setup_view, otp_setup_complete_view
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import redirect
 
 urlpatterns = [
+    # OTP two-factor authentication (before admin to avoid catch-all)
+    path('admin/otp/verify/', otp_verify_view, name='admin_otp_verify'),
+    path('admin/otp/setup/', otp_setup_view, name='admin_otp_setup'),
+    path('admin/otp/setup/complete/', otp_setup_complete_view, name='admin_otp_setup_complete'),
+
     # CRM Dashboard (before admin to avoid catch-all)
     path('admin/crm/dashboard/', staff_member_required(pipeline_dashboard), name='crm_dashboard'),
     path('admin/crm/board/<int:pipeline_id>/', staff_member_required(pipeline_board), name='crm_board'),

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup 2FA | Codeteki Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+    <div class="w-full max-w-lg">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <div class="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-red-500 to-amber-500 flex items-center justify-center mb-4 shadow-lg shadow-red-500/25">
+                <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <h1 class="text-2xl font-bold text-white mb-2">Set Up Two-Factor Authentication</h1>
+            <p class="text-slate-400">Scan this QR code with your authenticator app to get started</p>
+        </div>
+
+        {% if error %}
+        <div class="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <!-- Security Requirement Alert -->
+        <div class="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+            <div class="flex items-start gap-3">
+                <svg class="w-6 h-6 text-amber-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div>
+                    <p class="font-medium text-amber-400">Security Requirement</p>
+                    <p class="text-sm text-amber-400/80 mt-1">All administrators must enable two-factor authentication to protect the admin panel.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 1: QR Code -->
+        <div class="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden mb-4">
+            <div class="px-6 py-4 border-b border-white/10 flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center text-sm font-bold">1</div>
+                <h3 class="font-semibold text-white">Scan QR Code</h3>
+            </div>
+            <div class="p-6">
+                <p class="text-sm text-slate-400 mb-4">
+                    Open your authenticator app (Google Authenticator, Authy, etc.) and scan this QR code:
+                </p>
+                <div class="flex justify-center mb-4">
+                    <div class="p-4 bg-white rounded-xl">
+                        {{ qr_svg|safe }}
+                    </div>
+                </div>
+                <div class="text-center">
+                    <p class="text-xs text-slate-500 mb-2">Can't scan? Enter this code manually:</p>
+                    <div class="inline-flex items-center gap-2 px-4 py-2 bg-white/5 rounded-lg border border-white/10">
+                        <code class="text-sm font-mono text-slate-300 break-all" id="secret-key">{{ secret_key }}</code>
+                        <button type="button" onclick="copySecret()" class="p-1.5 hover:bg-white/10 rounded transition-colors" title="Copy secret key">
+                            <svg id="copy-icon" class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                            </svg>
+                            <svg id="check-icon" class="w-4 h-4 text-emerald-400 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Verify Code -->
+        <div class="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden mb-4">
+            <div class="px-6 py-4 border-b border-white/10 flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center text-sm font-bold">2</div>
+                <h3 class="font-semibold text-white">Enter Verification Code</h3>
+            </div>
+            <div class="p-6">
+                <p class="text-sm text-slate-400 mb-4">
+                    Enter the 6-digit code from your authenticator app to verify setup:
+                </p>
+                <form method="post" class="space-y-4">
+                    {% csrf_token %}
+                    <input type="text"
+                           name="token"
+                           id="code"
+                           maxlength="6"
+                           pattern="[0-9]{6}"
+                           inputmode="numeric"
+                           autocomplete="one-time-code"
+                           placeholder="000000"
+                           class="w-full text-center text-2xl font-mono tracking-[0.5em] px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all"
+                           required
+                           autofocus>
+                    <button type="submit"
+                            class="w-full px-6 py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-amber-500/25 flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Verify &amp; Enable
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Recommended Apps -->
+        <div class="p-4 bg-white/5 rounded-xl border border-white/10">
+            <p class="text-sm font-medium text-slate-300 mb-3">Recommended Authenticator Apps:</p>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="flex items-center gap-2 text-sm text-slate-400">
+                    <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                    Google Authenticator
+                </div>
+                <div class="flex items-center gap-2 text-sm text-slate-400">
+                    <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                    Authy
+                </div>
+                <div class="flex items-center gap-2 text-sm text-slate-400">
+                    <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                    Microsoft Authenticator
+                </div>
+                <div class="flex items-center gap-2 text-sm text-slate-400">
+                    <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                    1Password
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <p class="text-center text-slate-600 text-xs mt-6">
+            Codeteki Admin &bull; Security First
+        </p>
+    </div>
+
+    <script>
+        function copySecret() {
+            const secretKey = document.getElementById('secret-key').textContent.trim();
+            navigator.clipboard.writeText(secretKey).then(() => {
+                document.getElementById('copy-icon').classList.add('hidden');
+                document.getElementById('check-icon').classList.remove('hidden');
+                setTimeout(() => {
+                    document.getElementById('copy-icon').classList.remove('hidden');
+                    document.getElementById('check-icon').classList.add('hidden');
+                }, 2000);
+            });
+        }
+
+        document.getElementById('code').addEventListener('input', function(e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+    </script>
+</body>
+</html>
