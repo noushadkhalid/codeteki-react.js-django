@@ -2,10 +2,10 @@
 CRM Celery Tasks
 
 Background tasks for AI-powered CRM automation:
-- process_pending_deals: Hourly check for deals needing action
-- send_scheduled_emails: Every 15 min, send pending emails
-- check_email_replies: Every 30 min, poll inbox for replies
-- daily_ai_review: Daily review and scoring
+- process_pending_deals: Hourly check for deals needing action (weekdays 9-5)
+- send_scheduled_emails: Every 15 min, send pending emails (weekdays 9-5)
+- check_email_replies: Every 30 min, poll inbox for replies (24/7)
+- daily_ai_review: Daily review and scoring (weekday mornings)
 """
 
 import logging
@@ -16,13 +16,29 @@ from django.db import transaction
 
 logger = logging.getLogger(__name__)
 
+# Office hours: Mon-Fri 9AM-5PM (server timezone)
+OFFICE_HOUR_START = 9
+OFFICE_HOUR_END = 17  # 5 PM
+OFFICE_DAYS = range(0, 5)  # Monday=0 through Friday=4
+
+
+def is_office_hours() -> bool:
+    """Check if current time is within office hours (Mon-Fri 9AM-5PM)."""
+    now = timezone.localtime()
+    return now.weekday() in OFFICE_DAYS and OFFICE_HOUR_START <= now.hour < OFFICE_HOUR_END
+
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def process_pending_deals(self):
     """
     Process deals that need action based on next_action_date.
-    Runs hourly. Now engagement-aware with burnout detection and ghost handling.
+    Runs hourly during office hours (Mon-Fri 9AM-5PM).
+    Engagement-aware with burnout detection and ghost handling.
     """
+    if not is_office_hours():
+        logger.info("process_pending_deals skipped: outside office hours")
+        return {'processed': 0, 'errors': 0, 'skipped': 'outside_office_hours'}
+
     from crm.models import Deal, DealActivity, PipelineStage
     from crm.services.ai_agent import CRMAIAgent
     from crm.services.engagement_engine import get_engagement_profile
@@ -190,10 +206,15 @@ def queue_deal_email(self, deal_id: str, email_type: str = 'followup', ab_varian
     """
     Queue an email to be sent for a deal.
     Called by process_pending_deals or manually.
+    Only sends during office hours (Mon-Fri 9AM-5PM).
 
     For Desi Firms emails with pre-designed templates, uses the template directly.
     For other emails, uses AI to generate content.
     """
+    if not is_office_hours():
+        logger.info(f"queue_deal_email skipped for deal {deal_id}: outside office hours")
+        return {'success': False, 'error': 'Outside office hours'}
+
     from crm.models import Deal, EmailLog, DealActivity
     from crm.services.email_service import get_email_service
     from crm.services.email_templates import (

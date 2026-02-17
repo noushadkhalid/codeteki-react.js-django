@@ -244,29 +244,31 @@ CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes max per task
 # Celery Beat Schedule for CRM tasks
 from celery.schedules import crontab
 CELERY_BEAT_SCHEDULE = {
+    # === EMAIL SENDING TASKS - Weekdays 9AM-5PM only ===
     'crm-process-pending-deals': {
         'task': 'crm.tasks.process_pending_deals',
-        'schedule': crontab(minute=0),  # Every hour
+        'schedule': crontab(minute=0, hour='9-17', day_of_week='mon-fri'),
     },
     'crm-send-scheduled-emails': {
         'task': 'crm.tasks.send_scheduled_emails',
-        'schedule': crontab(minute='*/15'),  # Every 15 minutes
-    },
-    'crm-check-email-replies': {
-        'task': 'crm.tasks.check_email_replies',
-        'schedule': crontab(minute='*/30'),  # Every 30 minutes
-    },
-    'crm-daily-ai-review': {
-        'task': 'crm.tasks.daily_ai_review',
-        'schedule': crontab(hour=9, minute=0),  # 9 AM daily
+        'schedule': crontab(minute='*/15', hour='9-17', day_of_week='mon-fri'),
     },
     'crm-check-scheduled-drafts': {
         'task': 'crm.tasks.check_scheduled_drafts',
-        'schedule': crontab(minute='*/5'),  # Every 5 minutes - check for scheduled emails
+        'schedule': crontab(minute='*/5', hour='9-17', day_of_week='mon-fri'),
+    },
+    # === MONITORING TASKS - Replies checked 24/7, reviews weekday mornings ===
+    'crm-check-email-replies': {
+        'task': 'crm.tasks.check_email_replies',
+        'schedule': crontab(minute='*/30'),  # 24/7 - always catch replies
+    },
+    'crm-daily-ai-review': {
+        'task': 'crm.tasks.daily_ai_review',
+        'schedule': crontab(hour=9, minute=0, day_of_week='mon-fri'),
     },
     'crm-autopilot-engagement-scan': {
         'task': 'crm.tasks.autopilot_engagement_scan',
-        'schedule': crontab(hour=8, minute=0),  # 8 AM daily - before emails go out
+        'schedule': crontab(hour=8, minute=30, day_of_week='mon-fri'),
     },
 }
 
