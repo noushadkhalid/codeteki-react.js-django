@@ -256,10 +256,13 @@ def queue_deal_email(self, deal_id: str, email_type: str = 'followup', ab_varian
         logger.warning(f"Blocked email to unsubscribed contact {contact.email} (brand: {brand_slug})")
         return {'success': False, 'error': 'Contact is unsubscribed'}
 
-    # SAFETY: Never email bounced contacts
+    # SAFETY: Never email bounced or spam-reported contacts
     if contact.email_bounced:
         logger.warning(f"Blocked email to bounced contact {contact.email}")
         return {'success': False, 'error': 'Contact email has bounced'}
+    if contact.spam_reported:
+        logger.warning(f"Blocked email to spam-reported contact {contact.email}")
+        return {'success': False, 'error': 'Contact reported spam'}
 
     # Determine brand and pipeline info
     pipeline_type = deal.pipeline.pipeline_type if deal.pipeline else 'sales'

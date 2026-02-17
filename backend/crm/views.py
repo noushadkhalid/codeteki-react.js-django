@@ -747,37 +747,23 @@ class UnsubscribeWebhookView(View):
 @method_decorator(csrf_exempt, name='dispatch')
 class ZeptoMailBounceWebhookView(View):
     """
-    Webhook endpoint for ZeptoMail bounce notifications.
-    Handles both hard bounces and soft bounces.
+    Webhook endpoint for ZeptoMail bounce and spam notifications.
+    Handles hard bounces, soft bounces, and feedback loop (spam reports).
 
-    ZeptoMail sends POST with payload:
-    {
-        "event_name": ["hardbounce"],
-        "event_message": [{
-            "email_info": {
-                "to": [{"email_address": {"address": "user@example.com"}}],
-                "subject": "...",
-                ...
-            },
-            "event_data": [{
-                "details": [{
-                    "reason": "relaying-issues",
-                    "bounced_recipient": "user@example.com",
-                    "diagnostic_message": "bad-mailbox"
-                }],
-                "object": "hardbounce"
-            }]
-        }],
-        "mailagent_key": "..."
-    }
+    Events:
+    - hardbounce: Invalid email → mark bounced, close all deals
+    - softbounce: Temporary failure → track count, auto-escalate to hard bounce after 3
+    - feedback_loop: Spam report → treat as unsubscribe, close all deals
 
     Configure in ZeptoMail: Settings > Webhooks > Add webhook URL:
     https://yourdomain.com/api/crm/webhooks/bounce/
-    Enable: Hard bounced (required), Soft bounced (optional)
+    Enable: Hard bounced, Soft bounced, Feedback loop
 
     Security: Set ZEPTOMAIL_WEBHOOK_KEY in .env and add the same key
     in ZeptoMail's "Authorization headers" field.
     """
+
+    SOFT_BOUNCE_THRESHOLD = 3  # Convert to hard bounce after this many
 
     def post(self, request):
         import logging
@@ -802,33 +788,48 @@ class ZeptoMailBounceWebhookView(View):
         if not event_messages:
             return JsonResponse({'error': 'No event_message'}, status=400)
 
-        is_hard_bounce = 'hardbounce' in event_names
+        # Determine event type
+        event_type = 'unknown'
+        if 'hardbounce' in event_names:
+            event_type = 'hardbounce'
+        elif 'softbounce' in event_names:
+            event_type = 'softbounce'
+        elif 'feedback_loop' in event_names or 'spam' in event_names:
+            event_type = 'spam'
 
         results = []
         for message in event_messages:
-            # Extract bounced recipient emails
-            bounced_emails = set()
+            # Extract affected recipient emails
+            affected_emails = set()
 
-            # From event_data details
+            # From event_data details (bounce events)
             for event_data in message.get('event_data', []):
                 for detail in event_data.get('details', []):
                     recipient = detail.get('bounced_recipient', '').lower().strip()
                     if recipient:
-                        bounced_emails.add(recipient)
+                        affected_emails.add(recipient)
+                    # Feedback loop may use different field
+                    recipient = detail.get('recipient', '').lower().strip()
+                    if recipient:
+                        affected_emails.add(recipient)
 
             # Fallback: from email_info.to
-            if not bounced_emails:
+            if not affected_emails:
                 email_info = message.get('email_info', {})
                 for to_entry in email_info.get('to', []):
                     addr = to_entry.get('email_address', {}).get('address', '').lower().strip()
                     if addr:
-                        bounced_emails.add(addr)
+                        affected_emails.add(addr)
 
-            for email in bounced_emails:
-                if is_hard_bounce:
-                    result = self._handle_hard_bounce(email, data, logger)
+            for email in affected_emails:
+                if event_type == 'hardbounce':
+                    result = self._handle_hard_bounce(email, logger)
+                elif event_type == 'softbounce':
+                    result = self._handle_soft_bounce(email, logger)
+                elif event_type == 'spam':
+                    result = self._handle_spam_report(email, logger)
                 else:
-                    result = self._handle_soft_bounce(email, data, logger)
+                    result = {'email': email, 'action': 'ignored', 'reason': f'unknown event: {event_names}'}
                 results.append(result)
 
         return JsonResponse({
@@ -837,22 +838,12 @@ class ZeptoMailBounceWebhookView(View):
             'results': results,
         })
 
-    def _handle_hard_bounce(self, email, data, logger):
-        """Mark contact as bounced and close all active deals."""
-        contact = Contact.objects.filter(email__iexact=email).first()
-        if not contact:
-            logger.info(f"Bounce webhook: no contact for {email}")
-            return {'email': email, 'action': 'ignored', 'reason': 'no_contact'}
-
-        if contact.email_bounced:
-            return {'email': email, 'action': 'already_bounced'}
-
-        # Mark contact as bounced
+    def _mark_bounced_and_close_deals(self, contact, reason_desc, logger):
+        """Shared logic: mark contact bounced + close all active deals."""
         contact.email_bounced = True
         contact.bounced_at = timezone.now()
         contact.save(update_fields=['email_bounced', 'bounced_at'])
 
-        # Close all active deals
         active_deals = Deal.objects.filter(contact=contact, status='active')
         deals_closed = 0
         for deal in active_deals:
@@ -862,17 +853,91 @@ class ZeptoMailBounceWebhookView(View):
             DealActivity.objects.create(
                 deal=deal,
                 activity_type='status_change',
-                description=f"[Webhook] Hard bounce from ZeptoMail - deal auto-closed"
+                description=f"[Webhook] {reason_desc} - deal auto-closed"
             )
             deals_closed += 1
 
-        logger.warning(f"Hard bounce webhook: {email} - contact marked bounced, {deals_closed} deals closed")
+        return deals_closed
+
+    def _handle_hard_bounce(self, email, logger):
+        """Mark contact as bounced and close all active deals."""
+        contact = Contact.objects.filter(email__iexact=email).first()
+        if not contact:
+            logger.info(f"Bounce webhook: no contact for {email}")
+            return {'email': email, 'action': 'ignored', 'reason': 'no_contact'}
+
+        if contact.email_bounced:
+            return {'email': email, 'action': 'already_bounced'}
+
+        deals_closed = self._mark_bounced_and_close_deals(
+            contact, "Hard bounce from ZeptoMail", logger
+        )
+
+        logger.warning(f"Hard bounce webhook: {email} - marked bounced, {deals_closed} deals closed")
         return {'email': email, 'action': 'bounced', 'deals_closed': deals_closed}
 
-    def _handle_soft_bounce(self, email, data, logger):
-        """Log soft bounce but don't mark contact as bounced (temporary issue)."""
-        logger.info(f"Soft bounce webhook: {email}")
-        return {'email': email, 'action': 'logged_soft_bounce'}
+    def _handle_soft_bounce(self, email, logger):
+        """Track soft bounce count. Auto-escalate to hard bounce after threshold."""
+        contact = Contact.objects.filter(email__iexact=email).first()
+        if not contact:
+            logger.info(f"Soft bounce webhook: no contact for {email}")
+            return {'email': email, 'action': 'ignored', 'reason': 'no_contact'}
+
+        if contact.email_bounced:
+            return {'email': email, 'action': 'already_bounced'}
+
+        contact.soft_bounce_count = (contact.soft_bounce_count or 0) + 1
+        contact.save(update_fields=['soft_bounce_count'])
+
+        # Auto-escalate to hard bounce after threshold
+        if contact.soft_bounce_count >= self.SOFT_BOUNCE_THRESHOLD:
+            deals_closed = self._mark_bounced_and_close_deals(
+                contact, f"Soft bounce escalated to hard bounce ({contact.soft_bounce_count} soft bounces)", logger
+            )
+            logger.warning(f"Soft bounce escalated: {email} - {contact.soft_bounce_count} soft bounces → marked bounced, {deals_closed} deals closed")
+            return {'email': email, 'action': 'escalated_to_hard_bounce', 'soft_bounce_count': contact.soft_bounce_count, 'deals_closed': deals_closed}
+
+        logger.info(f"Soft bounce webhook: {email} - count now {contact.soft_bounce_count}/{self.SOFT_BOUNCE_THRESHOLD}")
+        return {'email': email, 'action': 'soft_bounce_tracked', 'soft_bounce_count': contact.soft_bounce_count}
+
+    def _handle_spam_report(self, email, logger):
+        """Recipient reported spam. Treat as unsubscribe and close all deals."""
+        contact = Contact.objects.filter(email__iexact=email).first()
+        if not contact:
+            logger.info(f"Spam report webhook: no contact for {email}")
+            return {'email': email, 'action': 'ignored', 'reason': 'no_contact'}
+
+        if contact.spam_reported:
+            return {'email': email, 'action': 'already_reported'}
+
+        # Mark as spam reported + unsubscribed
+        contact.spam_reported = True
+        contact.spam_reported_at = timezone.now()
+        contact.is_unsubscribed = True
+        contact.unsubscribed_at = timezone.now()
+        contact.unsubscribe_reason = 'Spam report (ZeptoMail feedback loop)'
+        contact.status = 'unsubscribed'
+        contact.save(update_fields=[
+            'spam_reported', 'spam_reported_at',
+            'is_unsubscribed', 'unsubscribed_at', 'unsubscribe_reason', 'status'
+        ])
+
+        # Close all active deals
+        active_deals = Deal.objects.filter(contact=contact, status='active')
+        deals_closed = 0
+        for deal in active_deals:
+            deal.status = 'lost'
+            deal.lost_reason = 'unsubscribed'
+            deal.save(update_fields=['status', 'lost_reason'])
+            DealActivity.objects.create(
+                deal=deal,
+                activity_type='status_change',
+                description=f"[Webhook] Spam report - contact unsubscribed, deal auto-closed"
+            )
+            deals_closed += 1
+
+        logger.warning(f"Spam report webhook: {email} - unsubscribed, {deals_closed} deals closed")
+        return {'email': email, 'action': 'spam_unsubscribed', 'deals_closed': deals_closed}
 
 
 @method_decorator(csrf_exempt, name='dispatch')

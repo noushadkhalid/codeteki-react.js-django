@@ -140,6 +140,9 @@ class Contact(models.Model):
     # Bounce tracking
     email_bounced = models.BooleanField(default=False, help_text="Email address hard-bounced (invalid/non-existent)")
     bounced_at = models.DateTimeField(null=True, blank=True)
+    soft_bounce_count = models.IntegerField(default=0, help_text="Number of soft bounces (auto-converts to hard bounce at 3)")
+    spam_reported = models.BooleanField(default=False, help_text="Recipient reported email as spam (feedback loop)")
+    spam_reported_at = models.DateTimeField(null=True, blank=True)
 
     # Status tracking (simplified pipeline)
     STATUS_CHOICES = [

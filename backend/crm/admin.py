@@ -285,9 +285,9 @@ class ContactAdmin(ModelAdmin):
         'bounce_badge',
         'created_at',
     ]
-    list_filter = ['status', 'is_unsubscribed', 'email_bounced', 'brand', 'contact_type', 'source', 'created_at']
+    list_filter = ['status', 'is_unsubscribed', 'email_bounced', 'spam_reported', 'brand', 'contact_type', 'source', 'created_at']
     search_fields = ['name', 'email', 'company', 'website']
-    readonly_fields = ['created_at', 'updated_at', 'id', 'last_emailed_at', 'email_count', 'unsubscribed_at', 'bounced_at']
+    readonly_fields = ['created_at', 'updated_at', 'id', 'last_emailed_at', 'email_count', 'unsubscribed_at', 'bounced_at', 'soft_bounce_count', 'spam_reported_at']
     ordering = ['-created_at']
 
     class Media:
@@ -310,10 +310,10 @@ class ContactAdmin(ModelAdmin):
             'classes': ['collapse'],
             'description': 'Brand-specific unsubscribes. Global unsubscribe blocks all brands.'
         }),
-        ('Bounce Status', {
-            'fields': ('email_bounced', 'bounced_at'),
+        ('Bounce & Spam Status', {
+            'fields': ('email_bounced', 'bounced_at', 'soft_bounce_count', 'spam_reported', 'spam_reported_at'),
             'classes': ['collapse'],
-            'description': 'Hard bounce = invalid/non-existent email. No more emails will be sent.'
+            'description': 'Hard bounce = invalid email. Spam = reported as spam. Both permanently block future emails.'
         }),
         ('Classification', {
             'fields': ('tags', 'domain_authority', 'ai_score'),
@@ -333,6 +333,8 @@ class ContactAdmin(ModelAdmin):
         # If bounced, show as danger
         if obj.email_bounced:
             return "BOUNCED", "danger"
+        if obj.spam_reported:
+            return "SPAM", "danger"
         # If unsubscribed (globally or brand-specific), always show as danger with clear indicator
         if obj.is_unsubscribed:
             return "🚫 UNSUBSCRIBED", "danger"
@@ -362,6 +364,10 @@ class ContactAdmin(ModelAdmin):
     def bounce_badge(self, obj):
         if obj.email_bounced:
             return "BOUNCED", "danger"
+        if obj.spam_reported:
+            return "SPAM", "danger"
+        if obj.soft_bounce_count:
+            return f"SOFT x{obj.soft_bounce_count}", "warning"
         return "OK", "success"
 
     @display(description="Last Emailed")

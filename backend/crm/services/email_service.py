@@ -281,6 +281,13 @@ class ZohoEmailService:
                     'message_id': None,
                     'error': f'Recipient {to} has a bounced email address.',
                 }
+            if contact.spam_reported:
+                logger.info(f"Skipping email to {to} - recipient reported spam")
+                return {
+                    'success': False,
+                    'message_id': None,
+                    'error': f'Recipient {to} reported spam.',
+                }
             brand_slug = self.brand.slug if self.brand else None
             if contact.is_unsubscribed:
                 logger.info(f"Skipping email to {to} - recipient is globally unsubscribed")
@@ -857,6 +864,13 @@ class ZeptoMailService(ZohoEmailService):
                     'success': False,
                     'message_id': None,
                     'error': f'Recipient {to} has a bounced email address.',
+                }
+            if contact.spam_reported:
+                logger.info(f"Skipping email to {to} - recipient reported spam")
+                return {
+                    'success': False,
+                    'message_id': None,
+                    'error': f'Recipient {to} reported spam.',
                 }
             brand_slug = self.brand.slug if self.brand else None
             if contact.is_unsubscribed:
