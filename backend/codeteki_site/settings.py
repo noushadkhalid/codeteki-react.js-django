@@ -285,6 +285,7 @@ ZOHO_API_DOMAIN = os.getenv("ZOHO_API_DOMAIN", "zoho.com")  # Use zoho.com.au fo
 ZEPTOMAIL_API_KEY = os.getenv("ZEPTOMAIL_API_KEY", "")
 ZEPTOMAIL_HOST = os.getenv("ZEPTOMAIL_HOST", "api.zeptomail.com")  # US: api.zeptomail.com
 ZEPTOMAIL_FROM_EMAIL = os.getenv("ZEPTOMAIL_FROM_EMAIL", "noreply@desifirms.com.au")
+ZEPTOMAIL_WEBHOOK_KEY = os.getenv("ZEPTOMAIL_WEBHOOK_KEY", "")  # Auth key for bounce webhook verification
 
 # Django Unfold Configuration
 from django.templatetags.static import static

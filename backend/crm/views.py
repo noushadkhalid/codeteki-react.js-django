@@ -11,6 +11,7 @@ API endpoints for CRM management:
 """
 
 import json
+from django.conf import settings
 from django.http import JsonResponse, HttpResponse
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
@@ -773,11 +774,22 @@ class ZeptoMailBounceWebhookView(View):
     Configure in ZeptoMail: Settings > Webhooks > Add webhook URL:
     https://yourdomain.com/api/crm/webhooks/bounce/
     Enable: Hard bounced (required), Soft bounced (optional)
+
+    Security: Set ZEPTOMAIL_WEBHOOK_KEY in .env and add the same key
+    in ZeptoMail's "Authorization headers" field.
     """
 
     def post(self, request):
         import logging
         logger = logging.getLogger(__name__)
+
+        # Verify webhook auth key if configured
+        webhook_key = getattr(settings, 'ZEPTOMAIL_WEBHOOK_KEY', '')
+        if webhook_key:
+            auth_header = request.headers.get('Authorization', '')
+            if auth_header != webhook_key:
+                logger.warning(f"Bounce webhook: invalid auth key")
+                return JsonResponse({'error': 'Unauthorized'}, status=401)
 
         try:
             data = json.loads(request.body)
