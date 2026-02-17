@@ -744,6 +744,126 @@ class UnsubscribeWebhookView(View):
 
 
 @method_decorator(csrf_exempt, name='dispatch')
+class ZeptoMailBounceWebhookView(View):
+    """
+    Webhook endpoint for ZeptoMail bounce notifications.
+    Handles both hard bounces and soft bounces.
+
+    ZeptoMail sends POST with payload:
+    {
+        "event_name": ["hardbounce"],
+        "event_message": [{
+            "email_info": {
+                "to": [{"email_address": {"address": "user@example.com"}}],
+                "subject": "...",
+                ...
+            },
+            "event_data": [{
+                "details": [{
+                    "reason": "relaying-issues",
+                    "bounced_recipient": "user@example.com",
+                    "diagnostic_message": "bad-mailbox"
+                }],
+                "object": "hardbounce"
+            }]
+        }],
+        "mailagent_key": "..."
+    }
+
+    Configure in ZeptoMail: Settings > Webhooks > Add webhook URL:
+    https://yourdomain.com/api/crm/webhooks/bounce/
+    Enable: Hard bounced (required), Soft bounced (optional)
+    """
+
+    def post(self, request):
+        import logging
+        logger = logging.getLogger(__name__)
+
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+        event_names = data.get('event_name', [])
+        event_messages = data.get('event_message', [])
+
+        if not event_messages:
+            return JsonResponse({'error': 'No event_message'}, status=400)
+
+        is_hard_bounce = 'hardbounce' in event_names
+
+        results = []
+        for message in event_messages:
+            # Extract bounced recipient emails
+            bounced_emails = set()
+
+            # From event_data details
+            for event_data in message.get('event_data', []):
+                for detail in event_data.get('details', []):
+                    recipient = detail.get('bounced_recipient', '').lower().strip()
+                    if recipient:
+                        bounced_emails.add(recipient)
+
+            # Fallback: from email_info.to
+            if not bounced_emails:
+                email_info = message.get('email_info', {})
+                for to_entry in email_info.get('to', []):
+                    addr = to_entry.get('email_address', {}).get('address', '').lower().strip()
+                    if addr:
+                        bounced_emails.add(addr)
+
+            for email in bounced_emails:
+                if is_hard_bounce:
+                    result = self._handle_hard_bounce(email, data, logger)
+                else:
+                    result = self._handle_soft_bounce(email, data, logger)
+                results.append(result)
+
+        return JsonResponse({
+            'status': 'processed',
+            'event': event_names,
+            'results': results,
+        })
+
+    def _handle_hard_bounce(self, email, data, logger):
+        """Mark contact as bounced and close all active deals."""
+        contact = Contact.objects.filter(email__iexact=email).first()
+        if not contact:
+            logger.info(f"Bounce webhook: no contact for {email}")
+            return {'email': email, 'action': 'ignored', 'reason': 'no_contact'}
+
+        if contact.email_bounced:
+            return {'email': email, 'action': 'already_bounced'}
+
+        # Mark contact as bounced
+        contact.email_bounced = True
+        contact.bounced_at = timezone.now()
+        contact.save(update_fields=['email_bounced', 'bounced_at'])
+
+        # Close all active deals
+        active_deals = Deal.objects.filter(contact=contact, status='active')
+        deals_closed = 0
+        for deal in active_deals:
+            deal.status = 'lost'
+            deal.lost_reason = 'invalid_email'
+            deal.save(update_fields=['status', 'lost_reason'])
+            DealActivity.objects.create(
+                deal=deal,
+                activity_type='status_change',
+                description=f"[Webhook] Hard bounce from ZeptoMail - deal auto-closed"
+            )
+            deals_closed += 1
+
+        logger.warning(f"Hard bounce webhook: {email} - contact marked bounced, {deals_closed} deals closed")
+        return {'email': email, 'action': 'bounced', 'deals_closed': deals_closed}
+
+    def _handle_soft_bounce(self, email, data, logger):
+        """Log soft bounce but don't mark contact as bounced (temporary issue)."""
+        logger.info(f"Soft bounce webhook: {email}")
+        return {'email': email, 'action': 'logged_soft_bounce'}
+
+
+@method_decorator(csrf_exempt, name='dispatch')
 class ContactSearchView(View):
     """
     Fast contact search for email composer autocomplete.

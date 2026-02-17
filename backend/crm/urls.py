@@ -15,6 +15,7 @@ API endpoints:
 Webhooks:
 - /api/crm/webhooks/reply/       - Email reply notifications
 - /api/crm/webhooks/unsubscribe/ - Unsubscribe/bounce notifications
+- /api/crm/webhooks/bounce/      - ZeptoMail hard/soft bounce notifications
 """
 
 from django.urls import path
@@ -34,6 +35,7 @@ from .views import (
     EmailTrackingPixelView,
     EmailReplyWebhookView,
     UnsubscribeWebhookView,
+    ZeptoMailBounceWebhookView,
     UnsubscribeView,
     # Dashboard views
     pipeline_dashboard,
@@ -81,6 +83,7 @@ urlpatterns = [
     # Webhooks (for Zoho/email service callbacks)
     path('webhooks/reply/', EmailReplyWebhookView.as_view(), name='webhook-reply'),
     path('webhooks/unsubscribe/', UnsubscribeWebhookView.as_view(), name='webhook-unsubscribe'),
+    path('webhooks/bounce/', ZeptoMailBounceWebhookView.as_view(), name='webhook-bounce'),
 
     # Public unsubscribe page (clicked from emails)
     path('unsubscribe/', UnsubscribeView.as_view(), name='unsubscribe'),
