@@ -432,6 +432,11 @@ class PipelineStage(models.Model):
         default=3,
         help_text="Days to wait before follow-up action"
     )
+    subject_variant_b = models.CharField(
+        max_length=255,
+        blank=True,
+        help_text="A/B test subject line. Leave blank to disable."
+    )
     is_terminal = models.BooleanField(default=False, help_text="Marks end states like Won/Lost")
 
     class Meta:
@@ -454,6 +459,16 @@ class Deal(models.Model):
         ('paused', 'Paused'),
     ]
 
+    ENGAGEMENT_TIER_CHOICES = [
+        ('', 'Unknown'),
+        ('engaged', 'Engaged'),
+        ('hot', 'Hot'),
+        ('warm', 'Warm'),
+        ('lurker', 'Lurker'),
+        ('cold', 'Cold'),
+        ('ghost', 'Ghost'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     contact = models.ForeignKey(Contact, on_delete=models.CASCADE, related_name='deals')
     pipeline = models.ForeignKey(Pipeline, on_delete=models.CASCADE, related_name='deals')
@@ -464,6 +479,17 @@ class Deal(models.Model):
         related_name='deals'
     )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    engagement_tier = models.CharField(
+        max_length=20,
+        blank=True,
+        choices=ENGAGEMENT_TIER_CHOICES,
+        default='',
+        help_text="Auto-computed engagement tier from email activity"
+    )
+    autopilot_paused = models.BooleanField(
+        default=False,
+        help_text="Pause autopilot for this deal (manual override)"
+    )
     lost_reason = models.CharField(
         max_length=50,
         blank=True,
@@ -566,7 +592,7 @@ class EmailLog(models.Model):
     """Track all sent emails."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    deal = models.ForeignKey(Deal, on_delete=models.CASCADE, related_name='email_logs')
+    deal = models.ForeignKey(Deal, on_delete=models.CASCADE, related_name='email_logs', null=True, blank=True)
     sequence_step = models.ForeignKey(
         SequenceStep,
         on_delete=models.SET_NULL,
@@ -574,6 +600,9 @@ class EmailLog(models.Model):
         blank=True,
         related_name='email_logs'
     )
+
+    # A/B testing
+    ab_variant = models.CharField(max_length=1, blank=True, help_text="A/B test variant: A or B")
 
     # Email content
     subject = models.CharField(max_length=255)
@@ -1177,3 +1206,5 @@ class EmailDraft(models.Model):
         if count > 0:
             return f"Draft - {count} recipient(s)"
         return f"Draft - {self.brand.name} ({self.email_type})"
+
+

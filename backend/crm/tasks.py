@@ -21,10 +21,11 @@ logger = logging.getLogger(__name__)
 def process_pending_deals(self):
     """
     Process deals that need action based on next_action_date.
-    Runs hourly.
+    Runs hourly. Now engagement-aware with burnout detection and ghost handling.
     """
     from crm.models import Deal, DealActivity, PipelineStage
     from crm.services.ai_agent import CRMAIAgent
+    from crm.services.engagement_engine import get_engagement_profile
 
     logger.info("Starting process_pending_deals task")
 
@@ -35,17 +36,33 @@ def process_pending_deals(self):
     # Find deals with next_action_date <= now and status active
     pending_deals = Deal.objects.filter(
         status='active',
-        next_action_date__lte=timezone.now()
-    ).select_related('contact', 'pipeline', 'current_stage')[:50]  # Process in batches
+        next_action_date__lte=timezone.now(),
+        autopilot_paused=False,
+    ).select_related('contact', 'pipeline', 'current_stage')[:50]
 
     for deal in pending_deals:
         try:
             with transaction.atomic():
+                # SAFETY: Skip unsubscribed contacts (belt-and-suspenders)
+                contact = deal.contact
+                brand_slug = deal.pipeline.brand.slug if deal.pipeline and deal.pipeline.brand else None
+                if contact.is_unsubscribed or (brand_slug and contact.is_unsubscribed_from_brand(brand_slug)):
+                    deal.status = 'lost'
+                    deal.lost_reason = 'unsubscribed'
+                    deal.save(update_fields=['status', 'lost_reason'])
+                    DealActivity.objects.create(
+                        deal=deal,
+                        activity_type='status_change',
+                        description=f"[Autopilot] Contact is unsubscribed - deal auto-closed"
+                    )
+                    processed += 1
+                    logger.info(f"Deal {deal.id}: Contact unsubscribed, auto-closed")
+                    continue
+
                 # Check if this is a "Follow Up 3 (Final)" stage that has expired
                 # If so, automatically move to "Not Interested" without AI analysis
                 stage_name = deal.current_stage.name.lower() if deal.current_stage else ''
                 if 'follow up 3' in stage_name or 'final' in stage_name:
-                    # This is the final follow-up stage - move to Not Interested
                     not_interested_stage = PipelineStage.objects.filter(
                         pipeline=deal.pipeline,
                         name__icontains='not interested'
@@ -64,19 +81,60 @@ def process_pending_deals(self):
                         logger.info(f"Deal {deal.id}: Auto-moved to Not Interested after final follow-up")
                         continue
 
-                # Get AI recommendation
-                result = ai_agent.analyze_deal(deal)
+                # === ENGAGEMENT-AWARE ROUTING ===
+                profile = get_engagement_profile(deal)
+
+                # Update engagement tier on deal
+                if deal.engagement_tier != profile.tier:
+                    deal.engagement_tier = profile.tier
+                    deal.save(update_fields=['engagement_tier'])
+
+                # GUARD: Ghost detection - stop wasting emails
+                if profile.tier == 'ghost' and profile.total_sent >= 3:
+                    not_interested_stage = PipelineStage.objects.filter(
+                        pipeline=deal.pipeline,
+                        name__icontains='not interested'
+                    ).first()
+                    if not_interested_stage:
+                        deal.move_to_stage(not_interested_stage)
+                        deal.status = 'lost'
+                        deal.lost_reason = 'no_response'
+                        deal.save(update_fields=['status', 'lost_reason'])
+                        DealActivity.objects.create(
+                            deal=deal,
+                            activity_type='stage_change',
+                            description=f"[Autopilot] Ghost detected: {profile.total_sent} emails sent, 0 opens. Auto-closed."
+                        )
+                        processed += 1
+                        logger.info(f"Deal {deal.id}: Ghost detected, moved to Not Interested")
+                        continue
+
+                # GUARD: Burnout risk - extend wait time
+                if profile.is_burnout_risk and profile.tier not in ('engaged', 'hot'):
+                    deal.next_action_date = timezone.now() + timedelta(days=7)
+                    deal.ai_notes = (deal.ai_notes or '') + f"\n[{timezone.now().strftime('%Y-%m-%d')}] [Autopilot] Burnout risk: {profile.consecutive_unopened} consecutive unopened. Extended wait 7 days."
+                    deal.save(update_fields=['next_action_date', 'ai_notes'])
+                    processed += 1
+                    logger.info(f"Deal {deal.id}: Burnout risk detected, extending wait")
+                    continue
+
+                # Pass engagement profile to AI for smarter analysis
+                result = ai_agent.analyze_deal(deal, engagement_profile=profile)
                 action = result.get('action', 'flag_for_review')
                 metadata = result.get('metadata', {})
 
-                logger.info(f"Deal {deal.id}: AI recommends '{action}'")
+                logger.info(f"Deal {deal.id}: AI recommends '{action}' (tier: {profile.tier})")
 
                 if action == 'send_email':
-                    # Queue email for sending
-                    queue_deal_email.delay(str(deal.id), metadata.get('email_type', 'followup'))
+                    email_type = metadata.get('email_type', 'followup')
+                    # A/B testing: check if stage has variant B subject
+                    ab_variant = ''
+                    if deal.current_stage and deal.current_stage.subject_variant_b:
+                        import random
+                        ab_variant = 'A' if random.random() > 0.5 else 'B'
+                    queue_deal_email.delay(str(deal.id), email_type, ab_variant=ab_variant)
 
                 elif action == 'move_stage':
-                    # Move to suggested stage
                     suggested_stage_name = metadata.get('suggested_stage', '')
                     if suggested_stage_name:
                         next_stage = PipelineStage.objects.filter(
@@ -93,10 +151,16 @@ def process_pending_deals(self):
                             )
 
                 elif action == 'wait':
-                    # Update next action date
                     wait_days = int(metadata.get('wait_days', 3))
                     deal.next_action_date = timezone.now() + timedelta(days=wait_days)
                     deal.save(update_fields=['next_action_date'])
+
+                elif action == 'change_approach':
+                    # AI says try something different - extend wait and note it
+                    wait_days = int(metadata.get('wait_days', 5))
+                    deal.next_action_date = timezone.now() + timedelta(days=wait_days)
+                    deal.ai_notes = (deal.ai_notes or '') + f"\n[{timezone.now().strftime('%Y-%m-%d')}] [Autopilot] Changing approach: {result.get('reasoning', '')}"
+                    deal.save(update_fields=['next_action_date', 'ai_notes'])
 
                 elif action == 'pause':
                     deal.status = 'paused'
@@ -108,7 +172,6 @@ def process_pending_deals(self):
                     )
 
                 elif action == 'flag_for_review':
-                    # Add to AI notes for human review
                     deal.ai_notes = (deal.ai_notes or '') + f"\n[{timezone.now().strftime('%Y-%m-%d')}] Flagged for review: {result.get('reasoning', '')}"
                     deal.save(update_fields=['ai_notes'])
 
@@ -123,7 +186,7 @@ def process_pending_deals(self):
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=30)
-def queue_deal_email(self, deal_id: str, email_type: str = 'followup'):
+def queue_deal_email(self, deal_id: str, email_type: str = 'followup', ab_variant: str = ''):
     """
     Queue an email to be sent for a deal.
     Called by process_pending_deals or manually.
@@ -152,8 +215,13 @@ def queue_deal_email(self, deal_id: str, email_type: str = 'followup'):
     email_service = get_email_service(brand)
     contact = deal.contact
 
-    # Determine brand and pipeline info
+    # SAFETY: Never email unsubscribed contacts
     brand_slug = brand.slug if brand else 'desifirms'
+    if contact.is_unsubscribed or contact.is_unsubscribed_from_brand(brand_slug):
+        logger.warning(f"Blocked email to unsubscribed contact {contact.email} (brand: {brand_slug})")
+        return {'success': False, 'error': 'Contact is unsubscribed'}
+
+    # Determine brand and pipeline info
     pipeline_type = deal.pipeline.pipeline_type if deal.pipeline else 'sales'
     pipeline_name = deal.pipeline.name if deal.pipeline else ''
 
@@ -185,20 +253,34 @@ def queue_deal_email(self, deal_id: str, email_type: str = 'followup'):
 
         # Get subject based on email type
         subject_map = {
+            # Desi Firms Real Estate
             'agent_invitation': f"Join Desi Firms Real Estate as a Founding Member",
             'agent_followup_1': f"Just checking in - free listing opportunity",
             'agent_followup_2': f"Quick reminder - free real estate listing",
             'agent_followup_3': f"Closing the loop - Desi Firms",
             'realestate_followup_3': f"Closing the loop - Desi Firms",
+            # Desi Firms Business
             'directory_invitation': f"List {recipient_company} on Desi Firms - FREE",
             'directory_followup_1': f"Quick follow-up - free business listing",
             'directory_followup_2': f"Quick reminder - free listing opportunity",
             'directory_followup_3': f"Closing the loop - Desi Firms",
+            # Desi Firms Events
+            'events_invitation': f"List your events on Desi Firms - FREE",
             'events_followup_1': f"Quick follow-up - free event listing",
             'events_followup_2': f"Quick reminder - free event listing",
             'events_followup_3': f"Closing the loop - Desi Firms",
+            # Codeteki Sales
+            'services_intro': f"AI-powered solutions for {recipient_company}",
+            'sales_followup': f"Quick follow-up - {recipient_company}",
+            'sales_followup_2': f"One more thought for {recipient_company}",
+            # Codeteki Backlink
+            'backlink_pitch': f"Content collaboration opportunity - {recipient_company}",
+            'backlink_followup': f"Following up on content collaboration",
         }
         subject = subject_map.get(template_email_type, 'Following up')
+        # A/B testing: use variant B subject if specified
+        if ab_variant == 'B' and deal.current_stage and deal.current_stage.subject_variant_b:
+            subject = deal.current_stage.subject_variant_b
         plain_body = f"(Pre-designed template: {template_email_type})"
         ai_generated = False
 
@@ -227,6 +309,9 @@ def queue_deal_email(self, deal_id: str, email_type: str = 'followup'):
 
         html_body = styled_email['html']
         subject = email_result['subject']
+        # A/B testing: use variant B subject if specified
+        if ab_variant == 'B' and deal.current_stage and deal.current_stage.subject_variant_b:
+            subject = deal.current_stage.subject_variant_b
         plain_body = email_result['body']
         ai_generated = True
 
@@ -236,7 +321,8 @@ def queue_deal_email(self, deal_id: str, email_type: str = 'followup'):
         subject=subject,
         body=plain_body,
         to_email=deal.contact.email,
-        ai_generated=ai_generated
+        ai_generated=ai_generated,
+        ab_variant=ab_variant,
     )
 
     # Send styled HTML email
@@ -262,9 +348,30 @@ def queue_deal_email(self, deal_id: str, email_type: str = 'followup'):
         DealActivity.objects.create(
             deal=deal,
             activity_type='email_sent',
-            description=f"Email sent: {email_result['subject']}",
+            description=f"Email sent: {subject}" + (f" [Variant {ab_variant}]" if ab_variant else ""),
             metadata={'email_log_id': str(email_log.id)}
         )
+
+        # Auto-advance to next stage so the next email uses the next template
+        # Only advance into follow-up or nudge stages, never into response/conversion stages
+        from crm.models import PipelineStage
+        if deal.current_stage and not deal.current_stage.is_terminal:
+            next_stage = PipelineStage.objects.filter(
+                pipeline=deal.pipeline,
+                order__gt=deal.current_stage.order
+            ).order_by('order').first()
+
+            if next_stage and not next_stage.is_terminal:
+                next_name = next_stage.name.lower()
+                # Only auto-advance into follow-up or nudge stages
+                if 'follow up' in next_name or 'nudge' in next_name:
+                    deal.move_to_stage(next_stage)
+                    DealActivity.objects.create(
+                        deal=deal,
+                        activity_type='stage_change',
+                        description=f"Auto-advanced to {next_stage.name} after email sent"
+                    )
+                    logger.info(f"Deal {deal.id}: Auto-advanced to {next_stage.name}")
 
         logger.info(f"Email sent successfully to {deal.contact.email}")
         return {'success': True, 'email_log_id': str(email_log.id)}
@@ -288,15 +395,18 @@ def send_scheduled_emails(self):
     sent = 0
     errors = 0
 
-    # Find unsent emails (created in last 24 hours)
+    # Find unsent pipeline emails (created in last 24 hours, with deals only)
     unsent_emails = EmailLog.objects.filter(
         sent_at__isnull=True,
+        deal__isnull=False,
         created_at__gte=timezone.now() - timedelta(hours=24)
     ).select_related('deal', 'deal__contact', 'deal__pipeline', 'deal__pipeline__brand')[:20]
 
     for email_log in unsent_emails:
         try:
             deal = email_log.deal
+            if not deal:
+                continue  # Guard: skip emails without deals
             contact = deal.contact if deal else None
             brand = deal.pipeline.brand if deal and deal.pipeline else None
             email_service = get_email_service(brand)
@@ -331,7 +441,6 @@ def send_scheduled_emails(self):
                 email_log.save()
 
                 # Update deal
-                deal = email_log.deal
                 deal.emails_sent += 1
                 deal.last_contact_date = timezone.now()
                 deal.save(update_fields=['emails_sent', 'last_contact_date'])
@@ -971,3 +1080,46 @@ def _send_scheduled_to_recipient(draft, recipient, subject, body_text, invited_s
             deal_created = True
 
     return {'success': True, 'deal_created': deal_created}
+
+
+@shared_task
+def autopilot_engagement_scan():
+    """
+    Daily scan of all active deals to update engagement tiers and detect issues.
+    Runs at 8 AM daily, before the main email processing.
+    """
+    from crm.models import Deal, DealActivity, PipelineStage
+    from crm.services.engagement_engine import get_engagement_profile
+
+    logger.info("Starting autopilot_engagement_scan")
+
+    active_deals = Deal.objects.filter(
+        status='active',
+    ).select_related('contact', 'pipeline', 'current_stage')
+
+    stats = {'total': 0, 'updated': 0, 'ghosts': 0, 'burnout': 0, 'hot': 0}
+
+    for deal in active_deals:
+        try:
+            profile = get_engagement_profile(deal)
+            stats['total'] += 1
+
+            # Update tier if changed
+            if deal.engagement_tier != profile.tier:
+                deal.engagement_tier = profile.tier
+                deal.save(update_fields=['engagement_tier'])
+                stats['updated'] += 1
+
+            # Count stats
+            if profile.tier == 'ghost':
+                stats['ghosts'] += 1
+            if profile.tier == 'hot':
+                stats['hot'] += 1
+            if profile.is_burnout_risk:
+                stats['burnout'] += 1
+
+        except Exception as e:
+            logger.error(f"Error scanning deal {deal.id}: {e}")
+
+    logger.info(f"autopilot_engagement_scan completed: {stats}")
+    return stats

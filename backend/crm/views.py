@@ -564,13 +564,14 @@ class EmailTrackingPixelView(View):
                 email_log.opened_at = timezone.now()
                 email_log.save()
 
-                # Log activity
+                # Log activity for pipeline emails
                 if email_log.deal:
                     DealActivity.objects.create(
                         deal=email_log.deal,
                         activity_type='email_opened',
                         description=f"Email opened: {email_log.subject}",
                     )
+
         except EmailLog.DoesNotExist:
             pass
 
@@ -1137,6 +1138,7 @@ class UnsubscribeView(View):
                     deal.lost_reason = 'unsubscribed'
                     deal.ai_notes = (deal.ai_notes or '') + f'\n[AUTO] Unsubscribed from {brand_slug} via link on {timezone.now().strftime("%Y-%m-%d")}'
                     deal.save()
+
         else:
             # Create contact record to track opt-out for future (brand already fetched above)
             Contact.objects.create(

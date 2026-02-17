@@ -264,6 +264,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'crm.tasks.check_scheduled_drafts',
         'schedule': crontab(minute='*/5'),  # Every 5 minutes - check for scheduled emails
     },
+    'crm-autopilot-engagement-scan': {
+        'task': 'crm.tasks.autopilot_engagement_scan',
+        'schedule': crontab(hour=8, minute=0),  # 8 AM daily - before emails go out
+    },
 }
 
 # Zoho Mail API Configuration (for CRM email outreach)

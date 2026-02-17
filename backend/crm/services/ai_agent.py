@@ -247,7 +247,7 @@ CRITICAL RULES:
             return f"Hi {company} Team,"
         return "Hi there,"
 
-    def analyze_deal(self, deal) -> dict:
+    def analyze_deal(self, deal, engagement_profile=None) -> dict:
         """
         Analyze a deal and decide the next action.
 
@@ -261,13 +261,33 @@ CRITICAL RULES:
         from crm.models import AIDecisionLog
 
         # Build context about the deal
-        context = self._build_deal_context(deal)
+        context = self._build_deal_context(deal, engagement_profile=engagement_profile)
+
+        # Build engagement-aware instructions
+        engagement_instructions = ""
+        if engagement_profile:
+            engagement_instructions = f"""
+CRITICAL - ENGAGEMENT-AWARE DECISIONS:
+- Engagement Tier: {engagement_profile.tier.upper()}
+- Open Rate: {engagement_profile.open_rate:.0%} ({engagement_profile.total_opened}/{engagement_profile.total_sent}) after {engagement_profile.total_sent} emails
+- Consecutive Unopened: {engagement_profile.consecutive_unopened}
+- Burnout Risk: {'YES' if engagement_profile.is_burnout_risk else 'No'}
+- System Recommendation: {engagement_profile.recommended_action}
+
+ENGAGEMENT RULES (follow these strictly):
+1. If open rate is 0% after 2+ emails → suggest 'change_approach' or 'pause', NOT another similar email
+2. If they opened but didn't reply → try a different angle, shorter email, or stronger CTA
+3. If burnout risk is detected → recommend 'wait' with 5-7 days
+4. NEVER suggest sending another similar email to someone who hasn't opened any
+5. If tier is 'engaged' or 'hot' → be more responsive, shorter wait times
+6. If tier is 'cold' → suggest changing subject line approach or wait longer
+"""
 
         prompt = f"""Analyze this deal and recommend the next action.
 
 DEAL CONTEXT:
 {context}
-
+{engagement_instructions}
 Based on the deal's current state, what should we do next?
 
 Consider:
@@ -275,14 +295,15 @@ Consider:
 2. What stage is the deal in?
 3. Have we sent emails? Were they opened/replied?
 4. What is the contact's engagement level?
+5. ENGAGEMENT DATA: Use the engagement profile above to make smarter decisions.
 
 Respond in JSON format:
 {{
-    "action": "send_email" | "move_stage" | "wait" | "flag_for_review" | "pause",
+    "action": "send_email" | "move_stage" | "wait" | "change_approach" | "flag_for_review" | "pause",
     "reasoning": "Brief explanation of why this action",
     "suggested_stage": "If action is move_stage, which stage name",
     "email_type": "If action is send_email, what type: initial, followup_1, followup_2, custom",
-    "wait_days": "If action is wait, how many days to wait"
+    "wait_days": "If action is wait or change_approach, how many days to wait"
 }}"""
 
         result = self.ai_engine.generate(
@@ -327,7 +348,7 @@ Respond in JSON format:
             'metadata': parsed
         }
 
-    def compose_email(self, deal, template: Optional[str] = None, context: dict = None) -> dict:
+    def compose_email(self, deal, template: Optional[str] = None, context: dict = None, engagement_profile=None) -> dict:
         """
         Compose a personalized email for a deal.
 
@@ -394,6 +415,23 @@ Codeteki Digital Services
             email_type = "second follow-up"
         else:
             email_type = f"follow-up #{deal.emails_sent}"
+
+        # Engagement-aware instructions for AI
+        engagement_context = ""
+        if engagement_profile:
+            engagement_context = f"""
+ENGAGEMENT CONTEXT (USE THIS TO TAILOR YOUR EMAIL):
+- This contact has received {engagement_profile.total_sent} emails so far
+- Open rate: {engagement_profile.open_rate:.0%}
+- They {'have opened' if engagement_profile.total_opened > 0 else 'have NOT opened'} previous emails
+- {'They clicked a link' if engagement_profile.total_clicked > 0 else 'No link clicks'}
+- Engagement tier: {engagement_profile.tier}
+
+SMART ADAPTATION:
+- If they haven't opened: Try a COMPLETELY DIFFERENT subject line approach
+- If they opened but didn't reply: They're interested but not convinced - add more value
+- If they clicked: They're warm - be more direct with CTA
+"""
 
         # Brand-specific instructions
         is_desi_firms = brand and ('desi' in brand.name.lower() or 'desifirms' in brand.slug.lower())
@@ -525,7 +563,7 @@ CAMPAIGN CONTEXT:
 - AI Notes: {deal.ai_notes or 'None'}
 
 {f'TEMPLATE TO PERSONALIZE:{chr(10)}{template}' if template else ''}
-
+{engagement_context}
 Requirements:
 1. Keep it concise (under 100 words for initial, under 80 for follow-ups)
 2. Follow the brand tone guidelines above STRICTLY
@@ -1888,7 +1926,7 @@ Respond in JSON format:
             'success': True
         }
 
-    def _build_deal_context(self, deal) -> str:
+    def _build_deal_context(self, deal, engagement_profile=None) -> str:
         """Build a context string for deal analysis."""
         from crm.models import EmailLog
 
@@ -1930,5 +1968,11 @@ Respond in JSON format:
             "",
             f"AI Notes: {deal.ai_notes or 'None'}",
         ]
+
+        # Add engagement profile if available
+        if engagement_profile:
+            from crm.services.engagement_engine import get_engagement_summary_for_ai
+            context_parts.append("")
+            context_parts.append(get_engagement_summary_for_ai(deal))
 
         return "\n".join(context_parts)

@@ -205,7 +205,7 @@ class BrandAdmin(ModelAdmin):
 class PipelineStageInline(TabularInline):
     model = PipelineStage
     extra = 1
-    fields = ('name', 'order', 'days_until_followup', 'is_terminal')
+    fields = ('name', 'order', 'days_until_followup', 'subject_variant_b', 'is_terminal')
     ordering = ['order']
 
 
@@ -714,15 +714,16 @@ class DealAdmin(ModelAdmin):
         'pipeline',
         'current_stage_display',
         'status_badge',
+        'engagement_tier_badge',
         'lost_reason_display',
         'next_action_date',
         'emails_sent',
         'value_display',
         'created_at',
     ]
-    list_filter = ['pipeline', 'current_stage', 'status', 'lost_reason', 'created_at']
+    list_filter = ['pipeline', 'current_stage', 'status', 'engagement_tier', 'autopilot_paused', 'lost_reason', 'created_at']
     search_fields = ['contact__name', 'contact__email', 'contact__company']
-    readonly_fields = ['id', 'created_at', 'updated_at', 'stage_entered_at', 'emails_sent']
+    readonly_fields = ['id', 'created_at', 'updated_at', 'stage_entered_at', 'emails_sent', 'engagement_tier']
     inlines = [DealActivityInline, EmailLogInline]
     ordering = ['-created_at']
 
@@ -734,7 +735,7 @@ class DealAdmin(ModelAdmin):
             'fields': ('contact', 'pipeline', 'current_stage', 'status', 'lost_reason', 'value')
         }),
         ('AI & Automation', {
-            'fields': ('ai_notes', 'next_action_date')
+            'fields': ('ai_notes', 'next_action_date', 'engagement_tier', 'autopilot_paused')
         }),
         ('Tracking', {
             'fields': ('emails_sent', 'last_contact_date', 'stage_entered_at'),
@@ -787,6 +788,20 @@ class DealAdmin(ModelAdmin):
         if obj.value:
             return f"${obj.value:,.2f}"
         return "-"
+
+    @display(description="Engagement", label=True)
+    def engagement_tier_badge(self, obj):
+        tier_colors = {
+            'engaged': 'success',
+            'hot': 'warning',
+            'warm': 'info',
+            'lurker': 'secondary',
+            'cold': 'info',
+            'ghost': 'danger',
+        }
+        if not obj.engagement_tier:
+            return "Unknown", "secondary"
+        return obj.get_engagement_tier_display(), tier_colors.get(obj.engagement_tier, 'secondary')
 
     @action(description="Move to next stage")
     def move_to_next_stage(self, request, queryset):
@@ -1503,15 +1518,18 @@ class EmailLogAdmin(ModelAdmin):
     list_display = [
         'subject_truncated',
         'to_email',
+        'source_display',
         'sent_at',
         'opened_badge',
         'replied_badge',
+        'ab_variant_display',
         'ai_generated',
     ]
-    list_filter = ['opened', 'replied', 'ai_generated', 'sent_at']
+    list_filter = ['opened', 'replied', 'ai_generated', 'ab_variant', 'sent_at']
     search_fields = ['subject', 'to_email', 'deal__contact__name']
     readonly_fields = [
-        'id', 'deal', 'sequence_step', 'subject', 'body', 'from_email', 'to_email',
+        'id', 'deal', 'sequence_step', 'ab_variant',
+        'subject', 'body', 'from_email', 'to_email',
         'sent_at', 'opened', 'opened_at', 'clicked', 'clicked_at',
         'replied', 'replied_at', 'reply_content', 'ai_generated',
         'zoho_message_id', 'tracking_id', 'created_at'
@@ -1530,6 +1548,14 @@ class EmailLogAdmin(ModelAdmin):
             return obj.subject[:50] + "..."
         return obj.subject
 
+    @display(description="Source", label=True)
+    def source_display(self, obj):
+        if obj.deal and obj.deal.pipeline:
+            return f"Pipeline: {obj.deal.pipeline.name}", "warning"
+        if obj.deal:
+            return "Pipeline", "warning"
+        return "Direct", "secondary"
+
     @display(description="Opened", label=True)
     def opened_badge(self, obj):
         if obj.opened:
@@ -1541,6 +1567,10 @@ class EmailLogAdmin(ModelAdmin):
         if obj.replied:
             return "Yes", "success"
         return "No", "danger"
+
+    @display(description="A/B")
+    def ab_variant_display(self, obj):
+        return obj.ab_variant or "-"
 
 
 # =============================================================================

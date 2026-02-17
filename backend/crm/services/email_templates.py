@@ -213,6 +213,29 @@ def get_email_type_for_stage(stage_name: str, pipeline_type: str = None, pipelin
         if stage_lower in events_map:
             return events_map[stage_lower]
 
+    elif pipeline_type == 'sales':
+        sales_map = {
+            'intro sent': 'services_intro',
+            'follow up 1': 'sales_followup',
+            'follow up 2': 'sales_followup_2',
+            'responded': 'sales_responded',
+            'discovery call': 'discovery_scheduled',
+            'proposal sent': 'proposal_sent',
+            'negotiating': 'proposal_followup',
+            'client': 'welcome_client',
+        }
+        if stage_lower in sales_map:
+            return sales_map[stage_lower]
+
+    elif pipeline_type == 'backlink':
+        backlink_map = {
+            'pitch sent': 'backlink_pitch',
+            'follow up 1': 'backlink_followup',
+            'follow up 2': 'backlink_followup',
+        }
+        if stage_lower in backlink_map:
+            return backlink_map[stage_lower]
+
     elif pipeline_type == 'registered_users':
         # For registered but inactive users - determine sub-type from pipeline name
         is_realestate = 'real estate' in pipeline_name_lower or 'realestate' in pipeline_name_lower
