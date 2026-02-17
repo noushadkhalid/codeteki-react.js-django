@@ -762,6 +762,16 @@ UNFOLD = {
                         "icon": "link",
                         "link": reverse_lazy("admin:crm_backlinkopportunity_changelist"),
                     },
+                    {
+                        "title": "Email Logs",
+                        "icon": "mark_email_read",
+                        "link": reverse_lazy("admin:crm_emaillog_changelist"),
+                    },
+                    {
+                        "title": "AI Decisions",
+                        "icon": "psychology",
+                        "link": reverse_lazy("admin:crm_aidecisionlog_changelist"),
+                    },
                 ],
             },
             # ============================================
