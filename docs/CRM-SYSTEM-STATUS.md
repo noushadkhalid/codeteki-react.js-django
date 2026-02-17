@@ -55,6 +55,7 @@ The autopilot sits on top of ALL pipelines and makes engagement-aware decisions:
 ```
 Deal ready for action?
   |
+  +-- Email bounced? --> Auto-close deal (NEVER email again)
   +-- Unsubscribed? --> Auto-close deal (NEVER email)
   +-- Final follow-up expired? --> Move to Not Interested
   +-- Ghost (3+ emails, 0 opens)? --> Auto-close deal
@@ -149,7 +150,23 @@ All AI decisions are logged with reasoning, tokens used, and model info.
 - Send Follow-up Email (with preview)
 - Pause/Resume automation
 
-### 9. Webhooks & Integrations
+### 9. Hard Bounce Detection
+
+When an email fails to send and the error indicates a permanent failure (invalid/non-existent address):
+
+1. **Contact marked as bounced** (`email_bounced=True`, `bounced_at` timestamped)
+2. **Deal auto-closed** (status=lost, lost_reason=invalid_email)
+3. **All other active deals for same contact also closed**
+4. **Future emails permanently blocked** at 3 levels:
+   - `process_pending_deals` skips bounced contacts before any processing
+   - `queue_deal_email` blocks before composing email
+   - Email service `send()` blocks at the lowest level
+
+Bounce detection keywords: invalid email, mailbox not found, user unknown, address rejected, 550/551/552/553/554, etc.
+
+Admin: Contacts list shows "BOUNCED" badge, filterable by `email_bounced`.
+
+### 10. Webhooks & Integrations
 
 - Email open tracking pixel
 - Reply webhook processing
@@ -157,7 +174,7 @@ All AI decisions are logged with reasoning, tokens used, and model info.
 - ChatLead auto-conversion to Contact + Deal (via signals)
 - ContactInquiry auto-conversion to Contact + Deal (via signals)
 
-### 10. Scheduled Tasks (Celery Beat)
+### 11. Scheduled Tasks (Celery Beat)
 
 | Task | Schedule | Purpose |
 |------|----------|---------|

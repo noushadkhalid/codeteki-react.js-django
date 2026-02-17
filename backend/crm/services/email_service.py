@@ -20,6 +20,43 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Hard bounce indicators in error messages from email providers
+HARD_BOUNCE_PATTERNS = [
+    'invalid email',
+    'invalid address',
+    'mailbox not found',
+    'mailbox unavailable',
+    'user unknown',
+    'user not found',
+    'no such user',
+    'address rejected',
+    'recipient rejected',
+    'does not exist',
+    'account disabled',
+    'account has been disabled',
+    'address not found',
+    'invalid recipient',
+    'undeliverable',
+    'permanently rejected',
+    'hard bounce',
+    'bad destination',
+    'unknown user',
+    '550',  # SMTP permanent failure
+    '551',
+    '552',
+    '553',
+    '554',
+]
+
+
+def is_hard_bounce(error_msg: str) -> bool:
+    """Check if an email send error indicates a hard bounce (invalid/non-existent address)."""
+    if not error_msg:
+        return False
+    error_lower = error_msg.lower()
+    return any(pattern in error_lower for pattern in HARD_BOUNCE_PATTERNS)
+
+
 # Cache for brand-specific email services (with TTL)
 _brand_service_cache = {}
 _brand_cache_timestamps = {}
@@ -233,10 +270,17 @@ class ZohoEmailService:
                 'error': f'Zoho Mail not configured{brand_info}. Configure Zoho credentials in Brand settings or environment variables.'
             }
 
-        # Check if recipient is unsubscribed (brand-specific)
+        # Check if recipient is unsubscribed or bounced (brand-specific)
         from crm.models import Contact
         contact = Contact.objects.filter(email__iexact=to).first()
         if contact:
+            if contact.email_bounced:
+                logger.info(f"Skipping email to {to} - recipient email has bounced")
+                return {
+                    'success': False,
+                    'message_id': None,
+                    'error': f'Recipient {to} has a bounced email address.',
+                }
             brand_slug = self.brand.slug if self.brand else None
             if contact.is_unsubscribed:
                 logger.info(f"Skipping email to {to} - recipient is globally unsubscribed")
@@ -311,6 +355,7 @@ class ZohoEmailService:
                 'success': False,
                 'message_id': None,
                 'error': error_msg,
+                'is_hard_bounce': is_hard_bounce(error_msg),
                 'from_email': self.from_email,
             }
 
@@ -802,10 +847,17 @@ class ZeptoMailService(ZohoEmailService):
                 'error': f'ZeptoMail not configured{brand_info}.'
             }
 
-        # Check if recipient is unsubscribed (brand-specific)
+        # Check if recipient is unsubscribed or bounced (brand-specific)
         from crm.models import Contact
         contact = Contact.objects.filter(email__iexact=to).first()
         if contact:
+            if contact.email_bounced:
+                logger.info(f"Skipping email to {to} - recipient email has bounced")
+                return {
+                    'success': False,
+                    'message_id': None,
+                    'error': f'Recipient {to} has a bounced email address.',
+                }
             brand_slug = self.brand.slug if self.brand else None
             if contact.is_unsubscribed:
                 logger.info(f"Skipping email to {to} - recipient is globally unsubscribed")
@@ -889,10 +941,12 @@ class ZeptoMailService(ZohoEmailService):
                 error_msg = response_data.get('message', '') or response_data.get('error', {}).get('details', [{}])[0].get('message', f'HTTP {response.status_code}')
                 logger.error(f"ZeptoMail: Failed to send to {to}: {error_msg}")
                 logger.error(f"ZeptoMail: Full response: {response.text[:500]}")
+                full_error = f'ZeptoMail error: {error_msg}'
                 return {
                     'success': False,
                     'message_id': None,
-                    'error': f'ZeptoMail error: {error_msg}',
+                    'error': full_error,
+                    'is_hard_bounce': is_hard_bounce(full_error),
                     'from_email': self.from_email,
                 }
 
@@ -902,6 +956,7 @@ class ZeptoMailService(ZohoEmailService):
                 'success': False,
                 'message_id': None,
                 'error': f'ZeptoMail request failed: {str(e)}',
+                'is_hard_bounce': False,
                 'from_email': self.from_email,
             }
 

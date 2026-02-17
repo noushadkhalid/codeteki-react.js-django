@@ -282,11 +282,12 @@ class ContactAdmin(ModelAdmin):
         'email_count',
         'last_emailed_display',
         'is_unsubscribed_badge',
+        'bounce_badge',
         'created_at',
     ]
-    list_filter = ['status', 'is_unsubscribed', 'brand', 'contact_type', 'source', 'created_at']
+    list_filter = ['status', 'is_unsubscribed', 'email_bounced', 'brand', 'contact_type', 'source', 'created_at']
     search_fields = ['name', 'email', 'company', 'website']
-    readonly_fields = ['created_at', 'updated_at', 'id', 'last_emailed_at', 'email_count', 'unsubscribed_at']
+    readonly_fields = ['created_at', 'updated_at', 'id', 'last_emailed_at', 'email_count', 'unsubscribed_at', 'bounced_at']
     ordering = ['-created_at']
 
     class Media:
@@ -309,6 +310,11 @@ class ContactAdmin(ModelAdmin):
             'classes': ['collapse'],
             'description': 'Brand-specific unsubscribes. Global unsubscribe blocks all brands.'
         }),
+        ('Bounce Status', {
+            'fields': ('email_bounced', 'bounced_at'),
+            'classes': ['collapse'],
+            'description': 'Hard bounce = invalid/non-existent email. No more emails will be sent.'
+        }),
         ('Classification', {
             'fields': ('tags', 'domain_authority', 'ai_score'),
             'classes': ['collapse']
@@ -324,6 +330,9 @@ class ContactAdmin(ModelAdmin):
 
     @display(description="Status", label=True)
     def status_badge(self, obj):
+        # If bounced, show as danger
+        if obj.email_bounced:
+            return "BOUNCED", "danger"
         # If unsubscribed (globally or brand-specific), always show as danger with clear indicator
         if obj.is_unsubscribed:
             return "🚫 UNSUBSCRIBED", "danger"
@@ -348,6 +357,12 @@ class ContactAdmin(ModelAdmin):
             brands = ', '.join(obj.unsubscribed_brands).upper()
             return f"🚫 {brands}", "danger"  # Red for visibility
         return "✅ Active", "success"
+
+    @display(description="Bounce", label=True)
+    def bounce_badge(self, obj):
+        if obj.email_bounced:
+            return "BOUNCED", "danger"
+        return "OK", "success"
 
     @display(description="Last Emailed")
     def last_emailed_display(self, obj):

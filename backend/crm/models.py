@@ -137,6 +137,10 @@ class Contact(models.Model):
     unsubscribed_at = models.DateTimeField(null=True, blank=True)
     unsubscribe_reason = models.TextField(blank=True, help_text="Why they unsubscribed")
 
+    # Bounce tracking
+    email_bounced = models.BooleanField(default=False, help_text="Email address hard-bounced (invalid/non-existent)")
+    bounced_at = models.DateTimeField(null=True, blank=True)
+
     # Status tracking (simplified pipeline)
     STATUS_CHOICES = [
         ('new', 'New'),

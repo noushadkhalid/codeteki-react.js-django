@@ -59,8 +59,22 @@ def process_pending_deals(self):
     for deal in pending_deals:
         try:
             with transaction.atomic():
-                # SAFETY: Skip unsubscribed contacts (belt-and-suspenders)
+                # SAFETY: Skip bounced contacts
                 contact = deal.contact
+                if contact.email_bounced:
+                    deal.status = 'lost'
+                    deal.lost_reason = 'invalid_email'
+                    deal.save(update_fields=['status', 'lost_reason'])
+                    DealActivity.objects.create(
+                        deal=deal,
+                        activity_type='status_change',
+                        description=f"[Autopilot] Contact email bounced - deal auto-closed"
+                    )
+                    processed += 1
+                    logger.info(f"Deal {deal.id}: Contact email bounced, auto-closed")
+                    continue
+
+                # SAFETY: Skip unsubscribed contacts (belt-and-suspenders)
                 brand_slug = deal.pipeline.brand.slug if deal.pipeline and deal.pipeline.brand else None
                 if contact.is_unsubscribed or (brand_slug and contact.is_unsubscribed_from_brand(brand_slug)):
                     deal.status = 'lost'
@@ -242,6 +256,11 @@ def queue_deal_email(self, deal_id: str, email_type: str = 'followup', ab_varian
         logger.warning(f"Blocked email to unsubscribed contact {contact.email} (brand: {brand_slug})")
         return {'success': False, 'error': 'Contact is unsubscribed'}
 
+    # SAFETY: Never email bounced contacts
+    if contact.email_bounced:
+        logger.warning(f"Blocked email to bounced contact {contact.email}")
+        return {'success': False, 'error': 'Contact email has bounced'}
+
     # Determine brand and pipeline info
     pipeline_type = deal.pipeline.pipeline_type if deal.pipeline else 'sales'
     pipeline_name = deal.pipeline.name if deal.pipeline else ''
@@ -397,8 +416,52 @@ def queue_deal_email(self, deal_id: str, email_type: str = 'followup', ab_varian
         logger.info(f"Email sent successfully to {deal.contact.email}")
         return {'success': True, 'email_log_id': str(email_log.id)}
     else:
-        logger.error(f"Failed to send email: {send_result.get('error')}")
-        return {'success': False, 'error': send_result.get('error')}
+        error_msg = send_result.get('error', '')
+        logger.error(f"Failed to send email: {error_msg}")
+
+        # HARD BOUNCE DETECTION: mark contact as bounced, close the deal
+        if send_result.get('is_hard_bounce'):
+            logger.warning(f"HARD BOUNCE detected for {contact.email}: {error_msg}")
+
+            # Mark contact as bounced
+            contact.email_bounced = True
+            contact.bounced_at = timezone.now()
+            contact.save(update_fields=['email_bounced', 'bounced_at'])
+
+            # Close the deal
+            deal.status = 'lost'
+            deal.lost_reason = 'invalid_email'
+            deal.save(update_fields=['status', 'lost_reason'])
+
+            DealActivity.objects.create(
+                deal=deal,
+                activity_type='status_change',
+                description=f"[Autopilot] Hard bounce: {error_msg[:200]}. Deal closed, no more emails will be sent."
+            )
+
+            # Also close any OTHER active deals for the same contact
+            other_deals = Deal.objects.filter(
+                contact=contact,
+                status='active'
+            ).exclude(id=deal.id)
+            closed_count = 0
+            for other_deal in other_deals:
+                other_deal.status = 'lost'
+                other_deal.lost_reason = 'invalid_email'
+                other_deal.save(update_fields=['status', 'lost_reason'])
+                DealActivity.objects.create(
+                    deal=other_deal,
+                    activity_type='status_change',
+                    description=f"[Autopilot] Hard bounce on contact email - deal auto-closed"
+                )
+                closed_count += 1
+
+            if closed_count:
+                logger.info(f"Also closed {closed_count} other active deals for bounced contact {contact.email}")
+
+            return {'success': False, 'error': error_msg, 'hard_bounce': True}
+
+        return {'success': False, 'error': error_msg}
 
 
 @shared_task(bind=True, max_retries=2, default_retry_delay=60)
