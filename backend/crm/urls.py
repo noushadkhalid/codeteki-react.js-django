@@ -41,6 +41,7 @@ from .views import (
     pipeline_dashboard,
     pipeline_board,
     move_deal_stage,
+    reactivate_deal,
 )
 
 app_name = 'crm'
@@ -50,6 +51,7 @@ urlpatterns = [
     path('dashboard/', pipeline_dashboard, name='pipeline_dashboard'),
     path('board/<int:pipeline_id>/', pipeline_board, name='pipeline_board'),
     path('board/move-deal/', move_deal_stage, name='move_deal_stage'),
+    path('board/reactivate-deal/', reactivate_deal, name='reactivate_deal'),
 
     # Pipelines
     path('pipelines/', PipelineListView.as_view(), name='pipeline-list'),

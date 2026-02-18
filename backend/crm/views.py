@@ -11,6 +11,7 @@ API endpoints for CRM management:
 """
 
 import json
+from datetime import timedelta
 from django.conf import settings
 from django.http import JsonResponse, HttpResponse
 from django.views import View
@@ -1171,23 +1172,23 @@ def pipeline_board(request, pipeline_id):
     # Stats
     total_active = Deal.objects.filter(pipeline=pipeline, status='active').count()
     total_won = Deal.objects.filter(pipeline=pipeline, status='won').count()
-    total_lost = Deal.objects.filter(pipeline=pipeline, status='lost').count()
     total_paused = Deal.objects.filter(pipeline=pipeline, status='paused').count()
 
-    # Lost deals grouped by reason
-    lost_deals = Deal.objects.filter(
-        pipeline=pipeline,
-        status='lost'
-    ).select_related('contact').order_by('-updated_at')[:50]
+    # Split lost deals into categories
+    all_lost = Deal.objects.filter(
+        pipeline=pipeline, status='lost'
+    ).select_related('contact').order_by('-updated_at')[:100]
 
-    lost_by_reason = {}
-    for deal in lost_deals:
-        reason = deal.lost_reason or 'other'
-        reason_display = dict(Deal._meta.get_field('lost_reason').choices).get(reason, reason.replace('_', ' ').title())
-        if reason not in lost_by_reason:
-            lost_by_reason[reason] = {'display': reason_display, 'deals': [], 'count': 0}
-        lost_by_reason[reason]['deals'].append(deal)
-        lost_by_reason[reason]['count'] += 1
+    # Permanently blocked (respect their choice / email invalid)
+    blocked_reasons = {'unsubscribed', 'invalid_email'}
+    # Re-activatable (just didn't respond or weren't interested)
+    reactivatable_reasons = {'no_response', 'not_interested', 'competitor', 'budget', 'timing', 'other', ''}
+
+    unsubscribed_deals = [d for d in all_lost if d.lost_reason == 'unsubscribed']
+    bounced_deals = [d for d in all_lost if d.lost_reason == 'invalid_email']
+    inactive_deals = [d for d in all_lost if d.lost_reason in reactivatable_reasons]
+
+    total_lost = len(all_lost)
 
     # Get admin context for Unfold sidebar
     context = {
@@ -1199,7 +1200,9 @@ def pipeline_board(request, pipeline_id):
         'total_won': total_won,
         'total_lost': total_lost,
         'total_paused': total_paused,
-        'lost_by_reason': lost_by_reason,
+        'unsubscribed_deals': unsubscribed_deals,
+        'bounced_deals': bounced_deals,
+        'inactive_deals': inactive_deals,
         'today': timezone.now().date(),
     }
     return render(request, 'admin/crm/pipeline_board.html', context)
@@ -1221,6 +1224,52 @@ def move_deal_stage(request):
         return JsonResponse({'success': True, 'message': f'Moved to {stage.name}'})
     except (Deal.DoesNotExist, PipelineStage.DoesNotExist) as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@staff_member_required
+@require_POST
+def reactivate_deal(request):
+    """
+    Reactivate a lost deal (no_response, not_interested, etc.).
+    Moves it back to the first stage of its pipeline and sets next action date.
+    Does NOT allow reactivating unsubscribed/bounced deals.
+    """
+    deal_id = request.POST.get('deal_id')
+
+    try:
+        deal = Deal.objects.select_related('contact', 'pipeline').get(id=deal_id)
+    except Deal.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Deal not found'}, status=400)
+
+    # Block reactivation of permanently blocked contacts
+    contact = deal.contact
+    if contact.email_bounced:
+        return JsonResponse({'success': False, 'error': 'Cannot reactivate - email has bounced'}, status=400)
+    if contact.is_unsubscribed or contact.spam_reported:
+        return JsonResponse({'success': False, 'error': 'Cannot reactivate - contact is unsubscribed'}, status=400)
+
+    # Find the first stage of the pipeline
+    first_stage = PipelineStage.objects.filter(
+        pipeline=deal.pipeline
+    ).order_by('order').first()
+
+    deal.status = 'active'
+    deal.lost_reason = ''
+    deal.current_stage = first_stage
+    deal.next_action_date = timezone.now() + timedelta(days=1)
+    deal.autopilot_paused = False
+    deal.save(update_fields=['status', 'lost_reason', 'current_stage', 'next_action_date', 'autopilot_paused'])
+
+    DealActivity.objects.create(
+        deal=deal,
+        activity_type='status_change',
+        description=f"Deal reactivated - moved back to {first_stage.name if first_stage else 'first stage'}"
+    )
+
+    return JsonResponse({
+        'success': True,
+        'message': f'Deal reactivated - moved to {first_stage.name if first_stage else "first stage"}'
+    })
 
 
 # =============================================================================
