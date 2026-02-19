@@ -1,5 +1,6 @@
 import io
 import base64
+import time
 
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
@@ -12,6 +13,12 @@ import qrcode.image.svg
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from django_otp.plugins.otp_static.models import StaticDevice, StaticToken
 from django_otp import login as otp_login
+
+
+def _otp_login_with_timestamp(request, device):
+    """Call otp_login and stamp the session so the middleware can enforce TTL."""
+    otp_login(request, device)
+    request.session["otp_verified_at"] = time.time()
 
 
 def _get_next_url(request):
@@ -49,13 +56,13 @@ def otp_verify_view(request):
             # Try TOTP devices first.
             for device in TOTPDevice.objects.filter(user=request.user, confirmed=True):
                 if device.verify_token(token):
-                    otp_login(request, device)
+                    _otp_login_with_timestamp(request, device)
                     return redirect(_get_next_url(request))
 
             # Fall back to static (backup) devices.
             for device in StaticDevice.objects.filter(user=request.user, confirmed=True):
                 if device.verify_token(token):
-                    otp_login(request, device)
+                    _otp_login_with_timestamp(request, device)
                     return redirect(_get_next_url(request))
 
             error = "Invalid code. Please try again."
@@ -96,7 +103,7 @@ def otp_setup_view(request):
             # Token is valid — mark device as confirmed.
             device.confirmed = True
             device.save()
-            otp_login(request, device)
+            _otp_login_with_timestamp(request, device)
 
             # Generate backup codes.
             static_device, _ = StaticDevice.objects.get_or_create(
