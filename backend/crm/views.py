@@ -675,11 +675,12 @@ class EmailReplyWebhookView(View):
         # Log email
         EmailLog.objects.create(
             deal=deal,
-            contact=contact,
             subject=f"Reply: {subject}",
-            direction='inbound',
+            body=body[:2000] if body else '',
+            to_email=deal.contact.email,
+            from_email=from_email,
             replied=True,
-            replied_at=timezone.now()
+            replied_at=timezone.now(),
         )
 
         return JsonResponse({

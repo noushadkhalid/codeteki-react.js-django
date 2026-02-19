@@ -13,7 +13,10 @@ def seed_content(apps, schema_editor):
     FAQCategory = apps.get_model("core", "FAQCategory")
     FAQItem = apps.get_model("core", "FAQItem")
     ContactMethod = apps.get_model("core", "ContactMethod")
-    SiteSettings = apps.get_model("core", "SiteSettings")
+    try:
+        SiteSettings = apps.get_model("core", "SiteSettings")
+    except LookupError:
+        SiteSettings = None
 
     hero = HeroSection.objects.create(
         badge="🚀 AI-Powered Business Solutions",
@@ -328,7 +331,7 @@ def seed_content(apps, schema_editor):
     for order, method in enumerate(contacts):
         ContactMethod.objects.create(order=order, **method)
 
-    if not SiteSettings.objects.exists():
+    if SiteSettings is not None and not SiteSettings.objects.exists():
         SiteSettings.objects.create(
             site_name="Codeteki Digital Services",
             site_tagline="AI-Powered Business Solutions",
@@ -347,11 +350,14 @@ def remove_content(apps, schema_editor):
     apps.get_model("core", "Service").objects.all().delete()
     apps.get_model("core", "FAQCategory").objects.all().delete()
     apps.get_model("core", "ContactMethod").objects.all().delete()
-    apps.get_model("core", "SiteSettings").objects.filter(
-        site_name="Codeteki Digital Services",
-        primary_email="hello@codeteki.com.au",
-        primary_phone="+61 469 754 386",
-    ).delete()
+    try:
+        apps.get_model("core", "SiteSettings").objects.filter(
+            site_name="Codeteki Digital Services",
+            primary_email="hello@codeteki.com.au",
+            primary_phone="+61 469 754 386",
+        ).delete()
+    except LookupError:
+        pass
 
 
 class Migration(migrations.Migration):
