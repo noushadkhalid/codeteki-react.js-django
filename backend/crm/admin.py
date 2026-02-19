@@ -287,7 +287,7 @@ class ContactAdmin(ModelAdmin):
     ]
     list_filter = ['status', 'is_unsubscribed', 'email_bounced', 'spam_reported', 'brand', 'contact_type', 'source', 'created_at']
     search_fields = ['name', 'email', 'company', 'website']
-    readonly_fields = ['created_at', 'updated_at', 'id', 'last_emailed_at', 'email_count', 'unsubscribed_at', 'bounced_at', 'soft_bounce_count', 'spam_reported_at']
+    readonly_fields = ['created_at', 'updated_at', 'id', 'last_emailed_at', 'email_count', 'preferred_send_hour', 'unsubscribed_at', 'bounced_at', 'soft_bounce_count', 'spam_reported_at']
     ordering = ['-created_at']
 
     class Media:
@@ -302,8 +302,8 @@ class ContactAdmin(ModelAdmin):
             'description': 'Track outreach progress'
         }),
         ('Email History', {
-            'fields': ('email_count', 'last_emailed_at'),
-            'description': 'Auto-updated when emails are sent'
+            'fields': ('email_count', 'last_emailed_at', 'preferred_send_hour'),
+            'description': 'Auto-updated when emails are sent. Preferred send hour computed from open history.'
         }),
         ('Unsubscribe', {
             'fields': ('is_unsubscribed', 'unsubscribed_brands', 'unsubscribed_at', 'unsubscribe_reason'),
@@ -567,8 +567,8 @@ class CodetekiContactAdmin(ContactAdmin):
             'description': 'Track outreach progress'
         }),
         ('Email History', {
-            'fields': ('email_count', 'last_emailed_at'),
-            'description': 'Auto-updated when emails are sent'
+            'fields': ('email_count', 'last_emailed_at', 'preferred_send_hour'),
+            'description': 'Auto-updated when emails are sent. Preferred send hour computed from open history.'
         }),
         ('Unsubscribe', {
             'fields': ('is_unsubscribed', 'unsubscribed_brands', 'unsubscribed_at', 'unsubscribe_reason'),
@@ -648,8 +648,8 @@ class DesiFirmsContactAdmin(ContactAdmin):
             'description': 'Track outreach progress'
         }),
         ('Email History', {
-            'fields': ('email_count', 'last_emailed_at'),
-            'description': 'Auto-updated when emails are sent'
+            'fields': ('email_count', 'last_emailed_at', 'preferred_send_hour'),
+            'description': 'Auto-updated when emails are sent. Preferred send hour computed from open history.'
         }),
         ('Unsubscribe', {
             'fields': ('is_unsubscribed', 'unsubscribed_brands', 'unsubscribed_at', 'unsubscribe_reason'),
@@ -742,9 +742,9 @@ class DealAdmin(ModelAdmin):
         'value_display',
         'created_at',
     ]
-    list_filter = ['pipeline', 'current_stage', 'status', 'engagement_tier', 'autopilot_paused', 'lost_reason', 'created_at']
+    list_filter = ['pipeline', 'current_stage', 'status', 'engagement_tier', 'autopilot_paused', 're_engagement_attempted', 'lost_reason', 'created_at']
     search_fields = ['contact__name', 'contact__email', 'contact__company']
-    readonly_fields = ['id', 'created_at', 'updated_at', 'stage_entered_at', 'emails_sent', 'engagement_tier']
+    readonly_fields = ['id', 'created_at', 'updated_at', 'stage_entered_at', 'emails_sent', 'engagement_tier', 're_engagement_attempted']
     inlines = [DealActivityInline, EmailLogInline]
     ordering = ['-created_at']
 
@@ -756,7 +756,7 @@ class DealAdmin(ModelAdmin):
             'fields': ('contact', 'pipeline', 'current_stage', 'status', 'lost_reason', 'value')
         }),
         ('AI & Automation', {
-            'fields': ('ai_notes', 'next_action_date', 'engagement_tier', 'autopilot_paused')
+            'fields': ('ai_notes', 'next_action_date', 'engagement_tier', 'autopilot_paused', 're_engagement_attempted')
         }),
         ('Tracking', {
             'fields': ('emails_sent', 'last_contact_date', 'stage_entered_at'),

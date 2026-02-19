@@ -655,7 +655,8 @@ class EmailReplyWebhookView(View):
             deal.current_stage = responded_stage
             deal.stage_entered_at = timezone.now()
 
-        # Update deal
+        # Update deal - pause autopilot so human can respond
+        deal.autopilot_paused = True
         deal.last_contact_date = timezone.now()
         deal.ai_notes = f"{deal.ai_notes or ''}\n\n[REPLY RECEIVED {timezone.now().strftime('%Y-%m-%d %H:%M')}]\nSubject: {subject}\n{body[:500]}..."
         deal.save()
@@ -939,6 +940,365 @@ class ZeptoMailBounceWebhookView(View):
 
         logger.warning(f"Spam report webhook: {email} - unsubscribed, {deals_closed} deals closed")
         return {'email': email, 'action': 'spam_unsubscribed', 'deals_closed': deals_closed}
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class DesiFirmsWebhookView(View):
+    """
+    Webhook receiver for Desi Firms application events.
+    Tracks the full user journey from registration through listing completion.
+
+    Registration events (create contact + deal):
+      user_registered — New user signed up
+
+    Progress events (advance deal stage):
+      business_created — User submitted a business listing (pending approval)
+      business_approved — Admin approved the business listing (won)
+      event_created — User submitted an event listing (pending approval)
+      event_approved — Admin approved the event listing (won)
+      agency_created — User created a real estate agency profile
+      agent_created — Agent profile created (independent or via invitation)
+      agent_invitation_sent — Agency invited a team member
+      agent_invitation_accepted — Agent accepted the invitation
+      agent_verified — Admin verified agent credentials
+      property_submitted — Agent submitted a property listing
+      property_approved — Admin approved the property listing (won)
+
+    Pipeline mapping (matched by pipeline_type):
+      pipeline_hint in payload → pipeline_type in CRM
+      'business' → 'business'
+      'events'   → 'events'
+      'realestate' → 'realestate'
+      fallback   → 'registered_users'
+
+    Auth: Authorization header must match DESIFIRMS_WEBHOOK_KEY setting.
+    """
+
+    # Events that mark the deal as won
+    WON_EVENTS = {'business_approved', 'event_approved', 'property_approved'}
+
+    # Map: event_type → (target_pipeline_name, stage_name_to_advance_to)
+    # Pipeline name uses icontains match. Stage name is exact.
+    # For outreach pipelines (cold leads we emailed who then converted):
+    #   user_registered → "Signed Up" / "Registered"
+    #   business_created → "Listed"  (they listed = won)
+    # For registered_users pipelines (users who came organically):
+    #   business_created → "Listed"
+    #   event_created → "Event Posted"
+    EVENT_STAGE_MAP = {
+        # Business journey
+        'business_created': {
+            'outreach_pipeline': 'Business Listings',
+            'nudge_pipeline': 'Registered Users - Business',
+            'outreach_stage': 'Signed Up',
+            'nudge_stage': 'Listed',
+        },
+        'business_approved': {
+            'outreach_pipeline': 'Business Listings',
+            'nudge_pipeline': 'Registered Users - Business',
+            'outreach_stage': 'Listed',
+            'nudge_stage': 'Listed',
+        },
+        # Events journey
+        'event_created': {
+            'outreach_pipeline': 'Desi Firms Events',
+            'nudge_pipeline': 'Registered Users - Events',
+            'outreach_stage': 'Signed Up',
+            'nudge_stage': 'Event Posted',
+        },
+        'event_approved': {
+            'outreach_pipeline': 'Desi Firms Events',
+            'nudge_pipeline': 'Registered Users - Events',
+            'outreach_stage': 'Event Listed',
+            'nudge_stage': 'Event Posted',
+        },
+        # Real estate journey — Agents & Agencies pipeline
+        'agency_created': {'stage': 'Agency Created'},
+        'agent_created': {'stage': 'Profile Complete'},
+        'agent_invitation_sent': {'stage': 'Team Invited'},
+        'agent_invitation_accepted': {'stage': 'Profile Complete'},
+        'agent_verified': {'stage': 'Verified'},
+        'property_submitted': {'stage': 'First Listing'},
+        'property_approved': {'stage': 'Active Lister'},
+    }
+
+    def post(self, request):
+        import logging
+        logger = logging.getLogger(__name__)
+
+        # Verify webhook auth key
+        webhook_key = getattr(settings, 'DESIFIRMS_WEBHOOK_KEY', '')
+        if webhook_key:
+            auth_header = request.headers.get('Authorization', '')
+            if auth_header != webhook_key:
+                logger.warning("Desi Firms webhook: invalid auth key")
+                return JsonResponse({'error': 'Unauthorized'}, status=401)
+
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+        event_type = data.get('event_type', '')
+        email = data.get('email', '').lower().strip()
+
+        if not email or not event_type:
+            return JsonResponse({'error': 'email and event_type required'}, status=400)
+
+        from crm.models import Brand
+
+        brand = Brand.objects.filter(slug='desifirms').first()
+        if not brand:
+            logger.error("Desi Firms webhook: no brand with slug 'desifirms'")
+            return JsonResponse({'error': 'Desi Firms brand not configured'}, status=500)
+
+        if event_type == 'user_registered':
+            return self._handle_registration(data, email, brand, logger)
+        elif event_type in self.EVENT_STAGE_MAP:
+            mark_won = event_type in self.WON_EVENTS
+            return self._handle_progress(data, email, event_type, brand, logger, mark_won)
+        else:
+            return JsonResponse({'status': 'ignored', 'message': f'Unknown event: {event_type}'})
+
+    def _get_or_create_contact(self, email, brand, data):
+        """Get or create a contact, updating name if provided."""
+        name = data.get('name', '')
+        contact, created = Contact.objects.get_or_create(
+            email=email,
+            brand=brand,
+            defaults={
+                'name': name,
+                'source': 'desifirms_webhook',
+                'status': 'new',
+                'contact_type': 'lead',
+            }
+        )
+        if not created and name and not contact.name:
+            contact.name = name
+            contact.save(update_fields=['name'])
+        return contact, created
+
+    def _find_nudge_pipeline(self, brand, pipeline_hint):
+        """Find the right Registered Users pipeline by name hint."""
+        from crm.models import Pipeline
+
+        name_map = {
+            'business': 'Registered Users - Business',
+            'events': 'Registered Users - Events',
+            'realestate': 'Registered Users - Real Estate',
+        }
+        name = name_map.get(pipeline_hint, '')
+        if name:
+            p = Pipeline.objects.filter(brand=brand, name=name, is_active=True).first()
+            if p:
+                return p
+
+        # Fallback: Agents & Agencies for realestate, or first registered_users
+        if pipeline_hint == 'realestate':
+            return Pipeline.objects.filter(
+                brand=brand, name__icontains='Agents', is_active=True,
+            ).first()
+
+        return Pipeline.objects.filter(
+            brand=brand, pipeline_type='registered_users', is_active=True,
+        ).first()
+
+    def _handle_registration(self, data, email, brand, logger):
+        """User registered on Desi Firms. Create contact + deal in nudge pipeline."""
+        from crm.models import Pipeline, PipelineStage
+
+        contact, _ = self._get_or_create_contact(email, brand, data)
+        phone = data.get('phone', '')
+        pipeline_hint = data.get('pipeline_hint', '')
+
+        # Check for existing active deal in ANY Desi Firms pipeline
+        existing_deal = Deal.objects.filter(
+            contact=contact, pipeline__brand=brand, status='active',
+        ).select_related('pipeline', 'current_stage').first()
+
+        if existing_deal:
+            # Already tracked (likely from outreach). Advance to "Signed Up" or "Registered"
+            registered_stage = PipelineStage.objects.filter(
+                pipeline=existing_deal.pipeline,
+                name__in=['Signed Up', 'Registered'],
+            ).order_by('-order').first()  # prefer Signed Up over Registered
+
+            if registered_stage and existing_deal.current_stage != registered_stage:
+                old_stage = existing_deal.current_stage.name if existing_deal.current_stage else 'None'
+                existing_deal.move_to_stage(registered_stage)
+                existing_deal.autopilot_paused = True
+                existing_deal.save(update_fields=['autopilot_paused'])
+                DealActivity.objects.create(
+                    deal=existing_deal,
+                    activity_type='stage_change',
+                    description=f"[Webhook] User registered on Desi Firms: {old_stage} → {registered_stage.name}",
+                )
+
+            return JsonResponse({
+                'status': 'advanced',
+                'deal_id': str(existing_deal.id),
+                'pipeline': existing_deal.pipeline.name,
+            })
+
+        # No existing deal — create in appropriate Registered Users pipeline
+        pipeline = self._find_nudge_pipeline(brand, pipeline_hint)
+        if not pipeline:
+            logger.warning(f"Desi Firms webhook: no nudge pipeline for hint={pipeline_hint}")
+            return JsonResponse({
+                'status': 'contact_created',
+                'contact_id': str(contact.id),
+            })
+
+        first_stage = PipelineStage.objects.filter(
+            pipeline=pipeline
+        ).order_by('order').first()
+
+        notes = f"Registered on Desi Firms via webhook."
+        if phone:
+            notes += f"\nPhone: {phone}"
+
+        deal = Deal.objects.create(
+            contact=contact,
+            pipeline=pipeline,
+            current_stage=first_stage,
+            status='active',
+            next_action_date=timezone.now(),
+            ai_notes=notes,
+        )
+
+        DealActivity.objects.create(
+            deal=deal,
+            activity_type='status_change',
+            description=f"[Webhook] User registered on Desi Firms: {email} → {pipeline.name}",
+        )
+
+        logger.info(f"Desi Firms webhook: created deal {deal.id} for {email} in {pipeline.name}")
+        return JsonResponse({
+            'status': 'success',
+            'contact_id': str(contact.id),
+            'deal_id': str(deal.id),
+        }, status=201)
+
+    def _handle_progress(self, data, email, event_type, brand, logger, mark_won=False):
+        """User took an action on Desi Firms. Advance their deal to the right stage."""
+        from crm.models import Pipeline, PipelineStage
+
+        contact, _ = self._get_or_create_contact(email, brand, data)
+        detail = (
+            data.get('detail', '') or data.get('business_name', '') or
+            data.get('event_name', '') or data.get('property_address', '') or
+            data.get('agent_name', '') or ''
+        )
+
+        mapping = self.EVENT_STAGE_MAP[event_type]
+
+        # Find the contact's active deal in any Desi Firms pipeline
+        deal = Deal.objects.filter(
+            contact=contact, pipeline__brand=brand, status='active',
+        ).select_related('pipeline', 'current_stage').first()
+
+        if not deal:
+            # No deal yet — auto-create in the right pipeline
+            if 'nudge_pipeline' in mapping:
+                # Business/Events: use nudge pipeline
+                pipeline = Pipeline.objects.filter(
+                    brand=brand, name=mapping['nudge_pipeline'], is_active=True,
+                ).first()
+            else:
+                # Real estate events: use Agents & Agencies pipeline
+                pipeline = Pipeline.objects.filter(
+                    brand=brand, name__icontains='Agents', is_active=True,
+                ).first()
+
+            if not pipeline:
+                logger.info(f"Desi Firms webhook: no pipeline for {event_type}")
+                return JsonResponse({'status': 'ignored', 'message': 'No matching pipeline'})
+
+            first_stage = PipelineStage.objects.filter(
+                pipeline=pipeline
+            ).order_by('order').first()
+
+            deal = Deal.objects.create(
+                contact=contact,
+                pipeline=pipeline,
+                current_stage=first_stage,
+                status='active',
+                next_action_date=timezone.now(),
+                ai_notes=f"Auto-created from webhook: {event_type}\n{detail}",
+            )
+            DealActivity.objects.create(
+                deal=deal,
+                activity_type='status_change',
+                description=f"[Webhook] Auto-created deal for {email} ({event_type})",
+            )
+            logger.info(f"Desi Firms webhook: auto-created deal {deal.id} for {email}")
+
+        # Determine target stage name based on which pipeline the deal is in
+        if 'outreach_pipeline' in mapping and mapping['outreach_pipeline'] in deal.pipeline.name:
+            target_stage_name = mapping['outreach_stage']
+        elif 'nudge_pipeline' in mapping and mapping['nudge_pipeline'] in deal.pipeline.name:
+            target_stage_name = mapping['nudge_stage']
+        elif 'stage' in mapping:
+            target_stage_name = mapping['stage']
+        else:
+            target_stage_name = None
+
+        # For real estate events: if deal is in a non-RE pipeline, move to Agents & Agencies
+        if 'stage' in mapping and 'Agents' not in deal.pipeline.name and 'Real Estate' not in deal.pipeline.name:
+            re_pipeline = Pipeline.objects.filter(
+                brand=brand, name__icontains='Agents', is_active=True,
+            ).first()
+            if re_pipeline:
+                old_name = deal.pipeline.name
+                first_stage = PipelineStage.objects.filter(
+                    pipeline=re_pipeline
+                ).order_by('order').first()
+                deal.pipeline = re_pipeline
+                deal.current_stage = first_stage
+                deal.save(update_fields=['pipeline', 'current_stage'])
+                DealActivity.objects.create(
+                    deal=deal,
+                    activity_type='stage_change',
+                    description=f"[Webhook] Moved {old_name} → {re_pipeline.name} ({event_type})",
+                )
+
+        # Advance to target stage
+        if target_stage_name:
+            target_stage = PipelineStage.objects.filter(
+                pipeline=deal.pipeline, name=target_stage_name,
+            ).first()
+            if target_stage and deal.current_stage != target_stage:
+                # Only advance forward, never backward
+                current_order = deal.current_stage.order if deal.current_stage else -1
+                if target_stage.order > current_order:
+                    old_stage = deal.current_stage.name if deal.current_stage else 'None'
+                    deal.move_to_stage(target_stage)
+                    DealActivity.objects.create(
+                        deal=deal,
+                        activity_type='stage_change',
+                        description=f"[Webhook] {event_type}: {old_stage} → {target_stage.name}. {detail}",
+                    )
+
+        if mark_won:
+            deal.status = 'won'
+            deal.save(update_fields=['status'])
+            DealActivity.objects.create(
+                deal=deal,
+                activity_type='status_change',
+                description=f"[Webhook] {event_type}: {detail}. Deal won!",
+            )
+        else:
+            # Pause autopilot — user is actively progressing on their own
+            if not deal.autopilot_paused:
+                deal.autopilot_paused = True
+                deal.save(update_fields=['autopilot_paused'])
+
+        logger.info(f"Desi Firms webhook: {event_type} for {email}, deal {deal.id}")
+        return JsonResponse({
+            'status': 'success',
+            'deal_id': str(deal.id),
+            'action': 'won' if mark_won else 'stage_advanced',
+        })
 
 
 @method_decorator(csrf_exempt, name='dispatch')

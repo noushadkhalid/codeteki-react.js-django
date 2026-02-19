@@ -137,6 +137,12 @@ class Contact(models.Model):
     unsubscribed_at = models.DateTimeField(null=True, blank=True)
     unsubscribe_reason = models.TextField(blank=True, help_text="Why they unsubscribed")
 
+    # Send optimization
+    preferred_send_hour = models.IntegerField(
+        null=True, blank=True,
+        help_text="Preferred hour to send emails (0-23), computed from open history"
+    )
+
     # Bounce tracking
     email_bounced = models.BooleanField(default=False, help_text="Email address hard-bounced (invalid/non-existent)")
     bounced_at = models.DateTimeField(null=True, blank=True)
@@ -496,6 +502,10 @@ class Deal(models.Model):
     autopilot_paused = models.BooleanField(
         default=False,
         help_text="Pause autopilot for this deal (manual override)"
+    )
+    re_engagement_attempted = models.BooleanField(
+        default=False,
+        help_text="Whether this deal has been through automated re-engagement"
     )
     lost_reason = models.CharField(
         max_length=50,

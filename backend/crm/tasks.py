@@ -39,7 +39,7 @@ def process_pending_deals(self):
         logger.info("process_pending_deals skipped: outside office hours")
         return {'processed': 0, 'errors': 0, 'skipped': 'outside_office_hours'}
 
-    from crm.models import Deal, DealActivity, PipelineStage
+    from crm.models import Contact, Deal, DealActivity, PipelineStage
     from crm.services.ai_agent import CRMAIAgent
     from crm.services.engagement_engine import get_engagement_profile
 
@@ -88,6 +88,23 @@ def process_pending_deals(self):
                     processed += 1
                     logger.info(f"Deal {deal.id}: Contact unsubscribed, auto-closed")
                     continue
+
+                # SAFETY: Domain-level reputation check
+                if '@' in contact.email:
+                    domain = contact.email.split('@')[1].lower()
+                    from django.db.models import Q
+                    bad_contacts_at_domain = Contact.objects.filter(
+                        Q(email_bounced=True) | Q(is_unsubscribed=True) | Q(spam_reported=True),
+                        email__iendswith=f'@{domain}',
+                        brand=deal.pipeline.brand,
+                    ).count()
+                    if bad_contacts_at_domain >= 3:
+                        deal.autopilot_paused = True
+                        deal.ai_notes = (deal.ai_notes or '') + f"\n[{timezone.now().strftime('%Y-%m-%d')}] [Autopilot] Domain reputation risk: {bad_contacts_at_domain} bounced/unsubscribed/spam contacts at @{domain}. Paused."
+                        deal.save(update_fields=['autopilot_paused', 'ai_notes'])
+                        processed += 1
+                        logger.info(f"Deal {deal.id}: Domain reputation risk at @{domain}, paused")
+                        continue
 
                 # Check if this is a "Follow Up 3 (Final)" stage that has expired
                 # If so, automatically move to "Not Interested" without AI analysis
@@ -156,6 +173,24 @@ def process_pending_deals(self):
                 logger.info(f"Deal {deal.id}: AI recommends '{action}' (tier: {profile.tier})")
 
                 if action == 'send_email':
+                    # Send time optimization: defer to preferred hour if known
+                    preferred_hour = contact.preferred_send_hour
+                    if preferred_hour is not None:
+                        now_local = timezone.localtime()
+                        current_hour = now_local.hour
+                        # If outside ±2hr window of preferred hour, defer
+                        hour_diff = abs(current_hour - preferred_hour)
+                        if hour_diff > 2 and hour_diff < 22:  # handle wrap-around
+                            # Defer to preferred hour today or tomorrow
+                            target = now_local.replace(hour=preferred_hour, minute=0, second=0, microsecond=0)
+                            if target <= now_local:
+                                target += timedelta(days=1)
+                            deal.next_action_date = target
+                            deal.save(update_fields=['next_action_date'])
+                            logger.info(f"Deal {deal.id}: Deferred to preferred send hour {preferred_hour}:00")
+                            processed += 1
+                            continue
+
                     email_type = metadata.get('email_type', 'followup')
                     # A/B testing: check if stage has variant B subject
                     ab_variant = ''
@@ -263,6 +298,23 @@ def queue_deal_email(self, deal_id: str, email_type: str = 'followup', ab_varian
     if contact.spam_reported:
         logger.warning(f"Blocked email to spam-reported contact {contact.email}")
         return {'success': False, 'error': 'Contact reported spam'}
+
+    # SAFETY: Cross-brand cooldown - don't email same person from multiple brands same day
+    from django.utils.timezone import localtime
+    today_start = localtime().replace(hour=0, minute=0, second=0, microsecond=0)
+    cross_brand_sent = EmailLog.objects.filter(
+        to_email=contact.email,
+        sent_at__gte=today_start,
+    ).exclude(
+        deal__pipeline__brand=brand,
+    ).exists()
+    if cross_brand_sent:
+        # Defer to tomorrow 10AM
+        tomorrow_10am = (today_start + timedelta(days=1)).replace(hour=10)
+        deal.next_action_date = tomorrow_10am
+        deal.save(update_fields=['next_action_date'])
+        logger.info(f"Cross-brand cooldown: {contact.email} already emailed by another brand today, deferred to tomorrow")
+        return {'success': False, 'error': 'Cross-brand cooldown - deferred to tomorrow'}
 
     # Determine brand and pipeline info
     pipeline_type = deal.pipeline.pipeline_type if deal.pipeline else 'sales'
@@ -381,10 +433,16 @@ def queue_deal_email(self, deal_id: str, email_type: str = 'followup', ab_varian
         email_log.zoho_message_id = send_result.get('message_id', '')
         email_log.save()
 
-        # Update deal
+        # Update deal with smart follow-up interval based on engagement tier
+        tier_intervals = {
+            'engaged': 2, 'hot': 2, 'warm': 3, 'lurker': 5, 'cold': 7, 'ghost': 7,
+        }
+        default_days = deal.current_stage.days_until_followup if deal.current_stage else 3
+        followup_days = tier_intervals.get(deal.engagement_tier, default_days)
+
         deal.emails_sent += 1
         deal.last_contact_date = timezone.now()
-        deal.next_action_date = timezone.now() + timedelta(days=deal.current_stage.days_until_followup if deal.current_stage else 3)
+        deal.next_action_date = timezone.now() + timedelta(days=followup_days)
         deal.save(update_fields=['emails_sent', 'last_contact_date', 'next_action_date'])
 
         # Log activity
@@ -617,6 +675,10 @@ def check_email_replies(self):
                     'from_email': msg['from_email']
                 }
             )
+
+            # Auto-pause autopilot on ANY reply so human can take over
+            deal.autopilot_paused = True
+            deal.save(update_fields=['autopilot_paused'])
 
             # Take action based on classification
             intent = classification.get('intent', 'other')
@@ -1176,7 +1238,7 @@ def autopilot_engagement_scan():
     Runs at 8 AM daily, before the main email processing.
     """
     from crm.models import Deal, DealActivity, PipelineStage
-    from crm.services.engagement_engine import get_engagement_profile
+    from crm.services.engagement_engine import get_engagement_profile, compute_preferred_send_hour
 
     logger.info("Starting autopilot_engagement_scan")
 
@@ -1197,6 +1259,13 @@ def autopilot_engagement_scan():
                 deal.save(update_fields=['engagement_tier'])
                 stats['updated'] += 1
 
+            # Update preferred send hour for contact
+            contact = deal.contact
+            new_hour = compute_preferred_send_hour(contact)
+            if new_hour is not None and contact.preferred_send_hour != new_hour:
+                contact.preferred_send_hour = new_hour
+                contact.save(update_fields=['preferred_send_hour'])
+
             # Count stats
             if profile.tier == 'ghost':
                 stats['ghosts'] += 1
@@ -1210,3 +1279,228 @@ def autopilot_engagement_scan():
 
     logger.info(f"autopilot_engagement_scan completed: {stats}")
     return stats
+
+
+@shared_task
+def attempt_re_engagement():
+    """
+    Re-engage lost deals that went cold (no_response) 30+ days ago.
+    Runs Monday 10AM. Reactivates up to 20 deals per run.
+    Skips bounced, unsubscribed, spam-reported contacts and already-attempted deals.
+    """
+    from crm.models import Deal, DealActivity, PipelineStage
+
+    logger.info("Starting attempt_re_engagement")
+
+    thirty_days_ago = timezone.now() - timedelta(days=30)
+
+    candidates = Deal.objects.filter(
+        status='lost',
+        lost_reason='no_response',
+        updated_at__lte=thirty_days_ago,
+        re_engagement_attempted=False,
+        contact__email_bounced=False,
+        contact__is_unsubscribed=False,
+        contact__spam_reported=False,
+    ).select_related('contact', 'pipeline')[:20]
+
+    reactivated = 0
+    for deal in candidates:
+        try:
+            # Double-check contact eligibility
+            contact = deal.contact
+            brand_slug = deal.pipeline.brand.slug if deal.pipeline and deal.pipeline.brand else None
+            if brand_slug and contact.is_unsubscribed_from_brand(brand_slug):
+                continue
+
+            # Find first stage of pipeline
+            first_stage = PipelineStage.objects.filter(
+                pipeline=deal.pipeline
+            ).order_by('order').first()
+            if not first_stage:
+                continue
+
+            # Reactivate
+            deal.status = 'active'
+            deal.lost_reason = ''
+            deal.current_stage = first_stage
+            deal.next_action_date = timezone.now()
+            deal.re_engagement_attempted = True
+            deal.autopilot_paused = False
+            deal.save(update_fields=[
+                'status', 'lost_reason', 'current_stage',
+                'next_action_date', 're_engagement_attempted', 'autopilot_paused',
+            ])
+
+            DealActivity.objects.create(
+                deal=deal,
+                activity_type='status_change',
+                description=f"[Autopilot] Re-engagement: deal reactivated after 30+ days. Moved to {first_stage.name}."
+            )
+
+            # Queue the re-engagement email
+            queue_deal_email.delay(str(deal.id), 'followup')
+            reactivated += 1
+
+        except Exception as e:
+            logger.error(f"Error re-engaging deal {deal.id}: {e}")
+
+    logger.info(f"attempt_re_engagement completed: {reactivated} reactivated")
+    return {'reactivated': reactivated}
+
+
+@shared_task
+def send_weekly_report():
+    """
+    Weekly autopilot report sent to admin.
+    Runs Monday 9AM. Summarizes last 7 days of CRM activity.
+    """
+    from crm.models import Brand, Deal, EmailLog, Contact
+    from crm.services.email_service import get_email_service
+    from django.conf import settings as django_settings
+
+    logger.info("Starting send_weekly_report")
+
+    admin_email = getattr(django_settings, 'ADMIN_REPORT_EMAIL', 'noushadkhalid@gmail.com')
+    seven_days_ago = timezone.now() - timedelta(days=7)
+
+    # Per-brand stats
+    brands = Brand.objects.filter(is_active=True)
+    brand_sections = []
+
+    total_sent = 0
+    total_opened = 0
+    total_replied = 0
+    total_bounced = 0
+    total_unsubscribed = 0
+    total_won = 0
+    total_lost = 0
+
+    for brand in brands:
+        emails = EmailLog.objects.filter(
+            deal__pipeline__brand=brand,
+            sent_at__gte=seven_days_ago,
+            sent_at__isnull=False,
+        )
+        sent = emails.count()
+        opened = emails.filter(opened=True).count()
+        replied = emails.filter(replied=True).count()
+        open_rate = f"{(opened / sent * 100):.1f}%" if sent else "N/A"
+
+        bounced = Contact.objects.filter(
+            brand=brand,
+            email_bounced=True,
+            bounced_at__gte=seven_days_ago,
+        ).count()
+        unsubscribed = Contact.objects.filter(
+            brand=brand,
+            unsubscribed_at__gte=seven_days_ago,
+        ).count()
+
+        won = Deal.objects.filter(
+            pipeline__brand=brand,
+            status='won',
+            updated_at__gte=seven_days_ago,
+        ).count()
+        lost = Deal.objects.filter(
+            pipeline__brand=brand,
+            status='lost',
+            updated_at__gte=seven_days_ago,
+        ).count()
+
+        total_sent += sent
+        total_opened += opened
+        total_replied += replied
+        total_bounced += bounced
+        total_unsubscribed += unsubscribed
+        total_won += won
+        total_lost += lost
+
+        brand_sections.append(f"""
+        <tr>
+            <td style="padding: 8px; border: 1px solid #ddd;"><strong>{brand.name}</strong></td>
+            <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{sent}</td>
+            <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{opened} ({open_rate})</td>
+            <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{replied}</td>
+            <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{bounced}</td>
+            <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{unsubscribed}</td>
+            <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{won}</td>
+            <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">{lost}</td>
+        </tr>""")
+
+    total_open_rate = f"{(total_opened / total_sent * 100):.1f}%" if total_sent else "N/A"
+
+    html = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto;">
+        <h2 style="color: #333;">Weekly CRM Autopilot Report</h2>
+        <p style="color: #666;">Week ending {timezone.localtime().strftime('%B %d, %Y')}</p>
+
+        <h3>Summary</h3>
+        <table style="border-collapse: collapse; width: 100%; margin-bottom: 20px;">
+            <tr style="background: #f5f5f5;">
+                <td style="padding: 8px;"><strong>Emails Sent</strong></td>
+                <td style="padding: 8px;">{total_sent}</td>
+                <td style="padding: 8px;"><strong>Opened</strong></td>
+                <td style="padding: 8px;">{total_opened} ({total_open_rate})</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px;"><strong>Replied</strong></td>
+                <td style="padding: 8px;">{total_replied}</td>
+                <td style="padding: 8px;"><strong>Bounced</strong></td>
+                <td style="padding: 8px;">{total_bounced}</td>
+            </tr>
+            <tr style="background: #f5f5f5;">
+                <td style="padding: 8px;"><strong>Unsubscribed</strong></td>
+                <td style="padding: 8px;">{total_unsubscribed}</td>
+                <td style="padding: 8px;"><strong>Deals Won</strong></td>
+                <td style="padding: 8px; color: green;">{total_won}</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px;"><strong>Deals Lost</strong></td>
+                <td style="padding: 8px; color: #cc0000;">{total_lost}</td>
+                <td style="padding: 8px;"></td>
+                <td style="padding: 8px;"></td>
+            </tr>
+        </table>
+
+        <h3>Per-Brand Breakdown</h3>
+        <table style="border-collapse: collapse; width: 100%;">
+            <thead>
+                <tr style="background: #333; color: white;">
+                    <th style="padding: 8px; text-align: left;">Brand</th>
+                    <th style="padding: 8px;">Sent</th>
+                    <th style="padding: 8px;">Opened</th>
+                    <th style="padding: 8px;">Replied</th>
+                    <th style="padding: 8px;">Bounced</th>
+                    <th style="padding: 8px;">Unsub</th>
+                    <th style="padding: 8px;">Won</th>
+                    <th style="padding: 8px;">Lost</th>
+                </tr>
+            </thead>
+            <tbody>
+                {''.join(brand_sections)}
+            </tbody>
+        </table>
+
+        <p style="color: #999; font-size: 12px; margin-top: 30px;">
+            Generated by CRM Autopilot on {timezone.localtime().strftime('%Y-%m-%d %H:%M')}
+        </p>
+    </body>
+    </html>
+    """
+
+    # Send via first brand's email service (or default)
+    email_service = get_email_service(brands.first() if brands.exists() else None)
+    result = email_service.send(
+        to=admin_email,
+        subject=f"Weekly CRM Report - {timezone.localtime().strftime('%b %d, %Y')}",
+        body=html,
+    )
+
+    if result.get('success'):
+        logger.info(f"Weekly report sent to {admin_email}")
+    else:
+        logger.error(f"Failed to send weekly report: {result.get('error')}")
+
+    return {'success': result.get('success', False), 'sent_to': admin_email}

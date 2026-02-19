@@ -213,6 +213,31 @@ def _get_recommendation(profile: EngagementProfile) -> tuple[str, int]:
     return 'send_now', 0
 
 
+def compute_preferred_send_hour(contact) -> int | None:
+    """
+    Compute preferred send hour from email open history.
+
+    Requires 3+ opens with timestamps. Returns most common hour (0-23)
+    or None if insufficient data.
+    """
+    from crm.models import EmailLog
+
+    opens = EmailLog.objects.filter(
+        to_email=contact.email,
+        opened=True,
+        opened_at__isnull=False,
+    ).values_list('opened_at', flat=True)
+
+    if len(opens) < 3:
+        return None
+
+    # Count opens by hour (using local timezone)
+    from collections import Counter
+    from django.utils.timezone import localtime
+    hour_counts = Counter(localtime(dt).hour for dt in opens)
+    return hour_counts.most_common(1)[0][0]
+
+
 def get_engagement_summary_for_ai(deal) -> str:
     """
     Get a formatted engagement summary string for inclusion in AI prompts.

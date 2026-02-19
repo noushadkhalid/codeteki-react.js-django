@@ -270,6 +270,14 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'crm.tasks.autopilot_engagement_scan',
         'schedule': crontab(hour=8, minute=30, day_of_week='mon-fri'),
     },
+    'crm-weekly-report': {
+        'task': 'crm.tasks.send_weekly_report',
+        'schedule': crontab(hour=9, minute=0, day_of_week='mon'),
+    },
+    'crm-attempt-re-engagement': {
+        'task': 'crm.tasks.attempt_re_engagement',
+        'schedule': crontab(hour=10, minute=0, day_of_week='mon'),
+    },
 }
 
 # Zoho Mail API Configuration (for CRM email outreach)
@@ -286,6 +294,12 @@ ZEPTOMAIL_API_KEY = os.getenv("ZEPTOMAIL_API_KEY", "")
 ZEPTOMAIL_HOST = os.getenv("ZEPTOMAIL_HOST", "api.zeptomail.com")  # US: api.zeptomail.com
 ZEPTOMAIL_FROM_EMAIL = os.getenv("ZEPTOMAIL_FROM_EMAIL", "noreply@desifirms.com.au")
 ZEPTOMAIL_WEBHOOK_KEY = os.getenv("ZEPTOMAIL_WEBHOOK_KEY", "")  # Auth key for bounce webhook verification
+
+# Desi Firms webhook integration
+DESIFIRMS_WEBHOOK_KEY = os.getenv("DESIFIRMS_WEBHOOK_KEY", "")
+
+# Weekly report recipient
+ADMIN_REPORT_EMAIL = os.getenv("ADMIN_REPORT_EMAIL", "noushadkhalid@gmail.com")
 
 # Django Unfold Configuration
 from django.templatetags.static import static

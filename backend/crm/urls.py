@@ -36,6 +36,7 @@ from .views import (
     EmailReplyWebhookView,
     UnsubscribeWebhookView,
     ZeptoMailBounceWebhookView,
+    DesiFirmsWebhookView,
     UnsubscribeView,
     # Dashboard views
     pipeline_dashboard,
@@ -86,6 +87,7 @@ urlpatterns = [
     path('webhooks/reply/', EmailReplyWebhookView.as_view(), name='webhook-reply'),
     path('webhooks/unsubscribe/', UnsubscribeWebhookView.as_view(), name='webhook-unsubscribe'),
     path('webhooks/bounce/', ZeptoMailBounceWebhookView.as_view(), name='webhook-bounce'),
+    path('webhooks/desifirms/', DesiFirmsWebhookView.as_view(), name='webhook-desifirms'),
 
     # Public unsubscribe page (clicked from emails)
     path('unsubscribe/', UnsubscribeView.as_view(), name='unsubscribe'),
