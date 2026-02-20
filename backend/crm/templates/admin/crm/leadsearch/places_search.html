@@ -130,6 +130,7 @@
     <!-- Search Form -->
     <form method="post" id="searchForm">
         {% csrf_token %}
+        <input type="hidden" name="do_search" value="1">
 
         <div class="search-form">
             <div class="form-group">
@@ -164,7 +165,7 @@
             </div>
             <div class="form-group">
                 <label>&nbsp;</label>
-                <button type="submit" name="do_search" class="btn btn-primary" id="searchBtn">Search</button>
+                <button type="submit" class="btn btn-primary" id="searchBtn">Search</button>
             </div>
         </div>
     </form>
@@ -240,12 +241,24 @@
             </tbody>
         </table>
 
-        <div class="btn-group">
+        <div style="display: flex; align-items: end; gap: 16px; margin-top: 20px; padding: 16px; background: #f9fafb; border-radius: 8px;">
+            <div class="form-group" style="min-width: 200px;">
+                <label>Pipeline (optional)</label>
+                <select name="pipeline">
+                    <option value="">No pipeline</option>
+                    {% for p in pipelines %}
+                    <option value="{{ p.id }}">{{ p.name }} ({{ p.brand.name }})</option>
+                    {% endfor %}
+                </select>
+            </div>
             <button type="submit" name="do_import" class="btn btn-success">
-                Import Selected as Contacts
+                Import as Contacts
+            </button>
+            <button type="submit" name="do_import_and_compose" class="btn btn-primary">
+                Import & Open in Email Composer
             </button>
             <a href="{% url 'admin:crm_leadsearch_changelist' %}" class="btn btn-secondary">
-                Back to Search History
+                Back
             </a>
         </div>
     </form>

@@ -3214,6 +3214,7 @@ class LeadSearchAdmin(ModelAdmin):
         from django.contrib import messages
 
         brands = Brand.objects.filter(is_active=True)
+        pipelines = Pipeline.objects.select_related('brand').all()
 
         if request.method == 'POST' and 'do_search' in request.POST:
             from crm.services.google_places import GooglePlacesService
@@ -3232,6 +3233,7 @@ class LeadSearchAdmin(ModelAdmin):
                     'opts': self.model._meta,
                     'industry_choices': Contact.INDUSTRY_CHOICES,
                     'brands': brands,
+                    'pipelines': pipelines,
                     'show_results': False,
                 })
 
@@ -3243,6 +3245,7 @@ class LeadSearchAdmin(ModelAdmin):
                     'opts': self.model._meta,
                     'industry_choices': Contact.INDUSTRY_CHOICES,
                     'brands': brands,
+                    'pipelines': pipelines,
                     'brand_id': brand_id,
                     'keywords': keywords,
                     'show_results': False,
@@ -3258,6 +3261,7 @@ class LeadSearchAdmin(ModelAdmin):
                     'opts': self.model._meta,
                     'industry_choices': Contact.INDUSTRY_CHOICES,
                     'brands': brands,
+                    'pipelines': pipelines,
                     'show_results': False,
                 })
 
@@ -3275,6 +3279,7 @@ class LeadSearchAdmin(ModelAdmin):
                     'opts': self.model._meta,
                     'industry_choices': Contact.INDUSTRY_CHOICES,
                     'brands': brands,
+                    'pipelines': pipelines,
                     'brand_id': brand_id,
                     'industry': industry,
                     'keywords': keywords,
@@ -3326,17 +3331,23 @@ class LeadSearchAdmin(ModelAdmin):
                 'opts': self.model._meta,
                 'industry_choices': Contact.INDUSTRY_CHOICES,
                 'brands': brands,
+                'pipelines': pipelines,
                 'show_results': True,
             }
             return TemplateResponse(request, 'admin/crm/leadsearch/places_search.html', context)
 
-        if request.method == 'POST' and 'do_import' in request.POST:
+        is_import = request.method == 'POST' and (
+            'do_import' in request.POST or 'do_import_and_compose' in request.POST
+        )
+        if is_import:
             import json
             from django.shortcuts import redirect
 
             brand_id = request.POST.get('brand_id', '')
             search_id = request.POST.get('search_id', '')
+            pipeline_id = request.POST.get('pipeline', '')
             selected = request.POST.getlist('selected_places')
+            open_composer = 'do_import_and_compose' in request.POST
 
             if not selected:
                 messages.warning(request, "No businesses selected for import.")
@@ -3348,6 +3359,14 @@ class LeadSearchAdmin(ModelAdmin):
                 messages.error(request, "Brand not found.")
                 return redirect(reverse('admin:crm_leadsearch_search'))
 
+            pipeline = None
+            if pipeline_id:
+                try:
+                    pipeline = Pipeline.objects.get(id=pipeline_id)
+                except Pipeline.DoesNotExist:
+                    pass
+
+            imported_contacts = []
             imported = 0
             skipped = 0
             for place_json in selected:
@@ -3357,7 +3376,7 @@ class LeadSearchAdmin(ModelAdmin):
                     skipped += 1
                     continue
 
-                Contact.objects.create(
+                contact = Contact.objects.create(
                     brand=brand,
                     name=biz.get('name', ''),
                     email=biz.get('email', ''),
@@ -3371,6 +3390,7 @@ class LeadSearchAdmin(ModelAdmin):
                     source='google_places',
                     contact_type='lead',
                 )
+                imported_contacts.append(contact)
                 imported += 1
 
             if search_id:
@@ -3380,6 +3400,29 @@ class LeadSearchAdmin(ModelAdmin):
                 request,
                 f"Imported {imported} contact(s) under {brand.name}. Skipped {skipped} duplicate(s).",
             )
+
+            if open_composer and imported_contacts:
+                from .models import EmailDraft
+                # Filter to contacts with email (can't email without one)
+                emailable = [c for c in imported_contacts if c.email]
+                draft = EmailDraft.objects.create(
+                    brand=brand,
+                    pipeline=pipeline,
+                )
+                if emailable:
+                    draft.contacts.set(emailable)
+                    messages.info(
+                        request,
+                        f"Email Composer created with {len(emailable)} contacts that have email addresses.",
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        "Email Composer created but none of the imported contacts have email addresses. "
+                        "Add contacts manually or use the contacts selector.",
+                    )
+                return redirect(reverse('admin:crm_emaildraft_change', args=[draft.pk]))
+
             return redirect(reverse('admin:crm_leadsearch_changelist'))
 
         # GET — show search form
@@ -3389,6 +3432,7 @@ class LeadSearchAdmin(ModelAdmin):
             'opts': self.model._meta,
             'industry_choices': Contact.INDUSTRY_CHOICES,
             'brands': brands,
+            'pipelines': pipelines,
             'show_results': False,
         }
         return TemplateResponse(request, 'admin/crm/leadsearch/places_search.html', context)
