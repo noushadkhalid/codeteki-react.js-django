@@ -1,0 +1,239 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block content %}
+<style>
+    .scan-results {
+        max-width: 1200px;
+        margin: 20px auto;
+        padding: 20px;
+    }
+    .scan-results h2 { margin-bottom: 20px; color: #1f2937; }
+
+    .scan-card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 20px;
+        overflow: hidden;
+    }
+    .scan-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-bottom: 1px solid #e5e7eb;
+        cursor: pointer;
+    }
+    .scan-header:hover { background: #f9fafb; }
+    .scan-header-left { display: flex; align-items: center; gap: 16px; }
+    .scan-header-right { display: flex; align-items: center; gap: 12px; }
+
+    .grade {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        font-size: 22px;
+        font-weight: 800;
+        color: #fff;
+    }
+    .grade-A { background: #22c55e; }
+    .grade-B { background: #84cc16; }
+    .grade-C { background: #eab308; }
+    .grade-D { background: #f97316; }
+    .grade-F { background: #ef4444; }
+
+    .contact-info h3 { margin: 0; font-size: 16px; color: #1f2937; }
+    .contact-info .url { font-size: 13px; color: #6b7280; }
+
+    .score-pill {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .score-good { background: #dcfce7; color: #166534; }
+    .score-ok { background: #fef9c3; color: #854d0e; }
+    .score-bad { background: #fee2e2; color: #991b1b; }
+
+    .scan-body { padding: 20px; display: none; }
+    .scan-body.open { display: block; }
+
+    .opp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 800px) { .opp-grid { grid-template-columns: 1fr; } }
+
+    .opp-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 14px;
+    }
+    .opp-card.high { border-left: 4px solid #ef4444; }
+    .opp-card.medium { border-left: 4px solid #f97316; }
+    .opp-card.low { border-left: 4px solid #eab308; }
+
+    .opp-card h4 {
+        margin: 0 0 8px 0;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .opp-card .priority {
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        font-weight: 700;
+    }
+    .priority-high { background: #fee2e2; color: #991b1b; }
+    .priority-medium { background: #ffedd5; color: #9a3412; }
+    .priority-low { background: #fef9c3; color: #854d0e; }
+
+    .opp-card ul { margin: 4px 0 8px 0; padding-left: 18px; font-size: 13px; color: #374151; }
+    .opp-card li { margin-bottom: 4px; }
+    .opp-card .solution { font-size: 12px; color: #1d4ed8; font-weight: 600; margin-top: 6px; }
+
+    .trap-box {
+        background: #fef2f2;
+        border: 1px solid #fca5a5;
+        border-radius: 8px;
+        padding: 14px;
+        margin-top: 16px;
+    }
+    .trap-box h4 { margin: 0 0 6px 0; color: #991b1b; font-size: 14px; }
+    .trap-box .tools { font-size: 13px; color: #374151; }
+    .trap-box .cost { font-weight: 700; color: #dc2626; }
+
+    .roadmap-box {
+        background: #eff6ff;
+        border: 1px solid #93c5fd;
+        border-radius: 8px;
+        padding: 14px;
+        margin-top: 16px;
+    }
+    .roadmap-box h4 { margin: 0 0 8px 0; color: #1e40af; font-size: 14px; }
+    .roadmap-steps { font-size: 13px; color: #1f2937; }
+    .roadmap-steps .step { margin-bottom: 6px; }
+    .roadmap-steps .label { font-weight: 600; color: #1d4ed8; }
+
+    .tech-stack { font-size: 13px; color: #6b7280; margin-top: 12px; }
+    .back-link { display: inline-block; margin-bottom: 16px; color: #3b82f6; text-decoration: none; }
+    .back-link:hover { text-decoration: underline; }
+    .toggle-icon { transition: transform 0.2s; font-size: 18px; color: #9ca3af; }
+    .toggle-icon.open { transform: rotate(90deg); }
+</style>
+
+<div class="scan-results">
+    <a href="{% url 'admin:crm_codetekicontact_changelist' %}" class="back-link">&larr; Back to contacts</a>
+    <h2>Website Scan Results ({{ scans|length }} scan{{ scans|length|pluralize }})</h2>
+
+    {% for scan in scans %}
+    <div class="scan-card">
+        <div class="scan-header" onclick="toggleScan('scan-{{ scan.id }}')">
+            <div class="scan-header-left">
+                <div class="grade grade-{{ scan.grade }}">{{ scan.grade }}</div>
+                <div class="contact-info">
+                    <h3>{{ scan.contact.name }} {% if scan.contact.company %} ({{ scan.contact.company }}){% endif %}</h3>
+                    <span class="url">{{ scan.url }}</span>
+                </div>
+            </div>
+            <div class="scan-header-right">
+                {% if scan.performance_score is not None %}
+                <span class="score-pill {% if scan.performance_score >= 70 %}score-good{% elif scan.performance_score >= 50 %}score-ok{% else %}score-bad{% endif %}">
+                    Perf {{ scan.performance_score }}
+                </span>
+                {% endif %}
+                {% if scan.seo_score is not None %}
+                <span class="score-pill {% if scan.seo_score >= 70 %}score-good{% elif scan.seo_score >= 50 %}score-ok{% else %}score-bad{% endif %}">
+                    SEO {{ scan.seo_score }}
+                </span>
+                {% endif %}
+                <span class="toggle-icon" id="icon-{{ scan.id }}">&#9654;</span>
+            </div>
+        </div>
+
+        <div class="scan-body" id="scan-{{ scan.id }}">
+            {% if scan.opportunities %}
+            <div class="opp-grid">
+                {% for opp in scan.opportunities %}
+                <div class="opp-card {{ opp.priority }}">
+                    <h4>
+                        {{ opp.service }}
+                        <span class="priority priority-{{ opp.priority }}">{{ opp.priority }}</span>
+                    </h4>
+                    <ul>
+                        {% for finding in opp.findings %}
+                        <li>{{ finding }}</li>
+                        {% endfor %}
+                    </ul>
+                    <div class="solution">Codeteki: {{ opp.codeteki_solution }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p style="color:#6b7280; padding: 10px;">No major opportunities detected &mdash; this site is in good shape.</p>
+            {% endif %}
+
+            {% if scan.subscription_trap and scan.subscription_trap.detected_tools %}
+            <div class="trap-box">
+                <h4>Subscription Trap Detected</h4>
+                <div class="tools">
+                    Tools: {{ scan.subscription_trap.detected_tools|join:", " }}
+                    <br>Estimated spend: <span class="cost">{{ scan.subscription_trap.estimated_monthly }}</span>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if scan.roadmap %}
+            <div class="roadmap-box">
+                <h4>Suggested Roadmap</h4>
+                <div class="roadmap-steps">
+                    {% if scan.roadmap.quick_win %}
+                    <div class="step"><span class="label">Quick Win:</span> {{ scan.roadmap.quick_win }}</div>
+                    {% endif %}
+                    {% if scan.roadmap.next_step %}
+                    <div class="step"><span class="label">Next Step:</span> {{ scan.roadmap.next_step }}</div>
+                    {% endif %}
+                    {% if scan.roadmap.long_term %}
+                    <div class="step"><span class="label">Long Term:</span> {{ scan.roadmap.long_term }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="tech-stack">
+                <strong>Tech Stack:</strong> {{ scan.tech_stack|default:"Unknown" }}
+                {% if scan.platform %} | <strong>Platform:</strong> {{ scan.platform }}{% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+function toggleScan(id) {
+    var body = document.getElementById(id);
+    var icon = document.getElementById('icon-' + id.replace('scan-', ''));
+    if (body.classList.contains('open')) {
+        body.classList.remove('open');
+        icon.classList.remove('open');
+    } else {
+        body.classList.add('open');
+        icon.classList.add('open');
+    }
+}
+// Auto-expand first scan
+{% if scans %}
+document.addEventListener('DOMContentLoaded', function() {
+    var first = document.querySelector('.scan-body');
+    var firstIcon = document.querySelector('.toggle-icon');
+    if (first) { first.classList.add('open'); }
+    if (firstIcon) { firstIcon.classList.add('open'); }
+});
+{% endif %}
+</script>
+{% endblock %}

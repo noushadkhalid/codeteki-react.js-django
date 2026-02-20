@@ -105,6 +105,23 @@ class Contact(models.Model):
         ('partner', 'Partner'),
     ]
 
+    INDUSTRY_CHOICES = [
+        ('restaurant', 'Restaurant / Cafe / Food'),
+        ('trades', 'Trades & Home Services'),
+        ('health_beauty', 'Health & Beauty'),
+        ('retail', 'Retail / Shopping'),
+        ('professional', 'Professional Services'),
+        ('fitness', 'Fitness / Sports'),
+        ('automotive', 'Automotive'),
+        ('education', 'Education / Training'),
+        ('real_estate', 'Real Estate'),
+        ('accommodation', 'Accommodation / Hotels'),
+        ('medical', 'Medical / Healthcare'),
+        ('legal', 'Legal Services'),
+        ('accounting', 'Accounting / Finance'),
+        ('other', 'Other'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     brand = models.ForeignKey(
         Brand,
@@ -114,10 +131,15 @@ class Contact(models.Model):
         blank=True,
         help_text="Which brand this contact belongs to"
     )
-    email = models.EmailField()  # Unique per brand, not globally
+    email = models.EmailField(blank=True, default='')  # Optional for phone-only leads
     name = models.CharField(max_length=255, blank=True, help_text="Leave blank to auto-extract from email/domain")
     company = models.CharField(max_length=255, blank=True)
     website = models.URLField(blank=True)
+    phone = models.CharField(max_length=30, blank=True, help_text="Phone number")
+    industry = models.CharField(max_length=50, blank=True, choices=INDUSTRY_CHOICES)
+    address = models.TextField(blank=True, help_text="Business address")
+    google_place_id = models.CharField(max_length=300, blank=True, help_text="Google Places ID for dedup")
+    google_rating = models.FloatField(null=True, blank=True, help_text="Google rating 1-5")
     domain_authority = models.IntegerField(null=True, blank=True, help_text="Domain Authority score 0-100")
     contact_type = models.CharField(max_length=20, choices=CONTACT_TYPE_CHOICES, default='lead')
     source = models.CharField(max_length=100, blank=True, help_text="Where this contact came from")
@@ -184,11 +206,18 @@ class Contact(models.Model):
         ordering = ['-created_at']
         verbose_name = 'Contact'
         verbose_name_plural = 'Contacts'
-        # Same email can exist for different brands, but unique within a brand
-        unique_together = [('brand', 'email')]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['brand', 'email'],
+                condition=models.Q(email__gt=''),
+                name='unique_brand_email_when_set',
+            ),
+        ]
 
     def __str__(self):
-        return f"{self.name} ({self.email})"
+        if self.email:
+            return f"{self.name} ({self.email})"
+        return f"{self.name} ({self.phone or 'no email'})"
 
     def is_unsubscribed_from_brand(self, brand_slug: str) -> bool:
         """Check if contact has unsubscribed from a specific brand."""
@@ -960,6 +989,45 @@ class BacklinkImport(models.Model):
         return f"{self.file_name} - {self.brand.name} ({self.status})"
 
 
+class ProspectScan(models.Model):
+    """Stores website scan results for a Codeteki prospect."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    contact = models.ForeignKey('Contact', on_delete=models.CASCADE, related_name='prospect_scans')
+    url = models.URLField()
+
+    # Raw scan data
+    crawl_data = models.JSONField(default=dict)
+    pagespeed_data = models.JSONField(default=dict)
+
+    # Processed results
+    grade = models.CharField(max_length=2, blank=True)
+    opportunities = models.JSONField(default=list)
+    subscription_trap = models.JSONField(default=dict)
+    roadmap = models.JSONField(default=dict)
+    tech_stack = models.CharField(max_length=200, blank=True)
+    platform = models.CharField(max_length=50, blank=True)
+
+    # Scores
+    performance_score = models.IntegerField(null=True, blank=True)
+    mobile_score = models.IntegerField(null=True, blank=True)
+    seo_score = models.IntegerField(null=True, blank=True)
+
+    # Status
+    status = models.CharField(max_length=20, default='pending',
+        choices=[('pending', 'Pending'), ('scanning', 'Scanning'),
+                 ('completed', 'Completed'), ('failed', 'Failed')])
+    error_message = models.TextField(blank=True)
+    scanned_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-scanned_at']
+        verbose_name = 'Prospect Scan'
+        verbose_name_plural = 'Prospect Scans'
+
+    def __str__(self):
+        return f"{self.contact.name} - {self.url} ({self.grade or self.status})"
+
+
 class EmailDraft(models.Model):
     """
     AI Email Composer - First contact tool.
@@ -1044,6 +1112,9 @@ class EmailDraft(models.Model):
             ('seo_services', 'SEO Services Pitch'),
             ('sales_followup', 'Sales Follow-up'),
             ('proposal_followup', 'Proposal Follow-up'),
+            # Codeteki - Prospect Audit
+            ('prospect_audit_outreach', 'Prospect Audit Outreach'),
+            ('sector_outreach', 'Sector-Specific Outreach'),
             # Codeteki - Backlink
             ('backlink_pitch', 'Backlink Pitch'),
             ('guest_post', 'Guest Post Offer'),
@@ -1225,3 +1296,23 @@ class EmailDraft(models.Model):
         return f"Draft - {self.brand.name} ({self.email_type})"
 
 
+class LeadSearch(models.Model):
+    """Stores Google Places search results for lead discovery."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    brand = models.ForeignKey('Brand', on_delete=models.CASCADE, related_name='lead_searches')
+    query = models.CharField(max_length=200, help_text="Search query used")
+    industry = models.CharField(max_length=50, blank=True)
+    location = models.CharField(max_length=200, help_text="Location searched")
+    radius_km = models.IntegerField(default=5)
+    results = models.JSONField(default=list, help_text="Raw API results")
+    results_count = models.IntegerField(default=0)
+    imported_count = models.IntegerField(default=0)
+    searched_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-searched_at']
+        verbose_name = 'Lead Search'
+        verbose_name_plural = 'Lead Searches'
+
+    def __str__(self):
+        return f"{self.query} - {self.location} ({self.results_count} results)"

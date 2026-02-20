@@ -1,0 +1,234 @@
+"""
+Google Places API (New) service for discovering local business leads.
+
+Uses Places API (New) — cheaper pricing, 10K free calls/month.
+Geocoding API still uses the legacy endpoint (no "new" version exists).
+Details fetched at search time now — free tier is generous enough.
+"""
+
+import logging
+import time
+import requests
+from django.conf import settings
+
+logger = logging.getLogger(__name__)
+
+
+class GooglePlacesService:
+    """Search Google Places API (New) to discover local business leads."""
+
+    PLACES_URL = 'https://places.googleapis.com/v1'
+    GEOCODE_URL = 'https://maps.googleapis.com/maps/api/geocode/json'
+
+    # Maps industry choices to Google Place types (New API format)
+    INDUSTRY_TO_PLACE_TYPES = {
+        'restaurant': ['restaurant', 'cafe', 'bakery', 'bar', 'meal_delivery'],
+        'trades': ['plumber', 'electrician', 'locksmith', 'roofing_contractor', 'painter'],
+        'health_beauty': ['beauty_salon', 'hair_salon', 'spa'],
+        'retail': ['store', 'clothing_store', 'furniture_store', 'jewelry_store'],
+        'fitness': ['gym', 'yoga_studio'],
+        'automotive': ['car_repair', 'car_dealer', 'car_wash'],
+        'medical': ['doctor', 'dentist', 'physiotherapist', 'pharmacy'],
+        'real_estate': ['real_estate_agency'],
+        'legal': ['lawyer'],
+        'accounting': ['accounting'],
+        'accommodation': ['lodging', 'hotel'],
+        'education': ['school', 'university'],
+        'professional': ['insurance_agency', 'travel_agency'],
+    }
+
+    def __init__(self):
+        self.api_key = getattr(settings, 'GOOGLE_API_KEY', '')
+        if not self.api_key:
+            logger.warning("GOOGLE_API_KEY not configured")
+
+    def _geocode(self, address: str) -> tuple[float, float] | None:
+        """Convert address string to lat/lng. Uses legacy Geocoding API."""
+        params = {
+            'address': address,
+            'key': self.api_key,
+            'region': 'au',
+        }
+        try:
+            resp = requests.get(self.GEOCODE_URL, params=params, timeout=10)
+            data = resp.json()
+            if data.get('status') == 'OK' and data.get('results'):
+                loc = data['results'][0]['geometry']['location']
+                return loc['lat'], loc['lng']
+            logger.warning(f"Geocode failed for '{address}': {data.get('status')}")
+        except Exception as e:
+            logger.error(f"Geocode error for '{address}': {e}")
+        return None
+
+    def search_nearby(self, location: str, industry: str = '', radius_km: int = 5) -> dict:
+        """
+        Search for businesses near a location with full details (phone, website).
+        New API caps at 20 per call, so we make multiple calls for more types.
+        Free tier = 10K calls/month — plenty of room.
+
+        Returns:
+            {
+                'success': bool,
+                'businesses': [{'name', 'address', 'phone', 'website', 'has_website',
+                                'rating', 'place_id', 'industry', ...}],
+                'total': int,
+                'without_website': int,
+                'error': str (if failed)
+            }
+        """
+        if not self.api_key:
+            return {'success': False, 'error': 'GOOGLE_API_KEY not configured', 'businesses': [], 'total': 0}
+
+        coords = self._geocode(location)
+        if not coords:
+            return {'success': False, 'error': f'Could not geocode "{location}". Make sure Geocoding API is enabled in Google Cloud Console.', 'businesses': [], 'total': 0}
+
+        lat, lng = coords
+
+        place_types = self.INDUSTRY_TO_PLACE_TYPES.get(industry, [])
+
+        if place_types:
+            # New API supports multiple includedTypes in one call
+            places = self._nearby_search(lat, lng, radius_km * 1000, place_types)
+        else:
+            # Fallback to text search for industries without mapped types
+            query = f"{industry} in {location}" if industry else location
+            places = self._text_search(query)
+
+        # Now fetch details (phone, website) for each result
+        businesses = []
+        for p in places:
+            details = self._get_place_details(p['place_id'])
+            biz = {
+                'name': p.get('name', ''),
+                'address': details.get('formatted_address', p.get('address', '')) if details else p.get('address', ''),
+                'phone': details.get('formatted_phone_number', '') if details else '',
+                'website': details.get('website', '') if details else '',
+                'has_website': bool(details.get('website')) if details else False,
+                'rating': p.get('rating'),
+                'user_ratings_total': p.get('user_ratings_total', 0),
+                'place_id': p['place_id'],
+                'industry': industry,
+                'types': p.get('types', []),
+            }
+            businesses.append(biz)
+            time.sleep(0.05)  # Light rate limiting
+
+        without_website = sum(1 for b in businesses if not b['has_website'])
+
+        return {
+            'success': True,
+            'businesses': businesses,
+            'total': len(businesses),
+            'without_website': without_website,
+        }
+
+    def _get_place_details(self, place_id: str) -> dict | None:
+        """
+        Get phone, website, full address for a single place.
+        Returns normalized dict matching admin import expectations.
+        """
+        url = f"{self.PLACES_URL}/places/{place_id}"
+        headers = {
+            'X-Goog-Api-Key': self.api_key,
+            'X-Goog-FieldMask': 'nationalPhoneNumber,websiteUri,formattedAddress',
+        }
+        try:
+            resp = requests.get(url, headers=headers, timeout=10)
+            if resp.status_code == 200:
+                data = resp.json()
+                return {
+                    'formatted_phone_number': data.get('nationalPhoneNumber', ''),
+                    'website': data.get('websiteUri', ''),
+                    'formatted_address': data.get('formattedAddress', ''),
+                }
+            logger.warning(f"Place details failed for {place_id}: {resp.status_code} - {resp.text[:200]}")
+        except Exception as e:
+            logger.error(f"Place details error for {place_id}: {e}")
+        return None
+
+    def get_details_batch(self, place_ids: list[str]) -> dict[str, dict]:
+        """
+        Fetch details for multiple places.
+        Returns {place_id: details_dict}.
+        """
+        results = {}
+        for pid in place_ids:
+            details = self._get_place_details(pid)
+            if details:
+                results[pid] = details
+            time.sleep(0.05)
+        return results
+
+    def _nearby_search(self, lat: float, lng: float, radius_m: int,
+                       place_types: list[str]) -> list[dict]:
+        """
+        Nearby Search using Places API (New). Max 20 results per call.
+        """
+        url = f"{self.PLACES_URL}/places:searchNearby"
+        headers = {
+            'X-Goog-Api-Key': self.api_key,
+            'X-Goog-FieldMask': 'places.id,places.displayName,places.shortFormattedAddress,places.rating,places.userRatingCount,places.types',
+            'Content-Type': 'application/json',
+        }
+        body = {
+            'includedTypes': place_types,
+            'maxResultCount': 20,
+            'locationRestriction': {
+                'circle': {
+                    'center': {'latitude': lat, 'longitude': lng},
+                    'radius': min(float(radius_m), 50000.0),
+                }
+            },
+        }
+        results = []
+        try:
+            resp = requests.post(url, headers=headers, json=body, timeout=15)
+            if resp.status_code == 200:
+                data = resp.json()
+                for place in data.get('places', []):
+                    results.append({
+                        'place_id': place.get('id', ''),
+                        'name': place.get('displayName', {}).get('text', ''),
+                        'address': place.get('shortFormattedAddress', ''),
+                        'rating': place.get('rating'),
+                        'user_ratings_total': place.get('userRatingCount', 0),
+                        'types': place.get('types', []),
+                    })
+            else:
+                logger.warning(f"Nearby search failed: {resp.status_code} - {resp.text[:300]}")
+        except Exception as e:
+            logger.error(f"Nearby search error: {e}")
+        return results
+
+    def _text_search(self, query: str) -> list[dict]:
+        """Text Search using Places API (New)."""
+        url = f"{self.PLACES_URL}/places:searchText"
+        headers = {
+            'X-Goog-Api-Key': self.api_key,
+            'X-Goog-FieldMask': 'places.id,places.displayName,places.shortFormattedAddress,places.rating,places.userRatingCount,places.types',
+            'Content-Type': 'application/json',
+        }
+        body = {
+            'textQuery': query,
+            'maxResultCount': 20,
+        }
+        results = []
+        try:
+            resp = requests.post(url, headers=headers, json=body, timeout=15)
+            if resp.status_code == 200:
+                data = resp.json()
+                for place in data.get('places', []):
+                    results.append({
+                        'place_id': place.get('id', ''),
+                        'name': place.get('displayName', {}).get('text', ''),
+                        'address': place.get('shortFormattedAddress', ''),
+                        'rating': place.get('rating'),
+                        'user_ratings_total': place.get('userRatingCount', 0),
+                        'types': place.get('types', []),
+                    })
+            else:
+                logger.warning(f"Text search failed: {resp.status_code} - {resp.text[:300]}")
+        except Exception as e:
+            logger.error(f"Text search error: {e}")
+        return results

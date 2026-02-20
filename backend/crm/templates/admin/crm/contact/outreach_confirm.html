@@ -1,0 +1,108 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block content %}
+<style>
+    .outreach-form {
+        max-width: 900px;
+        margin: 20px auto;
+        padding: 30px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .outreach-form h2 { margin-bottom: 20px; color: #1f2937; }
+    .info-box {
+        background: #eff6ff;
+        border: 1px solid #3b82f6;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .info-box strong { color: #1e40af; }
+    .scan-summary {
+        background: #f9fafb;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 16px;
+        border: 1px solid #e5e7eb;
+    }
+    .scan-summary h3 { margin: 0 0 8px 0; font-size: 15px; color: #1f2937; }
+    .scan-summary .url { font-size: 13px; color: #6b7280; }
+    .scan-summary .meta { font-size: 13px; color: #374151; margin-top: 8px; }
+    .grade-inline {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-weight: 700;
+        color: #fff;
+        font-size: 13px;
+    }
+    .grade-inline.A { background: #22c55e; }
+    .grade-inline.B { background: #84cc16; }
+    .grade-inline.C { background: #eab308; }
+    .grade-inline.D { background: #f97316; }
+    .grade-inline.F { background: #ef4444; }
+    .findings-preview { font-size: 13px; color: #374151; margin-top: 6px; }
+    .findings-preview li { margin-bottom: 2px; }
+    .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+    .btn { padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; }
+    .btn-primary { background: #3b82f6; color: white; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-secondary { background: #e5e7eb; color: #374151; }
+    .btn-secondary:hover { background: #d1d5db; }
+</style>
+
+<div class="outreach-form">
+    <h2>Generate Audit Outreach for {{ scans|length }} Contact{{ scans|length|pluralize }}</h2>
+
+    <div class="info-box">
+        <strong>What this does:</strong> AI will generate a personalized outreach email for each contact
+        using their actual website scan data. Each email will cite specific findings and suggest
+        a starting point. Deals will be created in the Codeteki Sales pipeline.
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        {% for contact in queryset %}
+        <input type="hidden" name="{{ action_checkbox_name }}" value="{{ contact.pk }}">
+        {% endfor %}
+        <input type="hidden" name="action" value="{{ action_name }}">
+
+        {% for scan in scans %}
+        <div class="scan-summary">
+            <h3>
+                {{ scan.contact.name }}
+                {% if scan.contact.company %}({{ scan.contact.company }}){% endif %}
+                <span class="grade-inline {{ scan.grade }}">{{ scan.grade }}</span>
+            </h3>
+            <div class="url">{{ scan.url }}</div>
+            <div class="meta">
+                {% if scan.performance_score is not None %}Perf: {{ scan.performance_score }}/100{% endif %}
+                {% if scan.seo_score is not None %} | SEO: {{ scan.seo_score }}/100{% endif %}
+                {% if scan.tech_stack %} | {{ scan.tech_stack }}{% endif %}
+            </div>
+            {% if scan.opportunities %}
+            <div class="findings-preview">
+                <strong>Top findings:</strong>
+                <ul>
+                    {% for opp in scan.opportunities|slice:":3" %}
+                    <li>{{ opp.service }}: {{ opp.findings.0 }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <div class="btn-group">
+            <button type="submit" name="apply" class="btn btn-primary">
+                Generate {{ scans|length }} Outreach Email{{ scans|length|pluralize }}
+            </button>
+            <a href="{% url 'admin:crm_codetekicontact_changelist' %}" class="btn btn-secondary">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

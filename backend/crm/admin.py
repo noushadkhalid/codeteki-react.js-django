@@ -3,10 +3,13 @@ CRM Admin Configuration
 Using Django Unfold for modern Tailwind-based UI
 """
 
+import logging
 from django.contrib import admin
 from django.utils.html import format_html
 from django.db.models import Count, Sum
 from django import forms
+
+logger = logging.getLogger(__name__)
 
 from unfold.admin import ModelAdmin, TabularInline, StackedInline
 from unfold.decorators import action, display
@@ -29,6 +32,8 @@ from .models import (
     ContactImport,
     BacklinkImport,
     EmailDraft,
+    ProspectScan,
+    LeadSearch,
 )
 
 
@@ -557,10 +562,33 @@ class CodetekiContactAdmin(ContactAdmin):
     """Codeteki-only contacts view - brand auto-selected."""
     form = CodetekiContactAdminForm
 
+    list_display = [
+        'name',
+        'email',
+        'company',
+        'industry_badge',
+        'phone',
+        'status_badge',
+        'email_count',
+        'last_emailed_display',
+        'is_unsubscribed_badge',
+        'bounce_badge',
+        'created_at',
+    ]
+    list_filter = ['status', 'industry', 'is_unsubscribed', 'email_bounced', 'contact_type', 'source', 'created_at']
+    search_fields = ['name', 'email', 'company', 'website', 'phone']
+    readonly_fields = ['created_at', 'updated_at', 'id', 'last_emailed_at', 'email_count', 'preferred_send_hour',
+                       'unsubscribed_at', 'bounced_at', 'soft_bounce_count', 'spam_reported_at',
+                       'google_place_id', 'google_rating']
+
     # Remove brand from fieldsets - it's auto-set
     fieldsets = (
         ('Contact Information', {
-            'fields': ('name', 'email', 'company', 'website')
+            'fields': ('name', 'email', 'company', 'website', 'phone', 'industry', 'address')
+        }),
+        ('Google Places', {
+            'fields': ('google_place_id', 'google_rating'),
+            'classes': ['collapse'],
         }),
         ('Status', {
             'fields': ('status', 'contact_type', 'source'),
@@ -588,6 +616,12 @@ class CodetekiContactAdmin(ContactAdmin):
         }),
     )
 
+    @display(description="Industry", label=True)
+    def industry_badge(self, obj):
+        if not obj.industry:
+            return "-", "default"
+        return obj.get_industry_display(), "info"
+
     def get_queryset(self, request):
         return super().get_queryset(request).filter(brand__slug='codeteki')
 
@@ -599,6 +633,497 @@ class CodetekiContactAdmin(ContactAdmin):
             except Brand.DoesNotExist:
                 pass
         super().save_model(request, obj, form, change)
+
+    @action(description="Scan Websites")
+    def scan_websites(self, request, queryset):
+        """Scan selected contacts' websites for opportunities."""
+        from django.template.response import TemplateResponse
+        from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
+        from django.contrib import messages
+
+        # Filter to contacts with websites
+        contacts_with_sites = queryset.exclude(website='').exclude(website__isnull=True)
+        if not contacts_with_sites.exists():
+            self.message_user(request, "No selected contacts have a website URL.", messages.WARNING)
+            return
+
+        if 'apply' in request.POST:
+            # Create ProspectScan records and dispatch task
+            from crm.tasks import scan_prospect_websites
+            scan_ids = []
+            for contact in contacts_with_sites:
+                scan = ProspectScan.objects.create(
+                    contact=contact,
+                    url=contact.website,
+                    status='pending',
+                )
+                scan_ids.append(str(scan.id))
+
+            scan_prospect_websites.delay(scan_ids)
+            self.message_user(
+                request,
+                f"Scanning {len(scan_ids)} website(s) in background. Check back in a minute for results.",
+                messages.SUCCESS,
+            )
+            return
+
+        context = {
+            **self.admin_site.each_context(request),
+            'title': 'Scan Prospect Websites',
+            'queryset': contacts_with_sites,
+            'opts': self.model._meta,
+            'action_checkbox_name': ACTION_CHECKBOX_NAME,
+            'contact_count': contacts_with_sites.count(),
+            'contacts_preview': contacts_with_sites[:20],
+            'action_name': 'scan_websites',
+        }
+        return TemplateResponse(
+            request,
+            'admin/crm/contact/scan_confirm.html',
+            context,
+        )
+
+    @action(description="View Scan Results")
+    def view_scan_results(self, request, queryset):
+        """View website scan results for selected contacts."""
+        from django.template.response import TemplateResponse
+
+        scans = ProspectScan.objects.filter(
+            contact__in=queryset,
+            status='completed',
+        ).select_related('contact').order_by('-scanned_at')
+
+        if not scans.exists():
+            from django.contrib import messages
+            self.message_user(request, "No completed scans for selected contacts. Run 'Scan Websites' first.", messages.WARNING)
+            return
+
+        context = {
+            **self.admin_site.each_context(request),
+            'title': 'Website Scan Results',
+            'scans': scans,
+            'opts': self.model._meta,
+        }
+        return TemplateResponse(
+            request,
+            'admin/crm/contact/scan_results.html',
+            context,
+        )
+
+    @action(description="Generate Audit Outreach")
+    def generate_audit_outreach(self, request, queryset):
+        """Generate personalized outreach emails using scan data."""
+        from django.template.response import TemplateResponse
+        from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
+        from django.contrib import messages
+        from django.utils import timezone as tz
+
+        # Get completed scans for selected contacts
+        scans = ProspectScan.objects.filter(
+            contact__in=queryset,
+            status='completed',
+        ).select_related('contact').order_by('-scanned_at')
+
+        # Deduplicate: one scan per contact (latest)
+        seen_contacts = set()
+        unique_scans = []
+        for scan in scans:
+            if scan.contact_id not in seen_contacts:
+                seen_contacts.add(scan.contact_id)
+                unique_scans.append(scan)
+
+        if not unique_scans:
+            self.message_user(request, "No completed scans for selected contacts. Run 'Scan Websites' first.", messages.WARNING)
+            return
+
+        if 'apply' in request.POST:
+            # Generate emails via AI and create deals
+            from crm.services.ai_agent import CRMAIAgent
+
+            ai_agent = CRMAIAgent()
+            generated = 0
+            errors = 0
+
+            # Get Codeteki sales pipeline
+            pipeline = Pipeline.objects.filter(
+                brand__slug='codeteki',
+                pipeline_type='sales',
+                is_active=True,
+            ).first()
+
+            if not pipeline:
+                self.message_user(request, "No active Codeteki sales pipeline found.", messages.ERROR)
+                return
+
+            first_stage = PipelineStage.objects.filter(
+                pipeline=pipeline,
+            ).order_by('order').first()
+
+            if not first_stage:
+                self.message_user(request, "Pipeline has no stages.", messages.ERROR)
+                return
+
+            for scan in unique_scans:
+                try:
+                    contact = scan.contact
+
+                    # Build findings summary for AI
+                    findings_parts = []
+                    for opp in scan.opportunities:
+                        findings_parts.append(f"\n{opp['service']} ({opp['priority']} priority):")
+                        for f in opp.get('findings', []):
+                            findings_parts.append(f"  - {f}")
+
+                    sub_trap = scan.subscription_trap
+                    sub_trap_str = ''
+                    if sub_trap and sub_trap.get('detected_tools'):
+                        sub_trap_str = f"\nSUBSCRIPTION TRAP: {', '.join(sub_trap['detected_tools'])} (est. {sub_trap.get('estimated_monthly', '?')})"
+
+                    roadmap = scan.roadmap or {}
+                    roadmap_str = ''
+                    if roadmap:
+                        roadmap_str = f"\nROADMAP:\n  Quick win: {roadmap.get('quick_win', 'N/A')}\n  Next: {roadmap.get('next_step', 'N/A')}\n  Long-term: {roadmap.get('long_term', 'N/A')}"
+
+                    suggestions = (
+                        f"WEBSITE SCAN RESULTS for {contact.website}:\n"
+                        f"Grade: {scan.grade}/F | Performance: {scan.performance_score or '?'}/100 | "
+                        f"SEO: {scan.seo_score or '?'}/100 | Tech: {scan.tech_stack}\n"
+                        f"\nFINDINGS:{chr(10).join(findings_parts)}"
+                        f"{sub_trap_str}"
+                        f"{roadmap_str}"
+                    )
+
+                    result = ai_agent.compose_email_from_context({
+                        'email_type': 'prospect_audit_outreach',
+                        'tone': 'friendly',
+                        'suggestions': suggestions,
+                        'recipient_name': contact.name,
+                        'recipient_email': contact.email,
+                        'recipient_company': contact.company,
+                        'recipient_website': contact.website,
+                        'brand_name': 'Codeteki',
+                        'brand_website': 'https://codeteki.au',
+                        'brand_description': 'Australian digital agency specializing in AI-powered business solutions, web development, SEO, and custom tools',
+                        'value_proposition': 'We help businesses solve real problems with smart technology — AI chatbots, custom tools, modern websites, and automation',
+                        'approach_style': 'problem_solving',
+                    })
+
+                    if result.get('success'):
+                        # Create deal in pipeline
+                        existing_deal = Deal.objects.filter(
+                            contact=contact,
+                            pipeline=pipeline,
+                            status='active',
+                        ).first()
+
+                        if not existing_deal:
+                            deal = Deal.objects.create(
+                                contact=contact,
+                                pipeline=pipeline,
+                                current_stage=first_stage,
+                                status='active',
+                                next_action_date=tz.now() + tz.timedelta(days=first_stage.days_until_followup or 3),
+                                ai_notes=(
+                                    f"[AUDIT OUTREACH - {tz.now().strftime('%Y-%m-%d')}]\n"
+                                    f"Grade: {scan.grade} | Perf: {scan.performance_score} | SEO: {scan.seo_score}\n"
+                                    f"Subject: {result['subject']}\n\n"
+                                    f"{result['body']}"
+                                ),
+                            )
+                        else:
+                            deal = existing_deal
+                            deal.ai_notes = (
+                                f"[AUDIT OUTREACH - {tz.now().strftime('%Y-%m-%d')}]\n"
+                                f"Grade: {scan.grade} | Perf: {scan.performance_score} | SEO: {scan.seo_score}\n"
+                                f"Subject: {result['subject']}\n\n"
+                                f"{result['body']}"
+                            )
+                            deal.save(update_fields=['ai_notes'])
+
+                        generated += 1
+                    else:
+                        errors += 1
+                        logger.error(f"AI email gen failed for {contact.email}: {result.get('error')}")
+
+                except Exception as e:
+                    errors += 1
+                    logger.error(f"Outreach gen failed for scan {scan.id}: {e}")
+
+            self.message_user(
+                request,
+                f"Generated {generated} outreach email(s) with deals in pipeline. {errors} error(s). Check Deals to review and send.",
+                messages.SUCCESS,
+            )
+            return
+
+        context = {
+            **self.admin_site.each_context(request),
+            'title': 'Generate Audit Outreach Emails',
+            'scans': unique_scans,
+            'queryset': queryset,
+            'opts': self.model._meta,
+            'action_checkbox_name': ACTION_CHECKBOX_NAME,
+            'action_name': 'generate_audit_outreach',
+        }
+        return TemplateResponse(
+            request,
+            'admin/crm/contact/outreach_confirm.html',
+            context,
+        )
+
+    @action(description="Search Google Places")
+    def search_google_places(self, request, queryset):
+        """Search Google Places API to discover local business leads."""
+        from django.template.response import TemplateResponse
+        from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
+        from django.contrib import messages
+
+        if 'do_search' in request.POST:
+            # Run search — fetches full details (phone, website) for all results
+            # Free tier = 10K calls/month, so no need to hold back
+            from crm.services.google_places import GooglePlacesService
+
+            industry = request.POST.get('industry', '')
+            location = request.POST.get('location', '').strip()
+            radius_km = int(request.POST.get('radius_km', '5'))
+
+            if not location:
+                self.message_user(request, "Please enter a location.", messages.WARNING)
+                return
+
+            service = GooglePlacesService()
+            result = service.search_nearby(location=location, industry=industry, radius_km=radius_km)
+
+            if not result['success']:
+                self.message_user(request, f"Search failed: {result['error']}", messages.ERROR)
+                return
+
+            # Store results in LeadSearch
+            try:
+                brand = Brand.objects.get(slug='codeteki')
+            except Brand.DoesNotExist:
+                self.message_user(request, "Codeteki brand not found.", messages.ERROR)
+                return
+
+            lead_search = LeadSearch.objects.create(
+                brand=brand,
+                query=f"{dict(Contact.INDUSTRY_CHOICES).get(industry, industry)} in {location}",
+                industry=industry,
+                location=location,
+                radius_km=radius_km,
+                results=result['businesses'],
+                results_count=result['total'],
+            )
+
+            # Add JSON-encoded value for each business (for form checkbox values)
+            import json as _json
+            for biz in result['businesses']:
+                biz['json_value'] = _json.dumps({
+                    'name': biz['name'], 'phone': biz.get('phone', ''),
+                    'address': biz['address'], 'website': biz.get('website', ''),
+                    'rating': biz['rating'], 'place_id': biz['place_id'],
+                    'industry': biz['industry'],
+                })
+
+            context = {
+                **self.admin_site.each_context(request),
+                'title': 'Google Places Search Results',
+                'businesses': result['businesses'],
+                'total': result['total'],
+                'without_website': result.get('without_website', 0),
+                'search_id': str(lead_search.id),
+                'industry': industry,
+                'location': location,
+                'radius_km': radius_km,
+                'opts': self.model._meta,
+                'industry_choices': Contact.INDUSTRY_CHOICES,
+                'show_results': True,
+            }
+            return TemplateResponse(request, 'admin/crm/contact/places_search.html', context)
+
+        if 'do_import' in request.POST:
+            # Import selected — details already fetched during search, no extra API calls
+            import json
+
+            search_id = request.POST.get('search_id', '')
+            selected = request.POST.getlist('selected_places')
+
+            if not selected:
+                self.message_user(request, "No businesses selected for import.", messages.WARNING)
+                return
+
+            try:
+                brand = Brand.objects.get(slug='codeteki')
+            except Brand.DoesNotExist:
+                self.message_user(request, "Codeteki brand not found.", messages.ERROR)
+                return
+
+            imported = 0
+            skipped = 0
+            for place_json in selected:
+                biz = json.loads(place_json)
+
+                # Dedup by google_place_id
+                if Contact.objects.filter(google_place_id=biz['place_id'], brand=brand).exists():
+                    skipped += 1
+                    continue
+
+                Contact.objects.create(
+                    brand=brand,
+                    name=biz.get('name', ''),
+                    phone=biz.get('phone', ''),
+                    company=biz.get('name', ''),
+                    website=biz.get('website', ''),
+                    address=biz.get('address', ''),
+                    industry=biz.get('industry', ''),
+                    google_place_id=biz.get('place_id', ''),
+                    google_rating=biz.get('rating'),
+                    source='google_places',
+                    contact_type='lead',
+                )
+                imported += 1
+
+            # Update LeadSearch import count
+            if search_id:
+                LeadSearch.objects.filter(id=search_id).update(imported_count=imported)
+
+            self.message_user(
+                request,
+                f"Imported {imported} contact(s). Skipped {skipped} duplicate(s).",
+                messages.SUCCESS,
+            )
+            return
+
+        # Show search form
+        context = {
+            **self.admin_site.each_context(request),
+            'title': 'Search Google Places for Leads',
+            'opts': self.model._meta,
+            'industry_choices': Contact.INDUSTRY_CHOICES,
+            'show_results': False,
+        }
+        return TemplateResponse(request, 'admin/crm/contact/places_search.html', context)
+
+    @action(description="Generate Sector Outreach")
+    def generate_sector_outreach(self, request, queryset):
+        """Generate sector-specific outreach for contacts with industry set."""
+        from django.template.response import TemplateResponse
+        from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
+        from django.contrib import messages
+        from django.utils import timezone as tz
+
+        # Filter to contacts with industry AND email
+        eligible = queryset.filter(industry__gt='').exclude(email='')
+        if not eligible.exists():
+            self.message_user(
+                request,
+                "No selected contacts have both an industry and email address set.",
+                messages.WARNING,
+            )
+            return
+
+        if 'apply' in request.POST:
+            from crm.services.ai_agent import CRMAIAgent
+
+            ai_agent = CRMAIAgent()
+            generated = 0
+            errors = 0
+
+            pipeline = Pipeline.objects.filter(
+                brand__slug='codeteki', pipeline_type='sales', is_active=True,
+            ).first()
+            if not pipeline:
+                self.message_user(request, "No active Codeteki sales pipeline found.", messages.ERROR)
+                return
+
+            first_stage = PipelineStage.objects.filter(pipeline=pipeline).order_by('order').first()
+            if not first_stage:
+                self.message_user(request, "Pipeline has no stages.", messages.ERROR)
+                return
+
+            for contact in eligible:
+                try:
+                    suggestions = (
+                        f"SECTOR OUTREACH for {contact.company or contact.name}\n"
+                        f"INDUSTRY: {contact.get_industry_display()}\n"
+                        f"ADDRESS: {contact.address or 'Unknown'}\n"
+                        f"PHONE: {contact.phone or 'Unknown'}\n"
+                        f"WEBSITE: {contact.website or 'NONE - no website'}\n"
+                        f"GOOGLE RATING: {contact.google_rating or 'Unknown'}\n"
+                    )
+
+                    result = ai_agent.compose_email_from_context({
+                        'email_type': 'sector_outreach',
+                        'tone': 'friendly',
+                        'suggestions': suggestions,
+                        'recipient_name': contact.name,
+                        'recipient_email': contact.email,
+                        'recipient_company': contact.company,
+                        'recipient_website': contact.website,
+                        'brand_name': 'Codeteki',
+                        'brand_website': 'https://codeteki.au',
+                        'brand_description': 'Australian digital agency specializing in AI-powered business solutions, web development, and custom tools',
+                        'value_proposition': 'We help businesses solve real problems with smart technology',
+                        'approach_style': 'problem_solving',
+                    })
+
+                    if result.get('success'):
+                        existing_deal = Deal.objects.filter(
+                            contact=contact, pipeline=pipeline, status='active',
+                        ).first()
+
+                        if not existing_deal:
+                            Deal.objects.create(
+                                contact=contact,
+                                pipeline=pipeline,
+                                current_stage=first_stage,
+                                status='active',
+                                next_action_date=tz.now() + tz.timedelta(days=first_stage.days_until_followup or 3),
+                                ai_notes=(
+                                    f"[SECTOR OUTREACH - {tz.now().strftime('%Y-%m-%d')}]\n"
+                                    f"Industry: {contact.get_industry_display()}\n"
+                                    f"Subject: {result['subject']}\n\n"
+                                    f"{result['body']}"
+                                ),
+                            )
+                        else:
+                            existing_deal.ai_notes = (
+                                f"[SECTOR OUTREACH - {tz.now().strftime('%Y-%m-%d')}]\n"
+                                f"Industry: {contact.get_industry_display()}\n"
+                                f"Subject: {result['subject']}\n\n"
+                                f"{result['body']}"
+                            )
+                            existing_deal.save(update_fields=['ai_notes'])
+
+                        generated += 1
+                    else:
+                        errors += 1
+                        logger.error(f"Sector outreach AI failed for {contact}: {result.get('error')}")
+                except Exception as e:
+                    errors += 1
+                    logger.error(f"Sector outreach failed for {contact}: {e}")
+
+            self.message_user(
+                request,
+                f"Generated {generated} sector outreach email(s) with deals. {errors} error(s). Check Deals to review and send.",
+                messages.SUCCESS,
+            )
+            return
+
+        context = {
+            **self.admin_site.each_context(request),
+            'title': 'Generate Sector Outreach Emails',
+            'contacts': eligible,
+            'queryset': queryset,
+            'opts': self.model._meta,
+            'action_checkbox_name': ACTION_CHECKBOX_NAME,
+            'action_name': 'generate_sector_outreach',
+        }
+        return TemplateResponse(request, 'admin/crm/contact/sector_outreach_confirm.html', context)
+
+    actions = ['mark_unsubscribed', 'resubscribe', 'add_to_pipeline_followup',
+               'scan_websites', 'view_scan_results', 'generate_audit_outreach',
+               'search_google_places', 'generate_sector_outreach']
 
 
 class DesiFirmsContactAdminForm(forms.ModelForm):

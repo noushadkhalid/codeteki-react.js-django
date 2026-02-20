@@ -1,0 +1,95 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block content %}
+<style>
+    .outreach-form {
+        max-width: 900px;
+        margin: 20px auto;
+        padding: 30px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .outreach-form h2 { margin-bottom: 20px; color: #1f2937; }
+    .info-box {
+        background: #eff6ff;
+        border: 1px solid #3b82f6;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .info-box strong { color: #1e40af; }
+    .contact-card {
+        background: #f9fafb;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 12px;
+        border: 1px solid #e5e7eb;
+    }
+    .contact-card h3 { margin: 0 0 6px 0; font-size: 15px; color: #1f2937; }
+    .contact-card .meta { font-size: 13px; color: #374151; }
+    .contact-card .meta span { margin-right: 16px; }
+    .industry-tag {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        background: #dbeafe;
+        color: #1e40af;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+    .btn { padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; }
+    .btn-primary { background: #3b82f6; color: white; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-secondary { background: #e5e7eb; color: #374151; }
+    .btn-secondary:hover { background: #d1d5db; }
+</style>
+
+<div class="outreach-form">
+    <h2>Generate Sector Outreach for {{ contacts|length }} Contact{{ contacts|length|pluralize }}</h2>
+
+    <div class="info-box">
+        <strong>What this does:</strong> AI will generate an industry-specific outreach email for each contact,
+        pitching business tools relevant to their sector (booking systems, quoting tools, etc.).
+        Deals will be created in the Codeteki Sales pipeline.
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        {% for contact in queryset %}
+        <input type="hidden" name="{{ action_checkbox_name }}" value="{{ contact.pk }}">
+        {% endfor %}
+        <input type="hidden" name="action" value="{{ action_name }}">
+
+        {% for contact in contacts %}
+        <div class="contact-card">
+            <h3>
+                {{ contact.name }}
+                {% if contact.company and contact.company != contact.name %}
+                    ({{ contact.company }})
+                {% endif %}
+                <span class="industry-tag">{{ contact.get_industry_display }}</span>
+            </h3>
+            <div class="meta">
+                <span>{{ contact.email }}</span>
+                {% if contact.phone %}<span>{{ contact.phone }}</span>{% endif %}
+                {% if contact.address %}<span>{{ contact.address|truncatewords:8 }}</span>{% endif %}
+                {% if contact.google_rating %}<span>Rating: {{ contact.google_rating }}</span>{% endif %}
+                {% if not contact.website %}<span style="color: #dc2626; font-weight: 600;">No website</span>{% endif %}
+            </div>
+        </div>
+        {% endfor %}
+
+        <div class="btn-group">
+            <button type="submit" name="apply" class="btn btn-primary">
+                Generate {{ contacts|length }} Outreach Email{{ contacts|length|pluralize }}
+            </button>
+            <a href="{% url 'admin:crm_codetekicontact_changelist' %}" class="btn btn-secondary">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

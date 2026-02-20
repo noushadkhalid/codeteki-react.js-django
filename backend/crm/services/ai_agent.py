@@ -1666,6 +1666,118 @@ Key approach:
 - Emphasize no obligation, no credit card required
 Tone: Welcoming, no-pressure''',
 
+            # Codeteki - Prospect Audit Outreach (based on real website scan data)
+            'prospect_audit_outreach': '''a personalized outreach email based on REAL website scan data.
+
+CRITICAL: This email is based on an ACTUAL scan of their website. You have REAL findings.
+This is NOT a generic email. Use the specific data from the scan.
+
+The user's suggestions field contains the scan findings, matched services, and roadmap.
+You MUST reference the SPECIFIC findings from their website scan.
+
+EMAIL RULES:
+1. Open by mentioning you looked at THEIR specific website
+2. Lead with THEIR biggest pain point (not your service list)
+3. Explain BUSINESS IMPACT in plain language:
+   - No chat = "customers visiting after 6pm have no way to get answers"
+   - Slow site = "half your mobile visitors leave before the page even loads"
+   - No booking = "people who want to book have to call - most won't bother"
+   - Paying for HubSpot = "you're paying $800/mo for features you use 10% of"
+   - Wix site = "you're renting your website - you don't own it, and it limits what you can do"
+4. Mention ONE specific thing Codeteki can build/fix for them
+5. If subscription trap detected, mention the savings angle
+6. Hint at the roadmap: "start with X, and down the line we can also..."
+7. CTA: Free consultation or quick demo
+8. MAX 120 words - busy business owners won't read more
+
+TONE: Like a helpful tech-savvy friend pointing out something they missed.
+NOT a salesperson. NOT corporate. NOT jargon-heavy.
+
+GOOD EXAMPLE:
+"Hey - I was checking out bombaycurry.com.au and noticed there's no way
+for customers to book a table or order from their phone. With 70% of
+restaurant searches happening on mobile, that's a lot of missed orders.
+
+We build AI-powered booking and ordering systems - one of our clients
+saw online orders jump 40% in the first month. Happy to show you a
+quick demo of what it'd look like for Bombay Curry.
+
+- Team Codeteki"
+
+BAD EXAMPLE:
+"Dear Sir/Madam, we are a leading digital solutions provider offering
+AI workforce solutions, web development, business automation..."''',
+
+            # Codeteki - Sector-Specific Outreach (for businesses found via Google Places)
+            'sector_outreach': '''a sector-specific outreach email for a local business.
+
+CRITICAL: This is NOT a website pitch. You are pitching BUSINESS TOOLS that solve THEIR specific industry problems.
+
+The user's suggestions field contains: INDUSTRY, BUSINESS NAME, ADDRESS, PHONE, WEBSITE STATUS, GOOGLE RATING.
+
+SECTOR-SPECIFIC PITCHES — use the one matching their industry:
+
+RESTAURANT/CAFE:
+- Online ordering system (no more phone orders during rush)
+- Table booking with AI confirmation
+- Digital menu with photos (QR code on tables)
+- Review management (auto-respond to Google reviews)
+- "Your competitors on Google have online ordering — you're losing delivery orders"
+
+TRADES (plumber, electrician, etc.):
+- Instant quoting tool (customer describes job, AI generates quote)
+- Job scheduling + dispatch system
+- Before/after photo gallery for marketing
+- "Stop spending evenings writing quotes — our AI tool generates them from a photo"
+
+HEALTH & BEAUTY:
+- Online booking (24/7, no phone tag)
+- Client history + preferences system
+- Appointment reminders (reduce no-shows by 40%)
+- "Your clients want to book at midnight — let them"
+
+RETAIL:
+- Simple online store (keep 100% of sales, no Shopify fees)
+- Inventory tracking
+- Customer loyalty program
+- "You're losing sales to online competitors — let's fix that"
+
+FITNESS:
+- Class booking + membership management
+- Progress tracking for clients
+- Automated check-in system
+
+MEDICAL:
+- Patient booking portal
+- Intake forms (digital, not paper)
+- Appointment reminders
+
+PROFESSIONAL SERVICES / LEGAL / ACCOUNTING:
+- Client portal with document sharing
+- Appointment booking
+- Automated intake questionnaires
+
+REAL ESTATE:
+- Property listing website with virtual tours
+- Lead capture forms
+- Automated follow-up sequences
+
+ACCOMMODATION:
+- Direct booking system (skip OTA commission fees)
+- Guest communication automation
+- Review management
+
+EMAIL RULES:
+1. Lead with ONE specific problem for THEIR industry
+2. Frame it as saving time or making money, not "digital transformation"
+3. Keep it under 100 words — these are busy owners
+4. CTA: "Happy to show you a 2-minute demo" or "Can I send you a quick video?"
+5. Tone: like a neighboring business owner, not a tech company
+
+CRITICAL: These businesses may not be tech-savvy. Use ZERO jargon.
+Say "booking system" not "SaaS platform". Say "app" not "application".
+Say "online orders" not "e-commerce solution".''',
+
             # Generic
             'invitation': 'a professional invitation email',
             'followup': 'a professional follow-up email',

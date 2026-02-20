@@ -1350,6 +1350,68 @@ def attempt_re_engagement():
 
 
 @shared_task
+def scan_prospect_websites(scan_ids: list):
+    """
+    Background task to scan prospect websites via PageSpeed + HTML crawl.
+    Creates ProspectScan records with service opportunity mapping.
+    """
+    import time
+    from crm.models import ProspectScan
+    from crm.services.prospect_auditor import ProspectAuditor
+
+    logger.info(f"Starting scan_prospect_websites for {len(scan_ids)} scans")
+    auditor = ProspectAuditor()
+    completed = 0
+    failed = 0
+
+    for scan_id in scan_ids:
+        try:
+            scan = ProspectScan.objects.get(id=scan_id)
+        except ProspectScan.DoesNotExist:
+            logger.error(f"ProspectScan {scan_id} not found")
+            failed += 1
+            continue
+
+        scan.status = 'scanning'
+        scan.save(update_fields=['status'])
+
+        try:
+            result = auditor.scan(scan.url)
+
+            # Save raw data
+            scan.crawl_data = result.get('crawl', {})
+            scan.pagespeed_data = result.get('pagespeed', {})
+
+            # Process and save opportunities
+            opportunities = auditor.get_service_opportunities(result)
+            scan.grade = opportunities['grade']
+            scan.opportunities = opportunities['opportunities']
+            scan.subscription_trap = opportunities.get('subscription_trap', {})
+            scan.roadmap = opportunities.get('roadmap', {})
+            scan.tech_stack = opportunities.get('tech_stack', '')[:200]
+            scan.platform = opportunities.get('platform', '')[:50]
+            scan.performance_score = opportunities.get('performance_score')
+            scan.mobile_score = opportunities.get('mobile_score')
+            scan.seo_score = opportunities.get('seo_score')
+            scan.status = 'completed'
+            scan.save()
+            completed += 1
+            logger.info(f"Scan {scan_id} completed: grade={scan.grade}, {len(scan.opportunities)} opportunities")
+
+        except Exception as e:
+            scan.status = 'failed'
+            scan.error_message = str(e)[:500]
+            scan.save(update_fields=['status', 'error_message'])
+            failed += 1
+            logger.error(f"Scan {scan_id} failed: {e}")
+
+        time.sleep(2)  # Rate limit between scans
+
+    logger.info(f"scan_prospect_websites completed: {completed} completed, {failed} failed")
+    return {'completed': completed, 'failed': failed}
+
+
+@shared_task
 def send_weekly_report():
     """
     Weekly autopilot report sent to admin.

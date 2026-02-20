@@ -1,0 +1,216 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block content %}
+<style>
+    .places-container {
+        max-width: 1100px;
+        margin: 20px auto;
+        padding: 30px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .places-container h2 { margin-bottom: 20px; color: #1f2937; }
+    .info-box {
+        background: #eff6ff;
+        border: 1px solid #3b82f6;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .info-box strong { color: #1e40af; }
+    .search-form {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto auto;
+        gap: 12px;
+        align-items: end;
+        margin-bottom: 24px;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group label { font-weight: 600; font-size: 13px; color: #374151; }
+    .form-group select, .form-group input {
+        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+    .stats-bar {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 20px;
+        padding: 12px 16px;
+        background: #f0fdf4;
+        border: 1px solid #22c55e;
+        border-radius: 8px;
+    }
+    .stat { font-size: 14px; }
+    .stat strong { color: #166534; }
+    .results-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+    }
+    .results-table th {
+        background: #f9fafb;
+        padding: 10px 12px;
+        text-align: left;
+        font-weight: 600;
+        color: #374151;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    .results-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #f3f4f6;
+        vertical-align: top;
+    }
+    .results-table tr:hover { background: #f9fafb; }
+    .website-yes { color: #16a34a; font-weight: 600; }
+    .website-no { color: #dc2626; font-weight: 700; }
+    .rating-stars { color: #eab308; }
+    .btn { padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; }
+    .btn-primary { background: #3b82f6; color: white; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-success { background: #22c55e; color: white; }
+    .btn-success:hover { background: #16a34a; }
+    .btn-secondary { background: #e5e7eb; color: #374151; }
+    .btn-secondary:hover { background: #d1d5db; }
+    .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+    .select-controls { margin-bottom: 12px; font-size: 13px; }
+    .select-controls a { color: #3b82f6; cursor: pointer; text-decoration: underline; margin-right: 12px; }
+</style>
+
+<div class="places-container">
+    <h2>Search Google Places for Leads</h2>
+
+    <div class="info-box">
+        <strong>How it works:</strong> Search for local businesses by industry and location.
+        Review results with phone and website info, then import the ones you want as contacts.
+    </div>
+
+    <!-- Search Form -->
+    <form method="post" id="searchForm">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="search_google_places">
+        <input type="hidden" name="_selected_action" value="0">
+
+        <div class="search-form">
+            <div class="form-group">
+                <label>Industry</label>
+                <select name="industry">
+                    <option value="">All Industries</option>
+                    {% for value, label in industry_choices %}
+                    <option value="{{ value }}" {% if value == industry %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Location</label>
+                <input type="text" name="location" placeholder="e.g. Parramatta NSW" value="{{ location|default:'' }}" required>
+            </div>
+            <div class="form-group">
+                <label>Radius (km)</label>
+                <input type="number" name="radius_km" min="1" max="50" value="{{ radius_km|default:'5' }}" style="width: 80px;">
+            </div>
+            <div class="form-group">
+                <label>&nbsp;</label>
+                <button type="submit" name="do_search" class="btn btn-primary">Search</button>
+            </div>
+        </div>
+    </form>
+
+    {% if show_results %}
+    <!-- Results -->
+    <div class="stats-bar">
+        <div class="stat">Found <strong>{{ total }}</strong> businesses</div>
+        <div class="stat"><strong>{{ without_website }}</strong> without a website</div>
+    </div>
+
+    {% if businesses %}
+    <form method="post" id="importForm">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="search_google_places">
+        <input type="hidden" name="_selected_action" value="0">
+        <input type="hidden" name="search_id" value="{{ search_id }}">
+
+        <div class="select-controls">
+            <a onclick="selectAll()">Select All</a>
+            <a onclick="selectNone()">Select None</a>
+            <a onclick="selectNoWebsite()">Select Without Website</a>
+        </div>
+
+        <table class="results-table">
+            <thead>
+                <tr>
+                    <th style="width: 30px;"><input type="checkbox" id="selectAllCb" onchange="toggleAll(this)"></th>
+                    <th>Business Name</th>
+                    <th>Phone</th>
+                    <th>Address</th>
+                    <th>Website</th>
+                    <th>Rating</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for biz in businesses %}
+                <tr data-has-website="{{ biz.has_website|yesno:'yes,no' }}">
+                    <td>
+                        <input type="checkbox" name="selected_places"
+                               value="{{ biz.json_value }}"
+                               class="place-cb">
+                    </td>
+                    <td><strong>{{ biz.name }}</strong></td>
+                    <td>{{ biz.phone|default:"-" }}</td>
+                    <td style="max-width: 250px;">{{ biz.address|default:"-" }}</td>
+                    <td>
+                        {% if biz.has_website %}
+                            <span class="website-yes">Has website</span>
+                        {% else %}
+                            <span class="website-no">NO WEBSITE</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if biz.rating %}
+                            <span class="rating-stars">{{ biz.rating }}</span>
+                            <span style="color: #6b7280; font-size: 12px;">({{ biz.user_ratings_total }})</span>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="btn-group">
+            <button type="submit" name="do_import" class="btn btn-success">
+                Import Selected as Contacts
+            </button>
+            <a href="{% url 'admin:crm_codetekicontact_changelist' %}" class="btn btn-secondary">
+                Back to Contacts
+            </a>
+        </div>
+    </form>
+    {% else %}
+    <p style="color: #6b7280; padding: 20px 0;">No businesses found. Try a different location or industry.</p>
+    {% endif %}
+    {% endif %}
+</div>
+
+<script>
+function toggleAll(cb) {
+    document.querySelectorAll('.place-cb').forEach(function(el) { el.checked = cb.checked; });
+}
+function selectAll() {
+    document.querySelectorAll('.place-cb').forEach(function(el) { el.checked = true; });
+    document.getElementById('selectAllCb').checked = true;
+}
+function selectNone() {
+    document.querySelectorAll('.place-cb').forEach(function(el) { el.checked = false; });
+    document.getElementById('selectAllCb').checked = false;
+}
+function selectNoWebsite() {
+    document.querySelectorAll('.place-cb').forEach(function(el) { el.checked = false; });
+    document.querySelectorAll('tr[data-has-website="no"] .place-cb').forEach(function(el) { el.checked = true; });
+}
+</script>
+{% endblock %}
