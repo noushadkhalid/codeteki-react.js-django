@@ -163,13 +163,59 @@ class GooglePlacesService:
             logger.error(f"Place details error for {place_id}: {e}")
         return None
 
-    # Common noreply/generic prefixes to skip
-    _JUNK_PREFIXES = {
+    # Prefixes that indicate auto-generated / platform emails
+    _JUNK_PREFIXES = (
         'noreply', 'no-reply', 'donotreply', 'do-not-reply', 'mailer-daemon',
-        'postmaster', 'webmaster', 'admin', 'root', 'sysadmin', 'hostmaster',
-        'abuse', 'security', 'privacy', 'support@wix', 'support@squarespace',
-        'support@shopify', 'support@wordpress',
+        'postmaster', 'webmaster', 'root', 'sysadmin', 'hostmaster',
+        'abuse', 'privacy',
+    )
+
+    # Platform / SaaS domains — never real business emails
+    _JUNK_DOMAINS = {
+        'sentry.io', 'wix.com', 'squarespace.com', 'shopify.com',
+        'wordpress.com', 'wordpress.org', 'w3.org', 'schema.org',
+        'googleapis.com', 'google.com', 'googletagmanager.com',
+        'facebook.com', 'fb.com', 'twitter.com', 'instagram.com',
+        'example.com', 'test.com', 'localhost', 'email.com',
+        'yourdomain.com', 'domain.com', 'yoursite.com', 'site.com',
+        'sentry-next.wixpress.com', 'wixpress.com',
+        'cloudflare.com', 'jsdelivr.net', 'unpkg.com',
+        'gravatar.com', 'amazonaws.com', 'herokuapp.com',
+        'ghost.io', 'mailchimp.com', 'hubspot.com',
+        'intercom.io', 'zendesk.com', 'freshdesk.com',
+        'stripe.com', 'paypal.com', 'gstatic.com',
     }
+
+    # Placeholder / dummy local parts
+    _JUNK_LOCALS = {
+        'user', 'email', 'test', 'example', 'your', 'name',
+        'someemail', 'someone', 'youremail', 'yourname',
+        'john', 'jane', 'johndoe', 'janedoe', 'placeholder',
+    }
+
+    def _is_junk_email(self, email: str) -> bool:
+        """Return True if this email looks like a platform, placeholder, or fake address."""
+        lower = email.lower()
+        local, _, domain = lower.partition('@')
+        if not domain:
+            return True
+        # File extensions embedded in HTML/CSS
+        if lower.endswith(('.png', '.jpg', '.gif', '.svg', '.webp', '.css', '.js')):
+            return True
+        # Platform domains
+        if domain in self._JUNK_DOMAINS or any(domain.endswith('.' + d) for d in self._JUNK_DOMAINS):
+            return True
+        # Junk prefixes
+        if any(local.startswith(p) for p in self._JUNK_PREFIXES):
+            return True
+        # Placeholder local parts (exact match)
+        local_clean = local.split('.')[0].split('+')[0]  # strip dots/plus tags
+        if local_clean in self._JUNK_LOCALS:
+            return True
+        # Suspiciously generic: xyz.com, abc.com
+        if domain in ('xyz.com', 'abc.com', 'aaa.com', 'mail.com'):
+            return True
+        return False
 
     def _scrape_email(self, url: str) -> str:
         """Try to find a contact email from the business website homepage."""
@@ -186,14 +232,9 @@ class GooglePlacesService:
                 r'[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}',
                 text,
             )
-            # Filter out junk/platform emails and image file extensions
             for email in emails:
-                lower = email.lower()
-                if any(lower.startswith(p) for p in self._JUNK_PREFIXES):
-                    continue
-                if lower.endswith(('.png', '.jpg', '.gif', '.svg', '.webp')):
-                    continue
-                return email
+                if not self._is_junk_email(email):
+                    return email
         except Exception:
             pass
         return ''
