@@ -763,6 +763,11 @@ UNFOLD = {
                         "link": reverse_lazy("admin:crm_contactimport_changelist"),
                     },
                     {
+                        "title": "Google Places Search",
+                        "icon": "location_on",
+                        "link": reverse_lazy("admin:crm_leadsearch_changelist"),
+                    },
+                    {
                         "title": "Brands",
                         "icon": "business",
                         "link": reverse_lazy("admin:crm_brand_changelist"),

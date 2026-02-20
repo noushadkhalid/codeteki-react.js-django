@@ -872,160 +872,6 @@ class CodetekiContactAdmin(ContactAdmin):
             context,
         )
 
-    def get_urls(self):
-        urls = super().get_urls()
-        custom_urls = [
-            path('search-places/', self.admin_site.admin_view(self.search_places_view),
-                 name='crm_codetekicontact_search_places'),
-        ]
-        return custom_urls + urls
-
-    def search_places_view(self, request):
-        """Custom view for Google Places search — not a standard action."""
-        from django.template.response import TemplateResponse
-        from django.contrib import messages
-
-        if request.method == 'POST' and 'do_search' in request.POST:
-            from crm.services.google_places import GooglePlacesService
-
-            industry = request.POST.get('industry', '')
-            location = request.POST.get('location', '').strip()
-            radius_km = int(request.POST.get('radius_km', '5'))
-
-            if not location:
-                self.message_user(request, "Please enter a location.", messages.WARNING)
-                return TemplateResponse(request, 'admin/crm/contact/places_search.html', {
-                    **self.admin_site.each_context(request),
-                    'title': 'Search Google Places for Leads',
-                    'opts': self.model._meta,
-                    'industry_choices': Contact.INDUSTRY_CHOICES,
-                    'show_results': False,
-                })
-
-            service = GooglePlacesService()
-            result = service.search_nearby(location=location, industry=industry, radius_km=radius_km)
-
-            if not result['success']:
-                self.message_user(request, f"Search failed: {result['error']}", messages.ERROR)
-                return TemplateResponse(request, 'admin/crm/contact/places_search.html', {
-                    **self.admin_site.each_context(request),
-                    'title': 'Search Google Places for Leads',
-                    'opts': self.model._meta,
-                    'industry_choices': Contact.INDUSTRY_CHOICES,
-                    'industry': industry,
-                    'location': location,
-                    'radius_km': radius_km,
-                    'show_results': False,
-                })
-
-            try:
-                brand = Brand.objects.get(slug='codeteki')
-            except Brand.DoesNotExist:
-                self.message_user(request, "Codeteki brand not found.", messages.ERROR)
-                return TemplateResponse(request, 'admin/crm/contact/places_search.html', {
-                    **self.admin_site.each_context(request),
-                    'title': 'Search Google Places for Leads',
-                    'opts': self.model._meta,
-                    'industry_choices': Contact.INDUSTRY_CHOICES,
-                    'show_results': False,
-                })
-
-            lead_search = LeadSearch.objects.create(
-                brand=brand,
-                query=f"{dict(Contact.INDUSTRY_CHOICES).get(industry, industry)} in {location}",
-                industry=industry,
-                location=location,
-                radius_km=radius_km,
-                results=result['businesses'],
-                results_count=result['total'],
-            )
-
-            import json as _json
-            for biz in result['businesses']:
-                biz['json_value'] = _json.dumps({
-                    'name': biz['name'], 'phone': biz.get('phone', ''),
-                    'address': biz['address'], 'website': biz.get('website', ''),
-                    'rating': biz['rating'], 'place_id': biz['place_id'],
-                    'industry': biz['industry'],
-                })
-
-            context = {
-                **self.admin_site.each_context(request),
-                'title': 'Google Places Search Results',
-                'businesses': result['businesses'],
-                'total': result['total'],
-                'without_website': result.get('without_website', 0),
-                'search_id': str(lead_search.id),
-                'industry': industry,
-                'location': location,
-                'radius_km': radius_km,
-                'opts': self.model._meta,
-                'industry_choices': Contact.INDUSTRY_CHOICES,
-                'show_results': True,
-            }
-            return TemplateResponse(request, 'admin/crm/contact/places_search.html', context)
-
-        if request.method == 'POST' and 'do_import' in request.POST:
-            import json
-            from django.shortcuts import redirect
-
-            search_id = request.POST.get('search_id', '')
-            selected = request.POST.getlist('selected_places')
-
-            if not selected:
-                self.message_user(request, "No businesses selected for import.", messages.WARNING)
-                return redirect(reverse('admin:crm_codetekicontact_search_places'))
-
-            try:
-                brand = Brand.objects.get(slug='codeteki')
-            except Brand.DoesNotExist:
-                self.message_user(request, "Codeteki brand not found.", messages.ERROR)
-                return redirect(reverse('admin:crm_codetekicontact_search_places'))
-
-            imported = 0
-            skipped = 0
-            for place_json in selected:
-                biz = json.loads(place_json)
-
-                if Contact.objects.filter(google_place_id=biz['place_id'], brand=brand).exists():
-                    skipped += 1
-                    continue
-
-                Contact.objects.create(
-                    brand=brand,
-                    name=biz.get('name', ''),
-                    phone=biz.get('phone', ''),
-                    company=biz.get('name', ''),
-                    website=biz.get('website', ''),
-                    address=biz.get('address', ''),
-                    industry=biz.get('industry', ''),
-                    google_place_id=biz.get('place_id', ''),
-                    google_rating=biz.get('rating'),
-                    source='google_places',
-                    contact_type='lead',
-                )
-                imported += 1
-
-            if search_id:
-                LeadSearch.objects.filter(id=search_id).update(imported_count=imported)
-
-            self.message_user(
-                request,
-                f"Imported {imported} contact(s). Skipped {skipped} duplicate(s).",
-                messages.SUCCESS,
-            )
-            return redirect(reverse('admin:crm_codetekicontact_changelist'))
-
-        # GET — show search form
-        context = {
-            **self.admin_site.each_context(request),
-            'title': 'Search Google Places for Leads',
-            'opts': self.model._meta,
-            'industry_choices': Contact.INDUSTRY_CHOICES,
-            'show_results': False,
-        }
-        return TemplateResponse(request, 'admin/crm/contact/places_search.html', context)
-
     @action(description="Generate Sector Outreach")
     def generate_sector_outreach(self, request, queryset):
         """Generate sector-specific outreach for contacts with industry set."""
@@ -1146,11 +992,6 @@ class CodetekiContactAdmin(ContactAdmin):
     actions = ['mark_unsubscribed', 'resubscribe', 'add_to_pipeline_followup',
                'scan_websites', 'view_scan_results', 'generate_audit_outreach',
                'generate_sector_outreach']
-
-    def changelist_view(self, request, extra_context=None):
-        extra_context = extra_context or {}
-        extra_context['search_places_url'] = reverse('admin:crm_codetekicontact_search_places')
-        return super().changelist_view(request, extra_context=extra_context)
 
 
 class DesiFirmsContactAdminForm(forms.ModelForm):
@@ -3291,3 +3132,215 @@ class EmailDraftAdmin(ModelAdmin):
         return TemplateResponse(request, 'admin/crm/emaildraft/send_preview.html', context)
 
 
+# =============================================================================
+# LEAD SEARCH ADMIN (Google Places)
+# =============================================================================
+
+@admin.register(LeadSearch)
+class LeadSearchAdmin(ModelAdmin):
+    list_display = ['query', 'brand', 'location', 'industry', 'results_count', 'imported_count', 'searched_at']
+    list_filter = ['brand', 'industry']
+    readonly_fields = ['id', 'brand', 'query', 'industry', 'location', 'radius_km',
+                       'results', 'results_count', 'imported_count', 'searched_at']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return True
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('search/', self.admin_site.admin_view(self.search_view),
+                 name='crm_leadsearch_search'),
+        ]
+        return custom_urls + urls
+
+    def search_view(self, request):
+        """Google Places search — brand-agnostic, with optional keyword filtering."""
+        from django.template.response import TemplateResponse
+        from django.contrib import messages
+
+        brands = Brand.objects.filter(is_active=True)
+
+        if request.method == 'POST' and 'do_search' in request.POST:
+            from crm.services.google_places import GooglePlacesService
+
+            brand_id = request.POST.get('brand', '')
+            industry = request.POST.get('industry', '')
+            keywords = request.POST.get('keywords', '').strip()
+            location = request.POST.get('location', '').strip()
+            radius_km = int(request.POST.get('radius_km', '5'))
+
+            if not brand_id:
+                messages.warning(request, "Please select a brand.")
+                return TemplateResponse(request, 'admin/crm/leadsearch/places_search.html', {
+                    **self.admin_site.each_context(request),
+                    'title': 'Search Google Places for Leads',
+                    'opts': self.model._meta,
+                    'industry_choices': Contact.INDUSTRY_CHOICES,
+                    'brands': brands,
+                    'show_results': False,
+                })
+
+            if not location:
+                messages.warning(request, "Please enter a location.")
+                return TemplateResponse(request, 'admin/crm/leadsearch/places_search.html', {
+                    **self.admin_site.each_context(request),
+                    'title': 'Search Google Places for Leads',
+                    'opts': self.model._meta,
+                    'industry_choices': Contact.INDUSTRY_CHOICES,
+                    'brands': brands,
+                    'brand_id': brand_id,
+                    'keywords': keywords,
+                    'show_results': False,
+                })
+
+            try:
+                brand = Brand.objects.get(id=brand_id, is_active=True)
+            except Brand.DoesNotExist:
+                messages.error(request, "Selected brand not found.")
+                return TemplateResponse(request, 'admin/crm/leadsearch/places_search.html', {
+                    **self.admin_site.each_context(request),
+                    'title': 'Search Google Places for Leads',
+                    'opts': self.model._meta,
+                    'industry_choices': Contact.INDUSTRY_CHOICES,
+                    'brands': brands,
+                    'show_results': False,
+                })
+
+            service = GooglePlacesService()
+            result = service.search_nearby(
+                location=location, industry=industry,
+                radius_km=radius_km, keywords=keywords,
+            )
+
+            if not result['success']:
+                messages.error(request, f"Search failed: {result['error']}")
+                return TemplateResponse(request, 'admin/crm/leadsearch/places_search.html', {
+                    **self.admin_site.each_context(request),
+                    'title': 'Search Google Places for Leads',
+                    'opts': self.model._meta,
+                    'industry_choices': Contact.INDUSTRY_CHOICES,
+                    'brands': brands,
+                    'brand_id': brand_id,
+                    'industry': industry,
+                    'keywords': keywords,
+                    'location': location,
+                    'radius_km': radius_km,
+                    'show_results': False,
+                })
+
+            # Build query string for the LeadSearch record
+            industry_label = dict(Contact.INDUSTRY_CHOICES).get(industry, industry)
+            query_parts = [p for p in [keywords, industry_label, f"in {location}"] if p]
+            query_str = ' '.join(query_parts)
+
+            lead_search = LeadSearch.objects.create(
+                brand=brand,
+                query=query_str,
+                industry=industry,
+                location=location,
+                radius_km=radius_km,
+                results=result['businesses'],
+                results_count=result['total'],
+            )
+
+            import json as _json
+            for biz in result['businesses']:
+                biz['json_value'] = _json.dumps({
+                    'name': biz['name'], 'phone': biz.get('phone', ''),
+                    'address': biz['address'], 'website': biz.get('website', ''),
+                    'rating': biz['rating'], 'place_id': biz['place_id'],
+                    'industry': biz['industry'],
+                })
+
+            context = {
+                **self.admin_site.each_context(request),
+                'title': 'Google Places Search Results',
+                'businesses': result['businesses'],
+                'total': result['total'],
+                'without_website': result.get('without_website', 0),
+                'search_id': str(lead_search.id),
+                'brand_id': brand_id,
+                'industry': industry,
+                'keywords': keywords,
+                'location': location,
+                'radius_km': radius_km,
+                'opts': self.model._meta,
+                'industry_choices': Contact.INDUSTRY_CHOICES,
+                'brands': brands,
+                'show_results': True,
+            }
+            return TemplateResponse(request, 'admin/crm/leadsearch/places_search.html', context)
+
+        if request.method == 'POST' and 'do_import' in request.POST:
+            import json
+            from django.shortcuts import redirect
+
+            brand_id = request.POST.get('brand_id', '')
+            search_id = request.POST.get('search_id', '')
+            selected = request.POST.getlist('selected_places')
+
+            if not selected:
+                messages.warning(request, "No businesses selected for import.")
+                return redirect(reverse('admin:crm_leadsearch_search'))
+
+            try:
+                brand = Brand.objects.get(id=brand_id, is_active=True)
+            except Brand.DoesNotExist:
+                messages.error(request, "Brand not found.")
+                return redirect(reverse('admin:crm_leadsearch_search'))
+
+            imported = 0
+            skipped = 0
+            for place_json in selected:
+                biz = json.loads(place_json)
+
+                if Contact.objects.filter(google_place_id=biz['place_id'], brand=brand).exists():
+                    skipped += 1
+                    continue
+
+                Contact.objects.create(
+                    brand=brand,
+                    name=biz.get('name', ''),
+                    phone=biz.get('phone', ''),
+                    company=biz.get('name', ''),
+                    website=biz.get('website', ''),
+                    address=biz.get('address', ''),
+                    industry=biz.get('industry', ''),
+                    google_place_id=biz.get('place_id', ''),
+                    google_rating=biz.get('rating'),
+                    source='google_places',
+                    contact_type='lead',
+                )
+                imported += 1
+
+            if search_id:
+                LeadSearch.objects.filter(id=search_id).update(imported_count=imported)
+
+            messages.success(
+                request,
+                f"Imported {imported} contact(s) under {brand.name}. Skipped {skipped} duplicate(s).",
+            )
+            return redirect(reverse('admin:crm_leadsearch_changelist'))
+
+        # GET — show search form
+        context = {
+            **self.admin_site.each_context(request),
+            'title': 'Search Google Places for Leads',
+            'opts': self.model._meta,
+            'industry_choices': Contact.INDUSTRY_CHOICES,
+            'brands': brands,
+            'show_results': False,
+        }
+        return TemplateResponse(request, 'admin/crm/leadsearch/places_search.html', context)
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['search_url'] = reverse('admin:crm_leadsearch_search')
+        return super().changelist_view(request, extra_context=extra_context)

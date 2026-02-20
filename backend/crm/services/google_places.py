@@ -60,11 +60,15 @@ class GooglePlacesService:
             logger.error(f"Geocode error for '{address}': {e}")
         return None
 
-    def search_nearby(self, location: str, industry: str = '', radius_km: int = 5) -> dict:
+    def search_nearby(self, location: str, industry: str = '', radius_km: int = 5,
+                       keywords: str = '') -> dict:
         """
         Search for businesses near a location with full details (phone, website).
         New API caps at 20 per call, so we make multiple calls for more types.
         Free tier = 10K calls/month — plenty of room.
+
+        When keywords are provided, uses text search with the keywords + industry + location
+        combined into a natural query (skips geocoding entirely).
 
         Returns:
             {
@@ -79,18 +83,26 @@ class GooglePlacesService:
         if not self.api_key:
             return {'success': False, 'error': 'GOOGLE_API_KEY not configured', 'businesses': [], 'total': 0}
 
-        coords = self._geocode(location)
-        if not coords:
-            return {'success': False, 'error': f'Could not geocode "{location}". Make sure Geocoding API is enabled in Google Cloud Console.', 'businesses': [], 'total': 0}
-
-        lat, lng = coords
-
+        from crm.models import Contact
         place_types = self.INDUSTRY_TO_PLACE_TYPES.get(industry, [])
 
-        if place_types:
+        if keywords:
+            # Use text search for keyword-based queries (e.g. "Indian restaurant in Parramatta NSW")
+            industry_label = dict(Contact.INDUSTRY_CHOICES).get(industry, industry)
+            parts = [p for p in [keywords, industry_label, f"in {location}"] if p]
+            query = ' '.join(parts)
+            places = self._text_search(query)
+        elif place_types:
+            coords = self._geocode(location)
+            if not coords:
+                return {'success': False, 'error': f'Could not geocode "{location}". Make sure Geocoding API is enabled in Google Cloud Console.', 'businesses': [], 'total': 0}
+            lat, lng = coords
             # New API supports multiple includedTypes in one call
             places = self._nearby_search(lat, lng, radius_km * 1000, place_types)
         else:
+            coords = self._geocode(location)
+            if not coords:
+                return {'success': False, 'error': f'Could not geocode "{location}". Make sure Geocoding API is enabled in Google Cloud Console.', 'businesses': [], 'total': 0}
             # Fallback to text search for industries without mapped types
             query = f"{industry} in {location}" if industry else location
             places = self._text_search(query)

@@ -1,8 +1,0 @@
-{% block object-tools-items %}
-    <a href="{{ search_places_url }}" class="btn" style="background: #3b82f6; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600; margin-right: 8px;">
-        Search Google Places
-    </a>
-    {% if has_add_permission %}
-        {% include "unfold/helpers/add_link.html" %}
-    {% endif %}
-{% endblock %}
