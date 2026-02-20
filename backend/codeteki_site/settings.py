@@ -720,7 +720,7 @@ UNFOLD = {
                 ],
             },
             # ============================================
-            # CRM & Outreach (Merged)
+            # CRM & Outreach
             # ============================================
             {
                 "title": "CRM & Outreach",
@@ -757,16 +757,35 @@ UNFOLD = {
                         "icon": "handshake",
                         "link": reverse_lazy("admin:crm_deal_changelist"),
                     },
+                ],
+            },
+            {
+                "title": "Lead Generation",
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": "Google Places Search",
+                        "icon": "location_on",
+                        "link": reverse_lazy("admin:crm_leadsearch_changelist"),
+                    },
                     {
                         "title": "Import Contacts",
                         "icon": "upload_file",
                         "link": reverse_lazy("admin:crm_contactimport_changelist"),
                     },
                     {
-                        "title": "Google Places Search",
-                        "icon": "location_on",
-                        "link": reverse_lazy("admin:crm_leadsearch_changelist"),
+                        "title": "Backlinks",
+                        "icon": "link",
+                        "link": reverse_lazy("admin:crm_backlinkopportunity_changelist"),
                     },
+                ],
+            },
+            {
+                "title": "CRM Settings & Logs",
+                "separator": True,
+                "collapsible": True,
+                "items": [
                     {
                         "title": "Brands",
                         "icon": "business",
@@ -776,11 +795,6 @@ UNFOLD = {
                         "title": "Pipeline Settings",
                         "icon": "settings",
                         "link": reverse_lazy("admin:crm_pipeline_changelist"),
-                    },
-                    {
-                        "title": "Backlinks",
-                        "icon": "link",
-                        "link": reverse_lazy("admin:crm_backlinkopportunity_changelist"),
                     },
                     {
                         "title": "Email Logs",
@@ -853,5 +867,58 @@ UNFOLD = {
             },
         ],
     },
-    # TABS removed - using sidebar navigation only for consistent experience
+    "TABS": [
+        # ── Codeteki Contacts ──
+        {
+            "models": ["crm.CodetekiContact"],
+            "items": [
+                {"title": "All", "link": reverse_lazy("admin:crm_codetekicontact_changelist")},
+                {"title": "New Leads", "link": "/admin/crm/codetekicontact/?status=new"},
+                {"title": "Contacted", "link": "/admin/crm/codetekicontact/?status=contacted"},
+                {"title": "Replied", "link": "/admin/crm/codetekicontact/?status=replied"},
+                {"title": "Interested", "link": "/admin/crm/codetekicontact/?status=interested"},
+                {"title": "No Response", "link": "/admin/crm/codetekicontact/?status=contacted&email_bounced__exact=0&is_unsubscribed__exact=0"},
+                {"title": "Unsubscribed", "link": "/admin/crm/codetekicontact/?is_unsubscribed__exact=1"},
+                {"title": "Bounced", "link": "/admin/crm/codetekicontact/?email_bounced__exact=1"},
+            ],
+        },
+        # ── Desi Firms Contacts ──
+        {
+            "models": ["crm.DesiFirmsContact"],
+            "items": [
+                {"title": "All", "link": reverse_lazy("admin:crm_desifirmscontact_changelist")},
+                {"title": "New Leads", "link": "/admin/crm/desifirmscontact/?status=new"},
+                {"title": "Contacted", "link": "/admin/crm/desifirmscontact/?status=contacted"},
+                {"title": "Replied", "link": "/admin/crm/desifirmscontact/?status=replied"},
+                {"title": "Interested", "link": "/admin/crm/desifirmscontact/?status=interested"},
+                {"title": "No Response", "link": "/admin/crm/desifirmscontact/?status=contacted&email_bounced__exact=0&is_unsubscribed__exact=0"},
+                {"title": "Unsubscribed", "link": "/admin/crm/desifirmscontact/?is_unsubscribed__exact=1"},
+                {"title": "Bounced", "link": "/admin/crm/desifirmscontact/?email_bounced__exact=1"},
+            ],
+        },
+        # ── All Contacts ──
+        {
+            "models": ["crm.Contact"],
+            "items": [
+                {"title": "All", "link": reverse_lazy("admin:crm_contact_changelist")},
+                {"title": "New Leads", "link": "/admin/crm/contact/?status=new"},
+                {"title": "Contacted", "link": "/admin/crm/contact/?status=contacted"},
+                {"title": "Replied", "link": "/admin/crm/contact/?status=replied"},
+                {"title": "No Response", "link": "/admin/crm/contact/?status=contacted&email_bounced__exact=0&is_unsubscribed__exact=0"},
+                {"title": "Unsubscribed", "link": "/admin/crm/contact/?is_unsubscribed__exact=1"},
+                {"title": "Bounced", "link": "/admin/crm/contact/?email_bounced__exact=1"},
+            ],
+        },
+        # ── Deals ──
+        {
+            "models": ["crm.Deal"],
+            "items": [
+                {"title": "All", "link": reverse_lazy("admin:crm_deal_changelist")},
+                {"title": "Active", "link": "/admin/crm/deal/?status=active"},
+                {"title": "Won", "link": "/admin/crm/deal/?status=won"},
+                {"title": "Lost", "link": "/admin/crm/deal/?status=lost"},
+                {"title": "Paused", "link": "/admin/crm/deal/?status=paused"},
+            ],
+        },
+    ],
 }
