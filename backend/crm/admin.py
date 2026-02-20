@@ -5,6 +5,7 @@ Using Django Unfold for modern Tailwind-based UI
 
 import logging
 from django.contrib import admin
+from django.urls import path, reverse
 from django.utils.html import format_html
 from django.db.models import Count, Sum
 from django import forms
@@ -871,16 +872,20 @@ class CodetekiContactAdmin(ContactAdmin):
             context,
         )
 
-    @action(description="Search Google Places")
-    def search_google_places(self, request, queryset):
-        """Search Google Places API to discover local business leads."""
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path('search-places/', self.admin_site.admin_view(self.search_places_view),
+                 name='crm_codetekicontact_search_places'),
+        ]
+        return custom_urls + urls
+
+    def search_places_view(self, request):
+        """Custom view for Google Places search — not a standard action."""
         from django.template.response import TemplateResponse
-        from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
         from django.contrib import messages
 
-        if 'do_search' in request.POST:
-            # Run search — fetches full details (phone, website) for all results
-            # Free tier = 10K calls/month, so no need to hold back
+        if request.method == 'POST' and 'do_search' in request.POST:
             from crm.services.google_places import GooglePlacesService
 
             industry = request.POST.get('industry', '')
@@ -889,21 +894,41 @@ class CodetekiContactAdmin(ContactAdmin):
 
             if not location:
                 self.message_user(request, "Please enter a location.", messages.WARNING)
-                return
+                return TemplateResponse(request, 'admin/crm/contact/places_search.html', {
+                    **self.admin_site.each_context(request),
+                    'title': 'Search Google Places for Leads',
+                    'opts': self.model._meta,
+                    'industry_choices': Contact.INDUSTRY_CHOICES,
+                    'show_results': False,
+                })
 
             service = GooglePlacesService()
             result = service.search_nearby(location=location, industry=industry, radius_km=radius_km)
 
             if not result['success']:
                 self.message_user(request, f"Search failed: {result['error']}", messages.ERROR)
-                return
+                return TemplateResponse(request, 'admin/crm/contact/places_search.html', {
+                    **self.admin_site.each_context(request),
+                    'title': 'Search Google Places for Leads',
+                    'opts': self.model._meta,
+                    'industry_choices': Contact.INDUSTRY_CHOICES,
+                    'industry': industry,
+                    'location': location,
+                    'radius_km': radius_km,
+                    'show_results': False,
+                })
 
-            # Store results in LeadSearch
             try:
                 brand = Brand.objects.get(slug='codeteki')
             except Brand.DoesNotExist:
                 self.message_user(request, "Codeteki brand not found.", messages.ERROR)
-                return
+                return TemplateResponse(request, 'admin/crm/contact/places_search.html', {
+                    **self.admin_site.each_context(request),
+                    'title': 'Search Google Places for Leads',
+                    'opts': self.model._meta,
+                    'industry_choices': Contact.INDUSTRY_CHOICES,
+                    'show_results': False,
+                })
 
             lead_search = LeadSearch.objects.create(
                 brand=brand,
@@ -915,7 +940,6 @@ class CodetekiContactAdmin(ContactAdmin):
                 results_count=result['total'],
             )
 
-            # Add JSON-encoded value for each business (for form checkbox values)
             import json as _json
             for biz in result['businesses']:
                 biz['json_value'] = _json.dumps({
@@ -941,29 +965,28 @@ class CodetekiContactAdmin(ContactAdmin):
             }
             return TemplateResponse(request, 'admin/crm/contact/places_search.html', context)
 
-        if 'do_import' in request.POST:
-            # Import selected — details already fetched during search, no extra API calls
+        if request.method == 'POST' and 'do_import' in request.POST:
             import json
+            from django.shortcuts import redirect
 
             search_id = request.POST.get('search_id', '')
             selected = request.POST.getlist('selected_places')
 
             if not selected:
                 self.message_user(request, "No businesses selected for import.", messages.WARNING)
-                return
+                return redirect(reverse('admin:crm_codetekicontact_search_places'))
 
             try:
                 brand = Brand.objects.get(slug='codeteki')
             except Brand.DoesNotExist:
                 self.message_user(request, "Codeteki brand not found.", messages.ERROR)
-                return
+                return redirect(reverse('admin:crm_codetekicontact_search_places'))
 
             imported = 0
             skipped = 0
             for place_json in selected:
                 biz = json.loads(place_json)
 
-                # Dedup by google_place_id
                 if Contact.objects.filter(google_place_id=biz['place_id'], brand=brand).exists():
                     skipped += 1
                     continue
@@ -983,7 +1006,6 @@ class CodetekiContactAdmin(ContactAdmin):
                 )
                 imported += 1
 
-            # Update LeadSearch import count
             if search_id:
                 LeadSearch.objects.filter(id=search_id).update(imported_count=imported)
 
@@ -992,9 +1014,9 @@ class CodetekiContactAdmin(ContactAdmin):
                 f"Imported {imported} contact(s). Skipped {skipped} duplicate(s).",
                 messages.SUCCESS,
             )
-            return
+            return redirect(reverse('admin:crm_codetekicontact_changelist'))
 
-        # Show search form
+        # GET — show search form
         context = {
             **self.admin_site.each_context(request),
             'title': 'Search Google Places for Leads',
@@ -1123,7 +1145,12 @@ class CodetekiContactAdmin(ContactAdmin):
 
     actions = ['mark_unsubscribed', 'resubscribe', 'add_to_pipeline_followup',
                'scan_websites', 'view_scan_results', 'generate_audit_outreach',
-               'search_google_places', 'generate_sector_outreach']
+               'generate_sector_outreach']
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['search_places_url'] = reverse('admin:crm_codetekicontact_search_places')
+        return super().changelist_view(request, extra_context=extra_context)
 
 
 class DesiFirmsContactAdminForm(forms.ModelForm):

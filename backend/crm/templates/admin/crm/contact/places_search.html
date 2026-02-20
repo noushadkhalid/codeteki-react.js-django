@@ -91,8 +91,6 @@
     <!-- Search Form -->
     <form method="post" id="searchForm">
         {% csrf_token %}
-        <input type="hidden" name="action" value="search_google_places">
-        <input type="hidden" name="_selected_action" value="0">
 
         <div class="search-form">
             <div class="form-group">
@@ -129,8 +127,6 @@
     {% if businesses %}
     <form method="post" id="importForm">
         {% csrf_token %}
-        <input type="hidden" name="action" value="search_google_places">
-        <input type="hidden" name="_selected_action" value="0">
         <input type="hidden" name="search_id" value="{{ search_id }}">
 
         <div class="select-controls">
