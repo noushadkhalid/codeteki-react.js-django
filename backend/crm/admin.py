@@ -3138,16 +3138,64 @@ class EmailDraftAdmin(ModelAdmin):
 
 @admin.register(LeadSearch)
 class LeadSearchAdmin(ModelAdmin):
-    list_display = ['query', 'brand', 'location', 'industry', 'results_count', 'imported_count', 'searched_at']
+    list_display = ['query', 'brand', 'location', 'industry_display', 'results_count',
+                    'imported_count', 'businesses_summary', 'searched_at']
     list_filter = ['brand', 'industry']
     readonly_fields = ['id', 'brand', 'query', 'industry', 'location', 'radius_km',
-                       'results', 'results_count', 'imported_count', 'searched_at']
+                       'results_table', 'results_count', 'imported_count', 'searched_at']
+    exclude = ['results']  # Hide raw JSON, show results_table instead
+
+    @display(description="Industry")
+    def industry_display(self, obj):
+        return dict(Contact.INDUSTRY_CHOICES).get(obj.industry, obj.industry) or '-'
+
+    @display(description="Top Results")
+    def businesses_summary(self, obj):
+        """Show first few business names in the changelist."""
+        if not obj.results:
+            return '-'
+        names = [b.get('name', '') for b in obj.results[:3]]
+        summary = ', '.join(names)
+        if obj.results_count > 3:
+            summary += f' +{obj.results_count - 3} more'
+        return summary
+
+    @display(description="Search Results")
+    def results_table(self, obj):
+        """Render results as an HTML table instead of raw JSON."""
+        if not obj.results:
+            return 'No results'
+        rows = []
+        for biz in obj.results:
+            email = biz.get('email', '') or '-'
+            phone = biz.get('phone', '') or '-'
+            website = 'Yes' if biz.get('website') or biz.get('has_website') else 'No'
+            rating = biz.get('rating', '-') or '-'
+            rows.append(
+                f'<tr><td>{biz.get("name", "")}</td><td>{email}</td>'
+                f'<td>{phone}</td><td>{biz.get("address", "")}</td>'
+                f'<td>{website}</td><td>{rating}</td></tr>'
+            )
+        return format_html(
+            '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+            '<thead><tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;">'
+            '<th style="padding:8px;text-align:left;">Name</th>'
+            '<th style="padding:8px;text-align:left;">Email</th>'
+            '<th style="padding:8px;text-align:left;">Phone</th>'
+            '<th style="padding:8px;text-align:left;">Address</th>'
+            '<th style="padding:8px;text-align:left;">Website</th>'
+            '<th style="padding:8px;text-align:left;">Rating</th>'
+            '</tr></thead><tbody>{}</tbody></table>',
+            format_html(''.join(rows)),
+        )
 
     def has_add_permission(self, request):
         return False
 
     def has_change_permission(self, request, obj=None):
-        return False
+        if obj:
+            return True  # Allow viewing detail page (all fields are readonly)
+        return True
 
     def has_delete_permission(self, request, obj=None):
         return True
@@ -3254,16 +3302,20 @@ class LeadSearchAdmin(ModelAdmin):
             for biz in result['businesses']:
                 biz['json_value'] = _json.dumps({
                     'name': biz['name'], 'phone': biz.get('phone', ''),
+                    'email': biz.get('email', ''),
                     'address': biz['address'], 'website': biz.get('website', ''),
                     'rating': biz['rating'], 'place_id': biz['place_id'],
                     'industry': biz['industry'],
                 })
+
+            with_email = sum(1 for b in result['businesses'] if b.get('email'))
 
             context = {
                 **self.admin_site.each_context(request),
                 'title': 'Google Places Search Results',
                 'businesses': result['businesses'],
                 'total': result['total'],
+                'with_email': with_email,
                 'without_website': result.get('without_website', 0),
                 'search_id': str(lead_search.id),
                 'brand_id': brand_id,
@@ -3308,6 +3360,7 @@ class LeadSearchAdmin(ModelAdmin):
                 Contact.objects.create(
                     brand=brand,
                     name=biz.get('name', ''),
+                    email=biz.get('email', ''),
                     phone=biz.get('phone', ''),
                     company=biz.get('name', ''),
                     website=biz.get('website', ''),

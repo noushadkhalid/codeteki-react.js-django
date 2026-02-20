@@ -7,6 +7,7 @@ Details fetched at search time now — free tier is generous enough.
 """
 
 import logging
+import re
 import time
 import requests
 from django.conf import settings
@@ -107,16 +108,19 @@ class GooglePlacesService:
             query = f"{industry} in {location}" if industry else location
             places = self._text_search(query)
 
-        # Now fetch details (phone, website) for each result
+        # Now fetch details (phone, website, email) for each result
         businesses = []
         for p in places:
             details = self._get_place_details(p['place_id'])
+            website = details.get('website', '') if details else ''
+            email = self._scrape_email(website) if website else ''
             biz = {
                 'name': p.get('name', ''),
                 'address': details.get('formatted_address', p.get('address', '')) if details else p.get('address', ''),
                 'phone': details.get('formatted_phone_number', '') if details else '',
-                'website': details.get('website', '') if details else '',
-                'has_website': bool(details.get('website')) if details else False,
+                'email': email,
+                'website': website,
+                'has_website': bool(website),
                 'rating': p.get('rating'),
                 'user_ratings_total': p.get('user_ratings_total', 0),
                 'place_id': p['place_id'],
@@ -158,6 +162,41 @@ class GooglePlacesService:
         except Exception as e:
             logger.error(f"Place details error for {place_id}: {e}")
         return None
+
+    # Common noreply/generic prefixes to skip
+    _JUNK_PREFIXES = {
+        'noreply', 'no-reply', 'donotreply', 'do-not-reply', 'mailer-daemon',
+        'postmaster', 'webmaster', 'admin', 'root', 'sysadmin', 'hostmaster',
+        'abuse', 'security', 'privacy', 'support@wix', 'support@squarespace',
+        'support@shopify', 'support@wordpress',
+    }
+
+    def _scrape_email(self, url: str) -> str:
+        """Try to find a contact email from the business website homepage."""
+        try:
+            resp = requests.get(url, timeout=5, headers={
+                'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)',
+            })
+            if resp.status_code != 200:
+                return ''
+            text = resp.text[:200_000]  # Cap to avoid huge pages
+
+            # Find all email addresses via regex
+            emails = re.findall(
+                r'[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}',
+                text,
+            )
+            # Filter out junk/platform emails and image file extensions
+            for email in emails:
+                lower = email.lower()
+                if any(lower.startswith(p) for p in self._JUNK_PREFIXES):
+                    continue
+                if lower.endswith(('.png', '.jpg', '.gif', '.svg', '.webp')):
+                    continue
+                return email
+        except Exception:
+            pass
+        return ''
 
     def get_details_batch(self, place_ids: list[str]) -> dict[str, dict]:
         """
