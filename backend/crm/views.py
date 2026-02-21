@@ -1535,21 +1535,15 @@ def pipeline_board(request, pipeline_id):
     total_won = Deal.objects.filter(pipeline=pipeline, status='won').count()
     total_paused = Deal.objects.filter(pipeline=pipeline, status='paused').count()
 
-    # Split lost deals into categories
-    all_lost = Deal.objects.filter(
-        pipeline=pipeline, status='lost'
-    ).select_related('contact').order_by('-updated_at')[:100]
+    # Split lost deals into categories — query each separately to avoid cutoff
+    lost_qs = Deal.objects.filter(pipeline=pipeline, status='lost').select_related('contact').order_by('-updated_at')
 
-    # Permanently blocked (respect their choice / email invalid)
-    blocked_reasons = {'unsubscribed', 'invalid_email'}
-    # Re-activatable (just didn't respond or weren't interested)
     reactivatable_reasons = {'no_response', 'not_interested', 'competitor', 'budget', 'timing', 'other', ''}
+    inactive_deals = list(lost_qs.filter(lost_reason__in=reactivatable_reasons)[:200])
+    unsubscribed_deals = list(lost_qs.filter(lost_reason='unsubscribed')[:200])
+    bounced_deals = list(lost_qs.filter(lost_reason='invalid_email')[:200])
 
-    unsubscribed_deals = [d for d in all_lost if d.lost_reason == 'unsubscribed']
-    bounced_deals = [d for d in all_lost if d.lost_reason == 'invalid_email']
-    inactive_deals = [d for d in all_lost if d.lost_reason in reactivatable_reasons]
-
-    total_lost = len(all_lost)
+    total_lost = lost_qs.count()
 
     # Get admin context for Unfold sidebar
     context = {
