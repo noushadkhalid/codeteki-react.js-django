@@ -93,77 +93,109 @@
         {% endfor %}
     </div>
 
-    <!-- Inactive Deals (No Response / Not Interested) - CAN be reactivated -->
-    {% if inactive_deals %}
-    <div style="margin-top: 32px;">
-        <h2 style="font-size: 18px; font-weight: 600; color: #6b7280; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
-            <svg width="20" height="20" fill="none" stroke="#6b7280" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            Inactive - No Response ({{ inactive_deals|length }})
-        </h2>
-        <p style="color: #9ca3af; font-size: 12px; margin-bottom: 14px;">These contacts didn't respond. You can reactivate them to try again later.</p>
-        <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 16px; flex-wrap: wrap;">
-            {% for deal in inactive_deals %}
-            <div style="min-width: 260px; max-width: 260px; background: white; border-radius: 8px; padding: 14px; border: 1px solid #e5e7eb; border-left: 3px solid #9ca3af;">
-                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 4px;">
-                    <a href="{% url 'admin:crm_deal_change' deal.id %}" style="font-weight: 600; color: #374151; font-size: 13px; text-decoration: none;">{{ deal.contact.name|default:"No Name" }}</a>
-                    <span style="background: #f3f4f6; color: #6b7280; padding: 2px 6px; border-radius: 4px; font-size: 10px; white-space: nowrap;">{{ deal.get_lost_reason_display }}</span>
-                </div>
-                <div style="color: #9ca3af; font-size: 11px; word-break: break-all;">{{ deal.contact.email }}</div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-                    <span style="color: #9ca3af; font-size: 10px;">{{ deal.emails_sent }} emails &middot; {{ deal.updated_at|date:"M j" }}</span>
-                    <button onclick="reactivateDeal('{{ deal.id }}')" style="background: #3b82f6; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 500;"
-                            onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
-                        Reactivate
-                    </button>
-                </div>
-            </div>
-            {% endfor %}
+    <!-- Closed Deals Tabs (No Response / Unsubscribed / Bounced) -->
+    {% if inactive_deals or unsubscribed_deals or bounced_deals %}
+    <div style="margin-top: 32px; background: white; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden;">
+        <!-- Tab Bar -->
+        <div style="display: flex; border-bottom: 2px solid #e5e7eb; background: #f9fafb; position: sticky; top: 0; z-index: 10;">
+            {% if inactive_deals %}
+            <button onclick="switchTab('noresponse')" id="tab-noresponse" class="board-tab active"
+                    style="padding: 12px 20px; font-size: 13px; font-weight: 600; border: none; background: white; color: #374151; cursor: pointer; border-bottom: 2px solid #667eea; margin-bottom: -2px; display: flex; align-items: center; gap: 6px;">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                No Response <span style="background: #e5e7eb; color: #6b7280; padding: 1px 8px; border-radius: 10px; font-size: 11px;">{{ inactive_deals|length }}</span>
+            </button>
+            {% endif %}
+            {% if unsubscribed_deals %}
+            <button onclick="switchTab('unsub')" id="tab-unsub" class="board-tab"
+                    style="padding: 12px 20px; font-size: 13px; font-weight: 600; border: none; background: transparent; color: #9ca3af; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; display: flex; align-items: center; gap: 6px;">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                Unsubscribed <span style="background: #fef3c7; color: #92400e; padding: 1px 8px; border-radius: 10px; font-size: 11px;">{{ unsubscribed_deals|length }}</span>
+            </button>
+            {% endif %}
+            {% if bounced_deals %}
+            <button onclick="switchTab('bounced')" id="tab-bounced" class="board-tab"
+                    style="padding: 12px 20px; font-size: 13px; font-weight: 600; border: none; background: transparent; color: #9ca3af; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; display: flex; align-items: center; gap: 6px;">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                Bounced <span style="background: #fee2e2; color: #dc2626; padding: 1px 8px; border-radius: 10px; font-size: 11px;">{{ bounced_deals|length }}</span>
+            </button>
+            {% endif %}
         </div>
-    </div>
-    {% endif %}
 
-    <!-- Unsubscribed Deals - PERMANENTLY blocked (they opted out) -->
-    {% if unsubscribed_deals %}
-    <div style="margin-top: 32px;">
-        <h2 style="font-size: 18px; font-weight: 600; color: #f59e0b; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
-            <svg width="20" height="20" fill="none" stroke="#f59e0b" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
-            Unsubscribed ({{ unsubscribed_deals|length }})
-        </h2>
-        <p style="color: #9ca3af; font-size: 12px; margin-bottom: 14px;">These contacts opted out. No emails will be sent to them.</p>
-        <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 16px; flex-wrap: wrap;">
-            {% for deal in unsubscribed_deals %}
-            <div style="min-width: 260px; max-width: 260px; background: #fffbeb; border-radius: 8px; padding: 14px; border: 1px solid #fde68a; border-left: 3px solid #f59e0b; opacity: 0.85;">
-                <a href="{% url 'admin:crm_deal_change' deal.id %}" style="font-weight: 600; color: #374151; font-size: 13px; text-decoration: none; display: block; margin-bottom: 2px;">{{ deal.contact.name|default:"No Name" }}</a>
-                <div style="color: #9ca3af; font-size: 11px; word-break: break-all;">{{ deal.contact.email }}</div>
-                <div style="color: #d97706; font-size: 10px; margin-top: 6px; font-weight: 500;">Opted out &middot; {{ deal.updated_at|date:"M j, Y" }}</div>
+        <!-- Tab Panels -->
+        <div style="max-height: 420px; overflow-y: auto;">
+            {% if inactive_deals %}
+            <div id="panel-noresponse" class="board-panel" style="padding: 16px;">
+                <p style="color: #9ca3af; font-size: 12px; margin: 0 0 12px 0;">These contacts didn't respond. You can reactivate them to try again later.</p>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px;">
+                    {% for deal in inactive_deals %}
+                    <div style="background: #f9fafb; border-radius: 8px; padding: 12px; border: 1px solid #e5e7eb; border-left: 3px solid #9ca3af;">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 3px;">
+                            <a href="{% url 'admin:crm_deal_change' deal.id %}" style="font-weight: 600; color: #374151; font-size: 13px; text-decoration: none;">{{ deal.contact.name|default:"No Name" }}</a>
+                            <span style="background: #f3f4f6; color: #6b7280; padding: 2px 6px; border-radius: 4px; font-size: 10px; white-space: nowrap;">{{ deal.get_lost_reason_display }}</span>
+                        </div>
+                        <div style="color: #9ca3af; font-size: 11px; word-break: break-all;">{{ deal.contact.email }}</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px;">
+                            <span style="color: #9ca3af; font-size: 10px;">{{ deal.emails_sent }} emails &middot; {{ deal.updated_at|date:"M j" }}</span>
+                            <button onclick="reactivateDeal('{{ deal.id }}')" style="background: #3b82f6; color: white; border: none; padding: 3px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 500;">Reactivate</button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
+            {% endif %}
 
-    <!-- Bounced/Invalid Deals - PERMANENTLY blocked (email doesn't exist) -->
-    {% if bounced_deals %}
-    <div style="margin-top: 32px;">
-        <h2 style="font-size: 18px; font-weight: 600; color: #dc2626; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
-            <svg width="20" height="20" fill="none" stroke="#dc2626" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-            Bounced / Invalid Email ({{ bounced_deals|length }})
-        </h2>
-        <p style="color: #9ca3af; font-size: 12px; margin-bottom: 14px;">These email addresses don't exist or are invalid. Permanently blocked.</p>
-        <div style="display: flex; gap: 12px; overflow-x: auto; padding-bottom: 16px; flex-wrap: wrap;">
-            {% for deal in bounced_deals %}
-            <div style="min-width: 260px; max-width: 260px; background: #fef2f2; border-radius: 8px; padding: 14px; border: 1px solid #fecaca; border-left: 3px solid #dc2626; opacity: 0.75;">
-                <a href="{% url 'admin:crm_deal_change' deal.id %}" style="font-weight: 600; color: #374151; font-size: 13px; text-decoration: none; display: block; margin-bottom: 2px;">{{ deal.contact.name|default:"No Name" }}</a>
-                <div style="color: #9ca3af; font-size: 11px; word-break: break-all; text-decoration: line-through;">{{ deal.contact.email }}</div>
-                <div style="color: #dc2626; font-size: 10px; margin-top: 6px; font-weight: 500;">Invalid email &middot; {{ deal.updated_at|date:"M j, Y" }}</div>
+            {% if unsubscribed_deals %}
+            <div id="panel-unsub" class="board-panel" style="padding: 16px; display: none;">
+                <p style="color: #9ca3af; font-size: 12px; margin: 0 0 12px 0;">These contacts opted out. No emails will be sent to them.</p>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px;">
+                    {% for deal in unsubscribed_deals %}
+                    <div style="background: #fffbeb; border-radius: 8px; padding: 12px; border: 1px solid #fde68a; border-left: 3px solid #f59e0b;">
+                        <a href="{% url 'admin:crm_deal_change' deal.id %}" style="font-weight: 600; color: #374151; font-size: 13px; text-decoration: none; display: block; margin-bottom: 2px;">{{ deal.contact.name|default:"No Name" }}</a>
+                        <div style="color: #9ca3af; font-size: 11px; word-break: break-all;">{{ deal.contact.email }}</div>
+                        <div style="color: #d97706; font-size: 10px; margin-top: 6px; font-weight: 500;">Opted out &middot; {{ deal.updated_at|date:"M j, Y" }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
-            {% endfor %}
+            {% endif %}
+
+            {% if bounced_deals %}
+            <div id="panel-bounced" class="board-panel" style="padding: 16px; display: none;">
+                <p style="color: #9ca3af; font-size: 12px; margin: 0 0 12px 0;">These email addresses don't exist or are invalid. Permanently blocked.</p>
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px;">
+                    {% for deal in bounced_deals %}
+                    <div style="background: #fef2f2; border-radius: 8px; padding: 12px; border: 1px solid #fecaca; border-left: 3px solid #dc2626;">
+                        <a href="{% url 'admin:crm_deal_change' deal.id %}" style="font-weight: 600; color: #374151; font-size: 13px; text-decoration: none; display: block; margin-bottom: 2px;">{{ deal.contact.name|default:"No Name" }}</a>
+                        <div style="color: #9ca3af; font-size: 11px; word-break: break-all; text-decoration: line-through;">{{ deal.contact.email }}</div>
+                        <div style="color: #dc2626; font-size: 10px; margin-top: 6px; font-weight: 500;">Invalid email &middot; {{ deal.updated_at|date:"M j, Y" }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
     {% endif %}
 </div>
 
 <script>
+function switchTab(tab) {
+    document.querySelectorAll('.board-panel').forEach(function(p) { p.style.display = 'none'; });
+    document.querySelectorAll('.board-tab').forEach(function(t) {
+        t.style.background = 'transparent';
+        t.style.color = '#9ca3af';
+        t.style.borderBottomColor = 'transparent';
+    });
+    var panel = document.getElementById('panel-' + tab);
+    var tabBtn = document.getElementById('tab-' + tab);
+    if (panel) panel.style.display = 'block';
+    if (tabBtn) {
+        tabBtn.style.background = 'white';
+        tabBtn.style.color = '#374151';
+        tabBtn.style.borderBottomColor = '#667eea';
+    }
+}
+
 function reactivateDeal(dealId) {
     if (!confirm('Reactivate this deal? It will be moved back to the first stage and autopilot will pick it up again.')) return;
 
