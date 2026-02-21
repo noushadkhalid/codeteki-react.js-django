@@ -6,13 +6,21 @@ from django.shortcuts import redirect
 OTP_VERIFY_TTL = 24 * 60 * 60
 
 
+def is_otp_verified(request):
+    """Check if the user has a fresh OTP verification (within 24 hours).
+
+    Used by both the middleware and OTP views to avoid inconsistent checks.
+    """
+    if not request.user.is_verified():
+        return False
+    verified_at = request.session.get("otp_verified_at")
+    return bool(verified_at and (time.time() - verified_at) < OTP_VERIFY_TTL)
+
+
 class AdminOTPMiddleware:
     """Enforce TOTP two-factor authentication for all admin pages.
 
-    After a user logs in with username/password, this middleware checks
-    whether they have completed OTP verification (via django-otp's
-    ``is_verified()``) AND that the verification happened within the
-    last 24 hours.  Expired verifications force a re-verify.
+    Uses a session timestamp to enforce 24-hour re-verification.
     """
 
     WHITELISTED_PREFIXES = (
@@ -39,17 +47,8 @@ class AdminOTPMiddleware:
         if not request.user.is_staff:
             return self.get_response(request)
 
-        # Check both: django-otp says verified AND our timestamp is fresh.
-        if request.user.is_verified():
-            verified_at = request.session.get("otp_verified_at")
-            if verified_at and (time.time() - verified_at) < OTP_VERIFY_TTL:
-                return self.get_response(request)
-
-            # Verification expired — clear OTP state so is_verified() returns
-            # False on the next request after we redirect.
-            if "_otp_device_id" in request.session:
-                del request.session["_otp_device_id"]
-            request.session.pop("otp_verified_at", None)
+        if is_otp_verified(request):
+            return self.get_response(request)
 
         request.session["admin_otp_next"] = path
 

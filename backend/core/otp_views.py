@@ -42,7 +42,8 @@ def _generate_qr_svg(device):
 @staff_member_required(login_url="/admin/login/")
 @require_http_methods(["GET", "POST"])
 def otp_verify_view(request):
-    if request.user.is_verified():
+    from core.middleware import is_otp_verified
+    if is_otp_verified(request):
         return redirect(_get_next_url(request))
 
     error = None
@@ -77,7 +78,8 @@ def otp_verify_view(request):
 @staff_member_required(login_url="/admin/login/")
 @require_http_methods(["GET", "POST"])
 def otp_setup_view(request):
-    if request.user.is_verified():
+    from core.middleware import is_otp_verified
+    if is_otp_verified(request):
         return redirect(_get_next_url(request))
 
     # Re-use an unconfirmed device if one already exists (e.g. user refreshed
