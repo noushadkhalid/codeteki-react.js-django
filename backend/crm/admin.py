@@ -3507,14 +3507,23 @@ class LeadSearchAdmin(ModelAdmin):
             for place_json in selected:
                 biz = json.loads(place_json)
 
+                # Skip if already imported by place_id
                 if Contact.objects.filter(google_place_id=biz['place_id'], brand=brand).exists():
+                    skipped += 1
+                    continue
+
+                # Skip if email already exists for this brand
+                biz_email = biz.get('email', '').strip()
+                if biz_email and Contact.objects.filter(email=biz_email, brand=brand).exists():
+                    existing = Contact.objects.filter(email=biz_email, brand=brand).first()
+                    imported_contacts.append(existing)
                     skipped += 1
                     continue
 
                 contact = Contact.objects.create(
                     brand=brand,
                     name=biz.get('name', ''),
-                    email=biz.get('email', ''),
+                    email=biz_email,
                     phone=biz.get('phone', ''),
                     company=biz.get('name', ''),
                     website=biz.get('website', ''),
