@@ -2088,3 +2088,136 @@ Respond in JSON format:
             context_parts.append(get_engagement_summary_for_ai(deal))
 
         return "\n".join(context_parts)
+
+    # =========================================================================
+    # SMS & WhatsApp Composition
+    # =========================================================================
+
+    def compose_message(self, context: dict) -> dict:
+        """
+        Dispatch message composition based on channel.
+        Returns {'body': str, 'subject': str (email only), 'success': bool}
+        """
+        channel = context.get('channel', 'email')
+        if channel == 'sms':
+            return self.compose_sms(context)
+        elif channel == 'whatsapp':
+            return self.compose_whatsapp(context)
+        return self.compose_email_from_context(context)
+
+    def compose_sms(self, context: dict) -> dict:
+        """
+        Compose a concise SMS message (max ~140 chars to leave room for opt-out text).
+
+        Returns:
+            {'body': str, 'subject': '', 'success': bool}
+        """
+        brand_name = context.get('brand_name', 'Our Company')
+        brand_description = context.get('brand_description', '')
+        value_proposition = context.get('value_proposition', '')
+        suggestions = context.get('suggestions', '')
+        recipient_name = context.get('recipient_name', '')
+        recipient_company = context.get('recipient_company', '')
+        email_type = context.get('email_type', 'custom')
+        tone = context.get('tone', 'friendly')
+
+        prompt = f"""Write a SHORT SMS message for a business outreach campaign.
+
+STRICT CONSTRAINTS:
+- Maximum 140 characters (the system auto-appends "Reply STOP to opt out" which takes ~20 chars)
+- No HTML, no markdown, no formatting
+- Include a clear call-to-action
+- Conversational and direct
+- No subject line needed
+
+CONTEXT:
+- Brand: {brand_name}
+- Brand description: {brand_description}
+- Value proposition: {value_proposition}
+- Email type: {email_type}
+- Tone: {tone}
+- Recipient: {recipient_name or 'Business owner'} at {recipient_company or 'their business'}
+- User suggestions: {suggestions or 'None'}
+
+Respond with ONLY the SMS message text, nothing else. No quotes, no labels."""
+
+        try:
+            result = self.ai_engine.generate_content(
+                prompt=prompt,
+                system_prompt="You are an SMS copywriter. Write extremely concise business messages under 140 characters.",
+                max_tokens=100,
+            )
+
+            body = result.get('content', '').strip()
+            if not body:
+                return {'body': '', 'subject': '', 'success': False, 'error': 'AI returned empty content'}
+
+            # Trim if too long
+            if len(body) > 140:
+                body = body[:137] + '...'
+
+            return {'body': body, 'subject': '', 'success': True}
+
+        except Exception as e:
+            logger.error(f"SMS compose failed: {e}")
+            return {'body': '', 'subject': '', 'success': False, 'error': str(e)}
+
+    def compose_whatsapp(self, context: dict) -> dict:
+        """
+        Compose a WhatsApp message (max ~1024 chars, WhatsApp formatting).
+
+        Returns:
+            {'body': str, 'subject': '', 'success': bool}
+        """
+        brand_name = context.get('brand_name', 'Our Company')
+        brand_description = context.get('brand_description', '')
+        value_proposition = context.get('value_proposition', '')
+        suggestions = context.get('suggestions', '')
+        recipient_name = context.get('recipient_name', '')
+        recipient_company = context.get('recipient_company', '')
+        email_type = context.get('email_type', 'custom')
+        tone = context.get('tone', 'friendly')
+        business_updates = context.get('business_updates', '')
+
+        prompt = f"""Write a WhatsApp business message for outreach.
+
+CONSTRAINTS:
+- Maximum 1024 characters
+- Use WhatsApp formatting: *bold*, _italic_, ~strikethrough~
+- Conversational, friendly tone (WhatsApp is informal)
+- Include a clear call-to-action
+- No HTML
+- No subject line needed
+
+CONTEXT:
+- Brand: {brand_name}
+- Brand description: {brand_description}
+- Value proposition: {value_proposition}
+- Email type: {email_type}
+- Tone: {tone}
+- Recipient: {recipient_name or 'Business owner'} at {recipient_company or 'their business'}
+- Business updates: {business_updates or 'None'}
+- User suggestions: {suggestions or 'None'}
+
+Respond with ONLY the WhatsApp message text, nothing else. No quotes, no labels."""
+
+        try:
+            result = self.ai_engine.generate_content(
+                prompt=prompt,
+                system_prompt="You are a WhatsApp business messaging expert. Write engaging, conversational messages using WhatsApp formatting (*bold*, _italic_).",
+                max_tokens=400,
+            )
+
+            body = result.get('content', '').strip()
+            if not body:
+                return {'body': '', 'subject': '', 'success': False, 'error': 'AI returned empty content'}
+
+            # Trim if too long
+            if len(body) > 1024:
+                body = body[:1021] + '...'
+
+            return {'body': body, 'subject': '', 'success': True}
+
+        except Exception as e:
+            logger.error(f"WhatsApp compose failed: {e}")
+            return {'body': '', 'subject': '', 'success': False, 'error': str(e)}

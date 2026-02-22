@@ -44,6 +44,12 @@ class Brand(models.Model):
         help_text="ZeptoMail API host: api.zeptomail.com (US) or api.zeptomail.com.au (AU)"
     )
 
+    # Twilio SMS/WhatsApp credentials
+    twilio_account_sid = models.CharField(max_length=255, blank=True)
+    twilio_auth_token = models.CharField(max_length=255, blank=True)
+    twilio_phone_number = models.CharField(max_length=20, blank=True, help_text="E.164 format, e.g. +61400000000")
+    twilio_whatsapp_number = models.CharField(max_length=20, blank=True, help_text="E.164 format for WhatsApp sender")
+
     # AI Configuration
     ai_company_description = models.TextField(
         blank=True,
@@ -172,6 +178,12 @@ class Contact(models.Model):
     spam_reported = models.BooleanField(default=False, help_text="Recipient reported email as spam (feedback loop)")
     spam_reported_at = models.DateTimeField(null=True, blank=True)
 
+    # SMS opt-out tracking
+    sms_opted_out = models.BooleanField(default=False, help_text="Contact opted out of SMS messages")
+    sms_opted_out_at = models.DateTimeField(null=True, blank=True)
+    last_sms_at = models.DateTimeField(null=True, blank=True)
+    sms_count = models.IntegerField(default=0, help_text="Total SMS/WhatsApp messages sent")
+
     # Status tracking (simplified pipeline)
     STATUS_CHOICES = [
         ('new', 'New'),
@@ -254,6 +266,25 @@ class Contact(models.Model):
             email = match.group(1)
         # Remove any remaining whitespace and lowercase
         return email.strip().lower()
+
+    @staticmethod
+    def normalize_phone(phone: str) -> str:
+        """
+        Normalize phone to E.164 format using phonenumbers library.
+        Assumes Australian numbers by default.
+        Returns empty string if invalid.
+        """
+        import phonenumbers
+        if not phone:
+            return ''
+        phone = phone.strip()
+        try:
+            parsed = phonenumbers.parse(phone, 'AU')
+            if phonenumbers.is_valid_number(parsed):
+                return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
+        except phonenumbers.NumberParseException:
+            pass
+        return ''
 
     # Generic email prefixes that need name extraction from domain/company
     GENERIC_EMAIL_PREFIXES = {
@@ -434,6 +465,9 @@ class Pipeline(models.Model):
         ('realestate', 'Real Estate'),
         ('classifieds', 'Classifieds'),
         ('registered_users', 'Registered Users (Nudge)'),
+        # SMS/WhatsApp campaigns
+        ('sms_campaign', 'SMS Campaign'),
+        ('whatsapp_campaign', 'WhatsApp Campaign'),
     ]
 
     brand = models.ForeignKey(
@@ -634,8 +668,15 @@ class SequenceStep(models.Model):
         return f"{self.sequence.name} - Step {self.order}"
 
 
+CHANNEL_CHOICES = [
+    ('email', 'Email'),
+    ('sms', 'SMS'),
+    ('whatsapp', 'WhatsApp'),
+]
+
+
 class EmailLog(models.Model):
-    """Track all sent emails."""
+    """Track all sent emails, SMS, and WhatsApp messages."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     deal = models.ForeignKey(Deal, on_delete=models.CASCADE, related_name='email_logs', null=True, blank=True)
@@ -647,14 +688,22 @@ class EmailLog(models.Model):
         related_name='email_logs'
     )
 
+    # Channel
+    channel = models.CharField(max_length=10, choices=CHANNEL_CHOICES, default='email')
+
     # A/B testing
     ab_variant = models.CharField(max_length=1, blank=True, help_text="A/B test variant: A or B")
 
     # Email content
-    subject = models.CharField(max_length=255)
+    subject = models.CharField(max_length=255, blank=True)
     body = models.TextField()
     from_email = models.EmailField(default='sales@codeteki.au')
-    to_email = models.EmailField()
+    to_email = models.EmailField(blank=True, default='')
+    to_phone = models.CharField(max_length=30, blank=True, help_text="E.164 phone for SMS/WhatsApp")
+
+    # Twilio tracking
+    message_sid = models.CharField(max_length=100, blank=True, help_text="Twilio message SID")
+    delivery_status = models.CharField(max_length=20, blank=True, help_text="Twilio delivery status")
 
     # Tracking
     sent_at = models.DateTimeField(null=True, blank=True)
@@ -675,12 +724,15 @@ class EmailLog(models.Model):
 
     class Meta:
         ordering = ['-created_at']
-        verbose_name = 'Email Log'
-        verbose_name_plural = 'Email Logs'
+        verbose_name = 'Message Log'
+        verbose_name_plural = 'Message Logs'
 
     def __str__(self):
         status = "Sent" if self.sent_at else "Draft"
-        return f"{status}: {self.subject} to {self.to_email}"
+        target = self.to_email or self.to_phone or 'unknown'
+        if self.channel in ('sms', 'whatsapp'):
+            return f"{status} {self.channel.upper()}: to {target}"
+        return f"{status}: {self.subject} to {target}"
 
 
 class AIDecisionLog(models.Model):
@@ -1030,10 +1082,12 @@ class ProspectScan(models.Model):
 
 class EmailDraft(models.Model):
     """
-    AI Email Composer - First contact tool.
+    AI Message Composer - First contact tool.
+    Supports Email, SMS, and WhatsApp channels.
     After sending, contacts are added to pipeline for AI autopilot follow-ups.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    channel = models.CharField(max_length=10, choices=CHANNEL_CHOICES, default='email')
     brand = models.ForeignKey(
         Brand,
         on_delete=models.CASCADE,
@@ -1062,6 +1116,12 @@ class EmailDraft(models.Model):
     manual_emails = models.TextField(
         blank=True,
         help_text="Add emails manually - one per line. Example:\njohn@example.com\njane@company.com"
+    )
+
+    # Add manual phones (one per line, for SMS/WhatsApp)
+    manual_phones = models.TextField(
+        blank=True,
+        help_text="Add phones manually - one per line. Example:\n+61412345678\nJohn <+61412345678>"
     )
 
     # Tracking
@@ -1197,13 +1257,17 @@ class EmailDraft(models.Model):
 
     class Meta:
         ordering = ['-updated_at']
-        verbose_name = 'Email Draft'
-        verbose_name_plural = 'AI Email Composer'
+        verbose_name = 'Message Draft'
+        verbose_name_plural = 'AI Message Composer'
 
     def get_all_recipients(self):
-        """Get all recipients as list of dicts with email, name, contact (if any)."""
+        """Get all recipients as list of dicts. For email: email, name, contact. For SMS/WhatsApp: phone, name, contact."""
         recipients = []
 
+        if self.channel in ('sms', 'whatsapp'):
+            return self._get_phone_recipients()
+
+        # Email channel - existing behavior
         # Add contacts from ManyToMany
         for contact in self.contacts.all():
             if not contact.is_unsubscribed:
@@ -1215,20 +1279,30 @@ class EmailDraft(models.Model):
                     'contact': contact
                 })
 
-        # Add manual emails
+        # Add manual emails (supports both "email" and "Name <email>" formats)
         if self.manual_emails:
+            import re
             for line in self.manual_emails.strip().split('\n'):
-                email = line.strip()
-                if email and '@' in email:
-                    # Check if already in contacts list
-                    if not any(r['email'] == email for r in recipients):
-                        recipients.append({
-                            'email': email,
-                            'name': email.split('@')[0],
-                            'company': '',
-                            'website': '',
-                            'contact': None
-                        })
+                line = line.strip()
+                if not line or '@' not in line:
+                    continue
+                # Parse "Name <email>" format
+                match = re.match(r'^(.+?)\s*<(.+?)>$', line)
+                if match:
+                    name = match.group(1).strip()
+                    email = match.group(2).strip()
+                else:
+                    email = line
+                    name = email.split('@')[0]
+                # Check if already in contacts list
+                if not any(r['email'] == email for r in recipients):
+                    recipients.append({
+                        'email': email,
+                        'name': name,
+                        'company': '',
+                        'website': '',
+                        'contact': None
+                    })
 
         # Legacy support
         if self.contact and not self.contact.is_unsubscribed:
@@ -1249,6 +1323,50 @@ class EmailDraft(models.Model):
                 'website': self.recipient_website,
                 'contact': None
             })
+
+        return recipients
+
+    def _get_phone_recipients(self):
+        """Get phone recipients for SMS/WhatsApp channels."""
+        import re
+        recipients = []
+
+        # Add contacts from ManyToMany that have phone and aren't opted out
+        for contact in self.contacts.all():
+            if contact.phone and not contact.sms_opted_out:
+                normalized = Contact.normalize_phone(contact.phone)
+                if normalized and not any(r.get('phone') == normalized for r in recipients):
+                    recipients.append({
+                        'phone': normalized,
+                        'name': contact.name,
+                        'company': contact.company,
+                        'website': contact.website,
+                        'contact': contact,
+                    })
+
+        # Add manual phones
+        if self.manual_phones:
+            for line in self.manual_phones.strip().split('\n'):
+                line = line.strip()
+                if not line:
+                    continue
+                # Parse "Name <+61...>" format
+                match = re.match(r'^(.+?)\s*<(.+?)>$', line)
+                if match:
+                    name = match.group(1).strip()
+                    phone = match.group(2).strip()
+                else:
+                    phone = line
+                    name = ''
+                normalized = Contact.normalize_phone(phone)
+                if normalized and not any(r.get('phone') == normalized for r in recipients):
+                    recipients.append({
+                        'phone': normalized,
+                        'name': name,
+                        'company': '',
+                        'website': '',
+                        'contact': None,
+                    })
 
         return recipients
 

@@ -1307,11 +1307,13 @@ class ContactSearchView(View):
     """
     Fast contact search for email composer autocomplete.
     Returns contacts not in active pipelines and not unsubscribed.
+    Supports channel param to filter by email or phone availability.
     """
 
     def get(self, request):
         query = request.GET.get('q', '').strip()
         brand_id = request.GET.get('brand')
+        channel = request.GET.get('channel', 'email')
         limit = min(int(request.GET.get('limit', 10)), 50)
 
         if len(query) < 2:
@@ -1320,15 +1322,21 @@ class ContactSearchView(View):
         contacts = Contact.objects.filter(
             Q(name__icontains=query) |
             Q(email__icontains=query) |
-            Q(company__icontains=query),
+            Q(company__icontains=query) |
+            Q(phone__icontains=query),
             is_unsubscribed=False
         ).exclude(
-            # Exclude contacts with active deals (already in pipeline)
             deals__status='active'
         ).order_by('name')
 
         if brand_id:
             contacts = contacts.filter(brand_id=brand_id)
+
+        # Filter by channel capability
+        if channel in ('sms', 'whatsapp'):
+            contacts = contacts.exclude(phone='').filter(sms_opted_out=False)
+        else:
+            contacts = contacts.exclude(email='')
 
         contacts = contacts.distinct()[:limit]
 
@@ -1337,6 +1345,7 @@ class ContactSearchView(View):
                 {
                     'id': str(c.id),
                     'email': c.email,
+                    'phone': c.phone or '',
                     'name': c.name or '',
                     'company': c.company or '',
                     'status': c.status,
@@ -1400,15 +1409,17 @@ class GenerateAIEmailView(View):
 
         # Use first recipient email for smart salutation
         first_recipient_email = recipient_emails[0] if recipient_emails else ''
+        channel = data.get('channel', 'email')
 
         # Build context for AI
         context = {
+            'channel': channel,
             'email_type': email_type,
             'tone': tone,
             'suggestions': suggestions,
-            'pipeline_type': pipeline_type,  # For contextual email generation
+            'pipeline_type': pipeline_type,
             'pipeline_name': pipeline_name,
-            'recipient_email': first_recipient_email,  # For smart salutation detection
+            'recipient_email': first_recipient_email,
             'recipient_name': recipient_name,
             'recipient_company': recipient_company,
             'recipient_website': '',
@@ -1418,7 +1429,7 @@ class GenerateAIEmailView(View):
             'value_proposition': value_proposition,
         }
 
-        # Generate email with AI
+        # Generate content with AI
         from crm.services.ai_agent import CRMAIAgent
         import traceback
         import logging
@@ -1426,7 +1437,7 @@ class GenerateAIEmailView(View):
 
         try:
             ai_agent = CRMAIAgent()
-            result = ai_agent.compose_email_from_context(context)
+            result = ai_agent.compose_message(context)
 
             if result.get('success'):
                 return JsonResponse({
@@ -1797,3 +1808,75 @@ def check_can_email(email: str, brand_slug: str = None) -> dict:
         }
 
     return {'can_email': True, 'reason': ''}
+
+
+# =============================================================================
+# TWILIO WEBHOOKS
+# =============================================================================
+
+@method_decorator(csrf_exempt, name='dispatch')
+class TwilioStatusWebhookView(View):
+    """
+    Twilio delivery status callback.
+    Updates EmailLog.delivery_status for SMS/WhatsApp messages.
+    """
+
+    def post(self, request):
+        message_sid = request.POST.get('MessageSid', '')
+        status = request.POST.get('MessageStatus', '')
+
+        if not message_sid:
+            return JsonResponse({'error': 'Missing MessageSid'}, status=400)
+
+        from .models import EmailLog
+        updated = EmailLog.objects.filter(message_sid=message_sid).update(
+            delivery_status=status
+        )
+
+        if updated:
+            import logging
+            logging.getLogger(__name__).info(
+                f"Twilio status update: {message_sid} -> {status}"
+            )
+
+        return JsonResponse({'ok': True})
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class TwilioInboundWebhookView(View):
+    """
+    Twilio inbound SMS webhook.
+    Handles STOP/opt-out messages.
+    """
+
+    def post(self, request):
+        from_number = request.POST.get('From', '')
+        body = request.POST.get('Body', '').strip().upper()
+
+        if not from_number:
+            return HttpResponse('', status=200)
+
+        # Handle opt-out keywords
+        opt_out_keywords = {'STOP', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT'}
+        if body in opt_out_keywords:
+            from .models import Contact
+            # Clean number format (Twilio sends with + prefix)
+            clean_number = from_number.replace('whatsapp:', '')
+
+            contacts = Contact.objects.filter(
+                Q(phone=clean_number) | Q(phone__endswith=clean_number[-10:])
+            )
+            updated = 0
+            for contact in contacts:
+                if not contact.sms_opted_out:
+                    contact.sms_opted_out = True
+                    contact.sms_opted_out_at = timezone.now()
+                    contact.save(update_fields=['sms_opted_out', 'sms_opted_out_at'])
+                    updated += 1
+
+            import logging
+            logging.getLogger(__name__).info(
+                f"SMS opt-out from {from_number}: {updated} contact(s) updated"
+            )
+
+        return HttpResponse('', status=200)

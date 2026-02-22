@@ -251,6 +251,35 @@
     min-height: 350px;
 }
 
+/* Char Counter for SMS/WhatsApp */
+.char-counter {
+    display: none;
+    padding: 4px 16px 8px;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.char-counter.show {
+    display: block;
+}
+
+.char-counter .count {
+    font-weight: 600;
+}
+
+.char-counter .count.warn {
+    color: #f59e0b;
+}
+
+.char-counter .count.over {
+    color: #ef4444;
+}
+
+.char-counter .segments {
+    margin-left: 8px;
+    color: #94a3b8;
+}
+
 /* Footer */
 .compose-footer {
     display: flex;
@@ -667,6 +696,14 @@
         <div class="compose-header">
             <div class="header-selects">
                 <div class="header-select">
+                    <label>Channel:</label>
+                    <select id="channelSelect" style="min-width:100px;">
+                        <option value="email">Email</option>
+                        <option value="sms">SMS</option>
+                        <option value="whatsapp">WhatsApp</option>
+                    </select>
+                </div>
+                <div class="header-select">
                     <label>Brand:</label>
                     <select id="brandSelect"></select>
                 </div>
@@ -708,6 +745,12 @@
             <div class="body-container">
                 <textarea class="body-textarea" id="bodyInput"
                           placeholder="Write your email here..."></textarea>
+            </div>
+
+            <!-- Character counter (visible for SMS/WhatsApp) -->
+            <div class="char-counter" id="charCounter">
+                <span class="count" id="charCount">0</span> / <span id="charLimit">160</span> chars
+                <span class="segments" id="segmentInfo"></span>
             </div>
         </div>
 
@@ -767,13 +810,13 @@
                 </svg>
                 AI Assistant
             </h3>
-            <p>Generate personalized emails with AI</p>
+            <p>Generate personalized messages with AI</p>
         </div>
 
         <div class="ai-panel-content">
             <!-- Email Type & Tone -->
             <div class="settings-section">
-                <h4>Email Settings</h4>
+                <h4>Message Settings</h4>
                 <div class="setting-row">
                     <label>Type</label>
                     <select id="emailTypeSelect">
@@ -841,12 +884,14 @@ Example:
 document.addEventListener('DOMContentLoaded', function() {
     // Django form fields
     const djangoForm = document.querySelector('#original-form-container form');
+    const idChannel = document.getElementById('id_channel');
     const idBrand = document.getElementById('id_brand');
     const idPipeline = document.getElementById('id_pipeline');
     const idEmailType = document.getElementById('id_email_type');
     const idTone = document.getElementById('id_tone');
     const idSuggestions = document.getElementById('id_your_suggestions');
     const idManualEmails = document.getElementById('id_manual_emails');
+    const idManualPhones = document.getElementById('id_manual_phones');
     const idFinalSubject = document.getElementById('id_final_subject');
     const idFinalBody = document.getElementById('id_final_body');
     const idGeneratedSubject = document.getElementById('id_generated_subject');
@@ -872,8 +917,83 @@ document.addEventListener('DOMContentLoaded', function() {
     const templateNameWrapper = document.getElementById('templateNameWrapper');
     const templateNameInput = document.getElementById('templateNameInput');
 
+    // Channel UI elements
+    const channelSelect = document.getElementById('channelSelect');
+    const charCounter = document.getElementById('charCounter');
+    const charCount = document.getElementById('charCount');
+    const charLimit = document.getElementById('charLimit');
+    const segmentInfo = document.getElementById('segmentInfo');
+    const subjectRow = subjectInput.closest('.field-row');
+
+    // Current channel state
+    let currentChannel = 'email';
+
     // Recipients array
     let recipients = [];
+
+    // Phone validation
+    const isValidPhone = (phone) => /^\+?[0-9\s\-()]{8,20}$/.test(phone.trim());
+
+    // Channel switching logic
+    function switchChannel(channel) {
+        currentChannel = channel;
+        if (idChannel) idChannel.value = channel;
+
+        const isPhone = channel === 'sms' || channel === 'whatsapp';
+
+        // Toggle subject row visibility
+        if (subjectRow) {
+            subjectRow.style.display = isPhone ? 'none' : 'flex';
+        }
+
+        // Toggle char counter
+        if (charCounter) {
+            charCounter.classList.toggle('show', isPhone);
+            charLimit.textContent = channel === 'sms' ? '160' : '1024';
+        }
+
+        // Update To input placeholder
+        if (isPhone) {
+            toInput.placeholder = 'Type phone + Enter, or search contacts...';
+            bodyInput.placeholder = channel === 'sms'
+                ? 'Write your SMS here (max 160 chars)...'
+                : 'Write your WhatsApp message here...';
+        } else {
+            toInput.placeholder = 'Type email + Enter, or search contacts...';
+            bodyInput.placeholder = 'Write your email here...';
+        }
+
+        // Update send button text
+        if (sendBtn) {
+            sendBtn.innerHTML = isPhone ? `Send ${channel.toUpperCase()} & Add to Pipeline` : 'Send & Add to Pipeline';
+        }
+
+        updateCharCount();
+    }
+
+    // Char counter update
+    function updateCharCount() {
+        if (currentChannel === 'email') return;
+        const len = bodyInput.value.length;
+        const limit = currentChannel === 'sms' ? 160 : 1024;
+        charCount.textContent = len;
+        charCount.className = 'count' + (len > limit ? ' over' : len > limit * 0.9 ? ' warn' : '');
+        if (currentChannel === 'sms') {
+            const segments = Math.ceil(len / 160) || 1;
+            segmentInfo.textContent = segments > 1 ? `(${segments} segments)` : '(1 segment)';
+        } else {
+            segmentInfo.textContent = '';
+        }
+    }
+
+    channelSelect.addEventListener('change', () => switchChannel(channelSelect.value));
+    bodyInput.addEventListener('input', () => updateCharCount());
+
+    // Initialize channel from Django form
+    if (idChannel && idChannel.value) {
+        channelSelect.value = idChannel.value;
+        switchChannel(idChannel.value);
+    }
 
     // Copy options from Django fields to custom selects
     function syncSelect(djangoSelect, customSelect) {
@@ -940,6 +1060,19 @@ document.addEventListener('DOMContentLoaded', function() {
             { value: 'partnership_followup', label: 'Partnership Follow-up' },
             { value: 'custom', label: 'Custom' }
         ],
+        // SMS/WhatsApp campaigns
+        'sms_campaign': [
+            { value: 'services_intro', label: 'Services Introduction' },
+            { value: 'invitation', label: 'Invitation' },
+            { value: 'followup', label: 'Follow-up' },
+            { value: 'custom', label: 'Custom' }
+        ],
+        'whatsapp_campaign': [
+            { value: 'services_intro', label: 'Services Introduction' },
+            { value: 'invitation', label: 'Invitation' },
+            { value: 'followup', label: 'Follow-up' },
+            { value: 'custom', label: 'Custom' }
+        ],
         // Default
         'default': [
             { value: 'invitation', label: 'Invitation' },
@@ -966,6 +1099,9 @@ document.addEventListener('DOMContentLoaded', function() {
         else if (pipelineText.includes('sales')) pipelineType = 'sales';
         else if (pipelineText.includes('backlink')) pipelineType = 'backlink';
         else if (pipelineText.includes('partnership')) pipelineType = 'partnership';
+        // SMS/WhatsApp campaigns
+        else if (pipelineText.includes('sms')) pipelineType = 'sms_campaign';
+        else if (pipelineText.includes('whatsapp')) pipelineType = 'whatsapp_campaign';
 
         const options = emailTypesByPipeline[pipelineType] || emailTypesByPipeline['default'];
 
@@ -1054,12 +1190,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Create chip
     const createChip = (recipient) => {
         const chip = document.createElement('div');
-        const colorIndex = getColorIndex(recipient.email);
+        const identifier = recipient.phone || recipient.email;
+        const colorIndex = getColorIndex(identifier);
         chip.className = `chip chip-${colorIndex}`;
-        chip.dataset.email = recipient.email;
+        chip.dataset.email = identifier;
 
-        const initials = getInitials(recipient.name, recipient.email);
-        const displayName = recipient.name || recipient.email.split('@')[0];
+        const isPhone = !!recipient.phone;
+        const initials = isPhone
+            ? (recipient.name ? getInitials(recipient.name, '') : recipient.phone.slice(-2))
+            : getInitials(recipient.name, recipient.email);
+        const displayName = recipient.name || (isPhone ? recipient.phone : recipient.email.split('@')[0]);
 
         chip.innerHTML = `
             <div class="chip-avatar">${initials}</div>
@@ -1068,27 +1208,34 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
 
         chip.querySelector('.chip-remove').addEventListener('click', () => {
-            removeRecipient(recipient.email);
+            removeRecipient(identifier);
         });
 
         return chip;
     };
 
     // Add recipient
-    const addRecipient = (email, name = '') => {
-        email = email.toLowerCase().trim();
-        if (!email || recipients.find(r => r.email === email)) return;
-
-        recipients.push({ email, name });
-        recipientChips.appendChild(createChip({ email, name }));
+    const addRecipient = (email, name = '', phone = '') => {
+        const isPhone = currentChannel === 'sms' || currentChannel === 'whatsapp';
+        if (isPhone) {
+            phone = phone || email;
+            email = '';
+            if (!phone || recipients.find(r => r.phone === phone)) return;
+            recipients.push({ email: '', name, phone });
+        } else {
+            email = email.toLowerCase().trim();
+            if (!email || recipients.find(r => r.email === email)) return;
+            recipients.push({ email, name, phone: '' });
+        }
+        recipientChips.appendChild(createChip(recipients[recipients.length - 1]));
         updateRecipientCount();
         syncRecipientsToForm();
     };
 
     // Remove recipient
-    const removeRecipient = (email) => {
-        recipients = recipients.filter(r => r.email !== email);
-        const chip = recipientChips.querySelector(`[data-email="${email}"]`);
+    const removeRecipient = (identifier) => {
+        recipients = recipients.filter(r => (r.email || r.phone) !== identifier);
+        const chip = recipientChips.querySelector(`[data-email="${CSS.escape(identifier)}"]`);
         if (chip) chip.remove();
         updateRecipientCount();
         syncRecipientsToForm();
@@ -1101,25 +1248,52 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Sync to Django form
     const syncRecipientsToForm = () => {
-        if (idManualEmails) {
-            idManualEmails.value = recipients.map(r => r.name ? `${r.name} <${r.email}>` : r.email).join('\n');
+        const isPhone = currentChannel === 'sms' || currentChannel === 'whatsapp';
+        if (isPhone) {
+            if (idManualPhones) {
+                idManualPhones.value = recipients.map(r => {
+                    const val = r.phone || r.email;
+                    return r.name ? `${r.name} <${val}>` : val;
+                }).join('\n');
+            }
+        } else {
+            if (idManualEmails) {
+                idManualEmails.value = recipients.map(r => r.name ? `${r.name} <${r.email}>` : r.email).join('\n');
+            }
         }
     };
 
     // Load existing recipients
-    if (idManualEmails && idManualEmails.value) {
-        idManualEmails.value.split('\n').forEach(line => {
-            line = line.trim();
-            if (!line) return;
-            const match = line.match(/^(.+?)\s*<(.+?)>$/) || line.match(/^(.+)$/);
-            if (match) {
-                const email = (match[2] || match[1]).trim();
-                const name = match[2] ? match[1].trim() : '';
-                if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                    addRecipient(email, name);
+    if (currentChannel === 'sms' || currentChannel === 'whatsapp') {
+        // Load phone recipients
+        if (idManualPhones && idManualPhones.value) {
+            idManualPhones.value.split('\n').forEach(line => {
+                line = line.trim();
+                if (!line) return;
+                const match = line.match(/^(.+?)\s*<(.+?)>$/);
+                if (match) {
+                    addRecipient('', match[1].trim(), match[2].trim());
+                } else {
+                    addRecipient('', '', line);
                 }
-            }
-        });
+            });
+        }
+    } else {
+        // Load email recipients
+        if (idManualEmails && idManualEmails.value) {
+            idManualEmails.value.split('\n').forEach(line => {
+                line = line.trim();
+                if (!line) return;
+                const match = line.match(/^(.+?)\s*<(.+?)>$/) || line.match(/^(.+)$/);
+                if (match) {
+                    const email = (match[2] || match[1]).trim();
+                    const name = match[2] ? match[1].trim() : '';
+                    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                        addRecipient(email, name);
+                    }
+                }
+            });
+        }
     }
 
     // Email validation
@@ -1130,13 +1304,23 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.key === 'Enter' || e.key === ',') {
             e.preventDefault();
             const value = toInput.value.trim().replace(',', '');
-            if (isValidEmail(value)) {
-                addRecipient(value);
-                toInput.value = '';
-                hideDropdown();
+            const isPhone = currentChannel === 'sms' || currentChannel === 'whatsapp';
+            if (isPhone) {
+                if (isValidPhone(value)) {
+                    addRecipient(value, '', value);
+                    toInput.value = '';
+                    hideDropdown();
+                }
+            } else {
+                if (isValidEmail(value)) {
+                    addRecipient(value);
+                    toInput.value = '';
+                    hideDropdown();
+                }
             }
         } else if (e.key === 'Backspace' && !toInput.value && recipients.length > 0) {
-            removeRecipient(recipients[recipients.length - 1].email);
+            const last = recipients[recipients.length - 1];
+            removeRecipient(last.email || last.phone);
         } else if (e.key === 'Escape') {
             hideDropdown();
         }
@@ -1146,7 +1330,12 @@ document.addEventListener('DOMContentLoaded', function() {
     toInput.addEventListener('paste', (e) => {
         e.preventDefault();
         const text = (e.clipboardData || window.clipboardData).getData('text');
-        text.split(/[\n,;\s]+/).filter(isValidEmail).forEach(email => addRecipient(email));
+        const isPhone = currentChannel === 'sms' || currentChannel === 'whatsapp';
+        if (isPhone) {
+            text.split(/[\n,;]+/).map(s => s.trim()).filter(isValidPhone).forEach(phone => addRecipient(phone, '', phone));
+        } else {
+            text.split(/[\n,;\s]+/).filter(isValidEmail).forEach(email => addRecipient(email));
+        }
         toInput.value = '';
     });
 
@@ -1160,7 +1349,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showDropdownLoading();
         searchTimeout = setTimeout(() => {
             const brandId = brandSelect.value || '';
-            fetch(`/api/crm/contacts/search/?q=${encodeURIComponent(query)}&brand=${brandId}&limit=6`)
+            fetch(`/api/crm/contacts/search/?q=${encodeURIComponent(query)}&brand=${brandId}&limit=6&channel=${currentChannel}`)
                 .then(r => r.json())
                 .then(data => showDropdownResults(data.contacts || []))
                 .catch(() => hideDropdown());
@@ -1181,23 +1370,30 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const colors = ['#f59e0b', '#3b82f6', '#22c55e', '#ec4899', '#6366f1',
                        '#a855f7', '#06b6d4', '#ef4444', '#eab308', '#10b981'];
+        const isPhone = currentChannel === 'sms' || currentChannel === 'whatsapp';
 
         contacts.forEach(c => {
             const item = document.createElement('div');
             item.className = 'dropdown-item';
-            const colorIdx = getColorIndex(c.email);
-            const initials = getInitials(c.name, c.email);
+            const identifier = isPhone ? (c.phone || c.email) : c.email;
+            const colorIdx = getColorIndex(identifier);
+            const initials = getInitials(c.name, identifier);
+            const subtitle = isPhone ? (c.phone || 'No phone') : c.email;
 
             item.innerHTML = `
                 <div class="dropdown-avatar" style="background: ${colors[colorIdx]}">${initials}</div>
                 <div class="dropdown-info">
                     <div class="dropdown-name">${c.name || 'Unknown'}</div>
-                    <div class="dropdown-email">${c.email}</div>
+                    <div class="dropdown-email">${subtitle}</div>
                 </div>
             `;
 
             item.addEventListener('click', () => {
-                addRecipient(c.email, c.name);
+                if (isPhone && c.phone) {
+                    addRecipient('', c.name, c.phone);
+                } else if (!isPhone && c.email) {
+                    addRecipient(c.email, c.name);
+                }
                 toInput.value = '';
                 hideDropdown();
                 toInput.focus();
@@ -1221,7 +1417,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Update status
     const updateStatus = () => {
-        const hasSubject = subjectInput.value.trim();
+        const isPhoneCh = currentChannel === 'sms' || currentChannel === 'whatsapp';
+        const hasSubject = isPhoneCh || subjectInput.value.trim();
         const hasBody = bodyInput.value.trim();
 
         if (hasSubject && hasBody) {
@@ -1262,11 +1459,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     scheduleToggle.addEventListener('change', () => {
         scheduleOptions.style.display = scheduleToggle.checked ? 'flex' : 'none';
-        // Update button text
+        const isPhoneCh = currentChannel === 'sms' || currentChannel === 'whatsapp';
         if (scheduleToggle.checked) {
-            sendBtn.innerHTML = '📅 Preview & Schedule';
+            sendBtn.innerHTML = 'Preview & Schedule';
         } else {
-            sendBtn.innerHTML = 'Send & Add to Pipeline';
+            sendBtn.innerHTML = isPhoneCh ? `Send ${currentChannel.toUpperCase()} & Add to Pipeline` : 'Send & Add to Pipeline';
         }
     });
 
@@ -1285,10 +1482,11 @@ document.addEventListener('DOMContentLoaded', function() {
     sendBtn.addEventListener('click', () => {
         if (isSending) return;
 
+        const isPhoneCh = currentChannel === 'sms' || currentChannel === 'whatsapp';
         if (recipients.length === 0) { showToast('Add at least one recipient'); return; }
         if (!pipelineSelect.value) { showToast('Select a pipeline'); return; }
-        if (!subjectInput.value.trim()) { showToast('Enter a subject'); return; }
-        if (!bodyInput.value.trim()) { showToast('Enter email content'); return; }
+        if (!isPhoneCh && !subjectInput.value.trim()) { showToast('Enter a subject'); return; }
+        if (!bodyInput.value.trim()) { showToast('Enter message content'); return; }
 
         // Check if scheduling is enabled and validate
         if (scheduleToggle.checked) {
@@ -1376,11 +1574,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 body: JSON.stringify({
                     brand_id: brandSelect.value,
-                    pipeline_id: pipelineSelect.value,  // Send pipeline for context
+                    pipeline_id: pipelineSelect.value,
                     email_type: emailTypeSelect.value,
                     tone: toneSelect.value,
                     suggestions: suggestionsInput.value,
-                    recipient_emails: recipientEmails,  // For smart salutation
+                    channel: currentChannel,
+                    recipient_emails: recipientEmails,
                     recipient_name: recipients.length > 0 ? recipients[0].name : '',
                     recipient_company: recipients.length > 0 ? recipients[0].company : ''
                 })
@@ -1389,20 +1588,23 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
 
             if (data.success) {
+                const isPhoneCh = currentChannel === 'sms' || currentChannel === 'whatsapp';
                 // Fill in the subject and body
-                subjectInput.value = data.subject || '';
+                if (!isPhoneCh) {
+                    subjectInput.value = data.subject || '';
+                    if (idFinalSubject) idFinalSubject.value = data.subject || '';
+                    if (idGeneratedSubject) idGeneratedSubject.value = data.subject || '';
+                }
                 bodyInput.value = data.body || '';
-
-                // Sync to Django form
-                if (idFinalSubject) idFinalSubject.value = data.subject || '';
                 if (idFinalBody) idFinalBody.value = data.body || '';
-                if (idGeneratedSubject) idGeneratedSubject.value = data.subject || '';
                 if (idGeneratedBody) idGeneratedBody.value = data.body || '';
 
                 updateStatus();
-                showToast('Email generated successfully!');
+                updateCharCount();
+                const label = isPhoneCh ? currentChannel.toUpperCase() + ' message' : 'Email';
+                showToast(`${label} generated successfully!`);
             } else {
-                showToast(data.error || 'Failed to generate email');
+                showToast(data.error || 'Failed to generate');
             }
         } catch (error) {
             console.error('AI generation error:', error);

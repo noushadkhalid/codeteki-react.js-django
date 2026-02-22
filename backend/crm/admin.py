@@ -65,6 +65,11 @@ class BrandAdmin(ModelAdmin):
             'fields': ('zoho_client_id', 'zoho_client_secret', 'zoho_account_id', 'zoho_refresh_token', 'zoho_api_domain'),
             'classes': ['collapse']
         }),
+        ('Twilio SMS/WhatsApp', {
+            'fields': ('twilio_account_sid', 'twilio_auth_token', 'twilio_phone_number', 'twilio_whatsapp_number'),
+            'classes': ['collapse'],
+            'description': 'Twilio credentials for SMS and WhatsApp outreach. Phone numbers in E.164 format (e.g., +61400000000).'
+        }),
         ('AI Configuration', {
             'fields': ('ai_company_description', 'ai_value_proposition', 'ai_business_updates', 'ai_target_context', 'ai_approach_style', 'backlink_content_types'),
             'description': 'These are used to personalize AI-generated emails. Business updates and target context help AI write context-aware emails.'
@@ -2339,25 +2344,25 @@ class EmailDraftAdmin(ModelAdmin):
     autocomplete_fields = []  # Using custom chip UI instead
 
     fieldsets = (
-        ('1. Brand & Pipeline', {
-            'fields': ('brand', 'pipeline'),
-            'description': 'Select brand and pipeline. After sending, contacts will be added to this pipeline for automated follow-ups.'
+        ('1. Channel, Brand & Pipeline', {
+            'fields': ('channel', 'brand', 'pipeline'),
+            'description': 'Select channel (Email/SMS/WhatsApp), brand, and pipeline.'
         }),
         ('2. Add Recipients', {
-            'fields': ('contacts', 'manual_emails', 'send_to_pipeline_contacts'),
-            'description': 'Select contacts AND/OR add emails manually. By default, contacts already in a pipeline are skipped. Check the box below to include them.'
+            'fields': ('contacts', 'manual_emails', 'manual_phones', 'send_to_pipeline_contacts'),
+            'description': 'For Email: add emails. For SMS/WhatsApp: add phone numbers. Contacts already in a pipeline are skipped by default.'
         }),
-        ('3. Email Settings', {
+        ('3. Message Settings', {
             'fields': ('email_type', 'tone', 'your_suggestions'),
             'description': 'Choose type, tone, and add your key points for AI'
         }),
-        ('4. AI Generated Email', {
+        ('4. AI Generated Content', {
             'fields': ('generated_subject', 'generated_body'),
-            'description': 'Click "Generate AI Email" action to fill these'
+            'description': 'Click "Generate AI" action to fill these. SMS/WhatsApp skip subject.'
         }),
-        ('5. Final Email (First Contact)', {
+        ('5. Final Message', {
             'fields': ('final_subject', 'final_body'),
-            'description': 'This is the first email. After sending, pipeline autopilot handles follow-ups.'
+            'description': 'Final content to send. For SMS/WhatsApp, only body is used.'
         }),
         ('Scheduling', {
             'fields': ('scheduled_for', 'schedule_status', 'schedule_error'),
@@ -2451,9 +2456,9 @@ class EmailDraftAdmin(ModelAdmin):
             return f"Failed", "danger"
         return "-", "secondary"
 
-    @action(description="🤖 Generate AI Email")
+    @action(description="🤖 Generate AI Content")
     def generate_ai_email(self, request, queryset):
-        """Generate AI email content based on user suggestions."""
+        """Generate AI content based on channel and user suggestions."""
         from crm.services.ai_agent import CRMAIAgent
         from django.contrib import messages
 
@@ -2472,6 +2477,7 @@ class EmailDraftAdmin(ModelAdmin):
                 recipient_website = draft.contact.website if draft.contact else draft.recipient_website
 
                 context = {
+                    'channel': draft.channel,
                     'email_type': draft.email_type,
                     'tone': draft.tone,
                     'suggestions': draft.your_suggestions,
@@ -2485,16 +2491,16 @@ class EmailDraftAdmin(ModelAdmin):
                     'value_proposition': draft.brand.ai_value_proposition or '',
                     'pipeline_type': draft.pipeline.pipeline_type if draft.pipeline else '',
                     'pipeline_name': draft.pipeline.name if draft.pipeline else '',
-                    # New context fields for smarter AI
                     'business_updates': draft.brand.ai_business_updates or '',
                     'target_context': draft.brand.ai_target_context or '',
                     'approach_style': draft.brand.ai_approach_style or 'problem_solving',
                 }
 
-                result = ai_agent.compose_email_from_context(context)
+                result = ai_agent.compose_message(context)
 
                 if result.get('success'):
-                    draft.generated_subject = result['subject']
+                    if draft.channel == 'email':
+                        draft.generated_subject = result.get('subject', '')
                     draft.generated_body = result['body']
                     draft.save(update_fields=['generated_subject', 'generated_body', 'updated_at'])
                     generated += 1
@@ -2503,8 +2509,9 @@ class EmailDraftAdmin(ModelAdmin):
             except Exception as e:
                 self.message_user(request, f"❌ {draft}: {str(e)}", messages.ERROR)
 
+        channel_label = 'message' if queryset.first() and queryset.first().channel != 'email' else 'email'
         if generated:
-            self.message_user(request, f"🤖 Generated {generated} email(s)!", messages.SUCCESS)
+            self.message_user(request, f"🤖 Generated {generated} {channel_label}(s)!", messages.SUCCESS)
 
     @action(description="📋 Copy AI to Final")
     def copy_to_final(self, request, queryset):
@@ -2674,6 +2681,128 @@ class EmailDraftAdmin(ModelAdmin):
         return TemplateResponse(request, 'admin/crm/emaildraft/send_preview.html', context)
 
     def _execute_send(self, request, draft, valid_recipients, subject, body_text):
+        """Send emails/SMS/WhatsApp after confirmation. Dispatches by channel."""
+        if draft.channel in ('sms', 'whatsapp'):
+            return self._execute_messaging_send(request, draft, valid_recipients, body_text)
+        return self._execute_email_send(request, draft, valid_recipients, subject, body_text)
+
+    def _execute_messaging_send(self, request, draft, valid_recipients, body_text):
+        """Send SMS or WhatsApp messages."""
+        from crm.services.messaging_service import get_messaging_service
+        from crm.models import Contact, Deal, PipelineStage, EmailLog
+        from django.contrib import messages
+        from django.utils import timezone
+
+        first_stage = PipelineStage.objects.filter(
+            pipeline=draft.pipeline
+        ).order_by('order').first()
+
+        if not first_stage:
+            self.message_user(request, f"❌ {draft}: Pipeline has no stages!", messages.ERROR)
+            return
+
+        messaging_service = get_messaging_service(brand=draft.brand)
+        channel = draft.channel
+
+        if channel == 'sms' and not messaging_service.enabled:
+            self.message_user(request, f"❌ Twilio SMS not configured for {draft.brand.name}!", messages.ERROR)
+            return
+        if channel == 'whatsapp' and not messaging_service.whatsapp_enabled:
+            self.message_user(request, f"❌ Twilio WhatsApp not configured for {draft.brand.name}!", messages.ERROR)
+            return
+
+        sent_count = 0
+        failed_count = 0
+        total_deals = 0
+        first_error = None
+
+        for recipient in valid_recipients:
+            contact = recipient.get('contact')
+            to_phone = recipient.get('phone', '')
+            recipient_name = recipient.get('name', '')
+
+            if not to_phone:
+                continue
+
+            # Send via Twilio
+            if channel == 'sms':
+                result = messaging_service.send_sms(to=to_phone, body=body_text)
+            else:
+                result = messaging_service.send_whatsapp(to=to_phone, body=body_text)
+
+            if result.get('success'):
+                sent_count += 1
+
+                # Create EmailLog for tracking
+                EmailLog.objects.create(
+                    deal=None,
+                    channel=channel,
+                    subject='',
+                    body=body_text,
+                    to_phone=to_phone,
+                    message_sid=result.get('message_sid', ''),
+                    delivery_status='sent',
+                    sent_at=timezone.now(),
+                    ai_generated=bool(draft.generated_body),
+                )
+
+                # Update contact SMS stats
+                if not contact:
+                    contact = Contact.objects.filter(phone=to_phone, brand=draft.brand).first()
+
+                if contact:
+                    contact.last_sms_at = timezone.now()
+                    contact.sms_count = (contact.sms_count or 0) + 1
+                    contact.status = 'contacted'
+                    contact.save(update_fields=['last_sms_at', 'sms_count', 'status'])
+
+                    # Create/update deal
+                    existing_deal = Deal.objects.filter(
+                        contact=contact, pipeline=draft.pipeline, status='active'
+                    ).first()
+                    if not existing_deal:
+                        Deal.objects.create(
+                            contact=contact,
+                            pipeline=draft.pipeline,
+                            current_stage=first_stage,
+                            status='active',
+                            emails_sent=1,
+                            last_contact_date=timezone.now(),
+                            next_action_date=timezone.now() + timezone.timedelta(days=first_stage.days_until_followup or 3),
+                            ai_notes=f"First contact via {channel.upper()} Composer"
+                        )
+                        total_deals += 1
+                    else:
+                        existing_deal.emails_sent = (existing_deal.emails_sent or 0) + 1
+                        existing_deal.last_contact_date = timezone.now()
+                        existing_deal.save(update_fields=['emails_sent', 'last_contact_date'])
+            else:
+                failed_count += 1
+                if failed_count == 1:
+                    first_error = result.get('error', 'Unknown error')
+
+        # Update draft tracking
+        draft.sent_count = (draft.sent_count or 0) + sent_count
+        draft.deals_created = (draft.deals_created or 0) + total_deals
+        draft.is_sent = True
+        draft.sent_at = timezone.now()
+        draft.save(update_fields=['sent_count', 'deals_created', 'is_sent', 'sent_at'])
+
+        from django.http import HttpResponseRedirect
+        from django.urls import reverse
+
+        msg = f"📤 Sent {sent_count} {channel.upper()} message(s)"
+        if total_deals > 0:
+            msg += f", created {total_deals} new deal(s)"
+        if failed_count > 0:
+            msg += f" ({failed_count} failed)"
+            if first_error:
+                msg += f" - Error: {first_error}"
+
+        self.message_user(request, msg, messages.SUCCESS if sent_count > 0 else messages.WARNING)
+        return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))
+
+    def _execute_email_send(self, request, draft, valid_recipients, subject, body_text):
         """Actually send emails after confirmation."""
         from crm.services.email_service import get_email_service
         from crm.services.email_templates import get_styled_email
@@ -3405,9 +3534,15 @@ class LeadSearchAdmin(ModelAdmin):
                 from .models import EmailDraft
                 # Filter to contacts with email (can't email without one)
                 emailable = [c for c in imported_contacts if c.email]
+                # Build manual_emails so the composer UI shows chips in the To field
+                manual_lines = [
+                    f"{c.name} <{c.email}>" if c.name else c.email
+                    for c in emailable
+                ]
                 draft = EmailDraft.objects.create(
                     brand=brand,
                     pipeline=pipeline,
+                    manual_emails='\n'.join(manual_lines),
                 )
                 if emailable:
                     draft.contacts.set(emailable)

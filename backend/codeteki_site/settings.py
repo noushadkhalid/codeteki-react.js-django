@@ -295,6 +295,12 @@ ZEPTOMAIL_HOST = os.getenv("ZEPTOMAIL_HOST", "api.zeptomail.com")  # US: api.zep
 ZEPTOMAIL_FROM_EMAIL = os.getenv("ZEPTOMAIL_FROM_EMAIL", "noreply@desifirms.com.au")
 ZEPTOMAIL_WEBHOOK_KEY = os.getenv("ZEPTOMAIL_WEBHOOK_KEY", "")  # Auth key for bounce webhook verification
 
+# Twilio SMS/WhatsApp Configuration
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
+TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER", "")
+TWILIO_WHATSAPP_NUMBER = os.getenv("TWILIO_WHATSAPP_NUMBER", "")
+
 # Desi Firms webhook integration
 DESIFIRMS_WEBHOOK_KEY = os.getenv("DESIFIRMS_WEBHOOK_KEY", "")
 
@@ -748,7 +754,7 @@ UNFOLD = {
                         "link": reverse_lazy("admin:crm_contact_changelist"),
                     },
                     {
-                        "title": "Email Composer",
+                        "title": "Message Composer",
                         "icon": "edit_note",
                         "link": reverse_lazy("admin:crm_emaildraft_changelist"),
                     },
@@ -797,7 +803,7 @@ UNFOLD = {
                         "link": reverse_lazy("admin:crm_pipeline_changelist"),
                     },
                     {
-                        "title": "Email Logs",
+                        "title": "Message Logs",
                         "icon": "mark_email_read",
                         "link": reverse_lazy("admin:crm_emaillog_changelist"),
                     },
