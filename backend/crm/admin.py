@@ -3443,6 +3443,7 @@ class LeadSearchAdmin(ModelAdmin):
                 })
 
             with_email = sum(1 for b in result['businesses'] if b.get('email'))
+            with_phone = sum(1 for b in result['businesses'] if b.get('phone'))
 
             context = {
                 **self.admin_site.each_context(request),
@@ -3450,6 +3451,7 @@ class LeadSearchAdmin(ModelAdmin):
                 'businesses': result['businesses'],
                 'total': result['total'],
                 'with_email': with_email,
+                'with_phone': with_phone,
                 'without_website': result.get('without_website', 0),
                 'search_id': str(lead_search.id),
                 'brand_id': brand_id,
@@ -3467,6 +3469,7 @@ class LeadSearchAdmin(ModelAdmin):
 
         is_import = request.method == 'POST' and (
             'do_import' in request.POST or 'do_import_and_compose' in request.POST
+            or 'do_import_and_sms' in request.POST
         )
         if is_import:
             import json
@@ -3476,7 +3479,6 @@ class LeadSearchAdmin(ModelAdmin):
             search_id = request.POST.get('search_id', '')
             pipeline_id = request.POST.get('pipeline', '')
             selected = request.POST.getlist('selected_places')
-            open_composer = 'do_import_and_compose' in request.POST
 
             if not selected:
                 messages.warning(request, "No businesses selected for import.")
@@ -3530,32 +3532,60 @@ class LeadSearchAdmin(ModelAdmin):
                 f"Imported {imported} contact(s) under {brand.name}. Skipped {skipped} duplicate(s).",
             )
 
-            if open_composer and imported_contacts:
+            open_composer = 'do_import_and_compose' in request.POST
+            open_sms_composer = 'do_import_and_sms' in request.POST
+
+            if (open_composer or open_sms_composer) and imported_contacts:
                 from .models import EmailDraft
-                # Filter to contacts with email (can't email without one)
-                emailable = [c for c in imported_contacts if c.email]
-                # Build manual_emails so the composer UI shows chips in the To field
-                manual_lines = [
-                    f"{c.name} <{c.email}>" if c.name else c.email
-                    for c in emailable
-                ]
-                draft = EmailDraft.objects.create(
-                    brand=brand,
-                    pipeline=pipeline,
-                    manual_emails='\n'.join(manual_lines),
-                )
-                if emailable:
-                    draft.contacts.set(emailable)
-                    messages.info(
-                        request,
-                        f"Email Composer created with {len(emailable)} contacts that have email addresses.",
+
+                if open_sms_composer:
+                    # SMS Composer - use phone-only contacts
+                    phoneable = [c for c in imported_contacts if c.phone]
+                    manual_phone_lines = [
+                        f"{c.name} <{c.phone}>" if c.name else c.phone
+                        for c in phoneable
+                    ]
+                    draft = EmailDraft.objects.create(
+                        brand=brand,
+                        pipeline=pipeline,
+                        channel='sms',
+                        manual_phones='\n'.join(manual_phone_lines),
                     )
+                    if phoneable:
+                        draft.contacts.set(phoneable)
+                        messages.info(
+                            request,
+                            f"SMS Composer created with {len(phoneable)} contacts that have phone numbers.",
+                        )
+                    else:
+                        messages.warning(
+                            request,
+                            "SMS Composer created but none of the imported contacts have phone numbers.",
+                        )
                 else:
-                    messages.warning(
-                        request,
-                        "Email Composer created but none of the imported contacts have email addresses. "
-                        "Add contacts manually or use the contacts selector.",
+                    # Email Composer - use contacts with email
+                    emailable = [c for c in imported_contacts if c.email]
+                    manual_lines = [
+                        f"{c.name} <{c.email}>" if c.name else c.email
+                        for c in emailable
+                    ]
+                    draft = EmailDraft.objects.create(
+                        brand=brand,
+                        pipeline=pipeline,
+                        manual_emails='\n'.join(manual_lines),
                     )
+                    if emailable:
+                        draft.contacts.set(emailable)
+                        messages.info(
+                            request,
+                            f"Email Composer created with {len(emailable)} contacts that have email addresses.",
+                        )
+                    else:
+                        messages.warning(
+                            request,
+                            "Email Composer created but none of the imported contacts have email addresses. "
+                            "Try 'Import & Open in SMS Composer' for phone-only contacts.",
+                        )
                 return redirect(reverse('admin:crm_emaildraft_change', args=[draft.pk]))
 
             return redirect(reverse('admin:crm_leadsearch_changelist'))
