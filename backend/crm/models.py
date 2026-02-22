@@ -465,9 +465,8 @@ class Pipeline(models.Model):
         ('realestate', 'Real Estate'),
         ('classifieds', 'Classifieds'),
         ('registered_users', 'Registered Users (Nudge)'),
-        # SMS/WhatsApp campaigns
-        ('sms_campaign', 'SMS Campaign'),
-        ('whatsapp_campaign', 'WhatsApp Campaign'),
+        # Phone campaigns (SMS/WhatsApp)
+        ('phone_campaign', 'Phone Campaign (SMS/WhatsApp)'),
     ]
 
     brand = models.ForeignKey(
@@ -670,8 +669,7 @@ class SequenceStep(models.Model):
 
 CHANNEL_CHOICES = [
     ('email', 'Email'),
-    ('sms', 'SMS'),
-    ('whatsapp', 'WhatsApp'),
+    ('phone', 'SMS/WhatsApp'),
 ]
 
 
@@ -1264,7 +1262,7 @@ class EmailDraft(models.Model):
         """Get all recipients as list of dicts. For email: email, name, contact. For SMS/WhatsApp: phone, name, contact."""
         recipients = []
 
-        if self.channel in ('sms', 'whatsapp'):
+        if self.channel == 'phone':
             return self._get_phone_recipients()
 
         # Email channel - existing behavior

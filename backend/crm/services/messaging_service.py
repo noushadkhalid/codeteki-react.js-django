@@ -182,6 +182,36 @@ class TwilioMessagingService:
             }
 
 
+    def send_smart(self, to: str, body: str) -> dict:
+        """
+        Try WhatsApp first (cheaper), fall back to SMS if WhatsApp fails.
+
+        Returns:
+            {success, message_sid, channel_used, error}
+        """
+        # Try WhatsApp first if configured
+        if self.whatsapp_enabled:
+            result = self.send_whatsapp(to, body)
+            if result['success']:
+                result['channel_used'] = 'whatsapp'
+                return result
+            logger.info(f"WhatsApp failed for {to}, falling back to SMS: {result.get('error')}")
+
+        # Fall back to SMS
+        if self.enabled:
+            result = self.send_sms(to, body)
+            result['channel_used'] = 'sms'
+            return result
+
+        brand_info = f" for {self.brand.name}" if self.brand else ""
+        return {
+            'success': False,
+            'message_sid': None,
+            'channel_used': None,
+            'error': f'No messaging channel configured{brand_info}.',
+        }
+
+
 def get_messaging_service(brand: Optional['Brand'] = None) -> TwilioMessagingService:
     """Factory function to get TwilioMessagingService for a brand."""
     return TwilioMessagingService(brand=brand)

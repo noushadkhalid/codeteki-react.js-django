@@ -1333,7 +1333,7 @@ class ContactSearchView(View):
             contacts = contacts.filter(brand_id=brand_id)
 
         # Filter by channel capability
-        if channel in ('sms', 'whatsapp'):
+        if channel == 'phone':
             contacts = contacts.exclude(phone='').filter(sms_opted_out=False)
         else:
             contacts = contacts.exclude(email='')

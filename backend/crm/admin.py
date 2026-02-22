@@ -2346,7 +2346,7 @@ class EmailDraftAdmin(ModelAdmin):
     fieldsets = (
         ('1. Channel, Brand & Pipeline', {
             'fields': ('channel', 'brand', 'pipeline'),
-            'description': 'Select channel (Email/SMS/WhatsApp), brand, and pipeline.'
+            'description': 'Select channel (Email or SMS/WhatsApp), brand, and pipeline.'
         }),
         ('2. Add Recipients', {
             'fields': ('contacts', 'manual_emails', 'manual_phones', 'send_to_pipeline_contacts'),
@@ -2682,12 +2682,12 @@ class EmailDraftAdmin(ModelAdmin):
 
     def _execute_send(self, request, draft, valid_recipients, subject, body_text):
         """Send emails/SMS/WhatsApp after confirmation. Dispatches by channel."""
-        if draft.channel in ('sms', 'whatsapp'):
+        if draft.channel == 'phone':
             return self._execute_messaging_send(request, draft, valid_recipients, body_text)
         return self._execute_email_send(request, draft, valid_recipients, subject, body_text)
 
     def _execute_messaging_send(self, request, draft, valid_recipients, body_text):
-        """Send SMS or WhatsApp messages."""
+        """Send messages via WhatsApp-first-then-SMS smart routing."""
         from crm.services.messaging_service import get_messaging_service
         from crm.models import Contact, Deal, PipelineStage, EmailLog
         from django.contrib import messages
@@ -2702,41 +2702,40 @@ class EmailDraftAdmin(ModelAdmin):
             return
 
         messaging_service = get_messaging_service(brand=draft.brand)
-        channel = draft.channel
 
-        if channel == 'sms' and not messaging_service.enabled:
-            self.message_user(request, f"❌ Twilio SMS not configured for {draft.brand.name}!", messages.ERROR)
-            return
-        if channel == 'whatsapp' and not messaging_service.whatsapp_enabled:
-            self.message_user(request, f"❌ Twilio WhatsApp not configured for {draft.brand.name}!", messages.ERROR)
+        if not messaging_service.enabled and not messaging_service.whatsapp_enabled:
+            self.message_user(request, f"❌ Twilio not configured for {draft.brand.name}!", messages.ERROR)
             return
 
         sent_count = 0
         failed_count = 0
         total_deals = 0
+        wa_count = 0
+        sms_count = 0
         first_error = None
 
         for recipient in valid_recipients:
             contact = recipient.get('contact')
             to_phone = recipient.get('phone', '')
-            recipient_name = recipient.get('name', '')
 
             if not to_phone:
                 continue
 
-            # Send via Twilio
-            if channel == 'sms':
-                result = messaging_service.send_sms(to=to_phone, body=body_text)
-            else:
-                result = messaging_service.send_whatsapp(to=to_phone, body=body_text)
+            # Smart send: try WhatsApp first, fall back to SMS
+            result = messaging_service.send_smart(to=to_phone, body=body_text)
+            channel_used = result.get('channel_used', 'sms')
 
             if result.get('success'):
                 sent_count += 1
+                if channel_used == 'whatsapp':
+                    wa_count += 1
+                else:
+                    sms_count += 1
 
-                # Create EmailLog for tracking
+                # Create log for tracking
                 EmailLog.objects.create(
                     deal=None,
-                    channel=channel,
+                    channel=channel_used,
                     subject='',
                     body=body_text,
                     to_phone=to_phone,
@@ -2746,7 +2745,7 @@ class EmailDraftAdmin(ModelAdmin):
                     ai_generated=bool(draft.generated_body),
                 )
 
-                # Update contact SMS stats
+                # Update contact stats
                 if not contact:
                     contact = Contact.objects.filter(phone=to_phone, brand=draft.brand).first()
 
@@ -2769,7 +2768,7 @@ class EmailDraftAdmin(ModelAdmin):
                             emails_sent=1,
                             last_contact_date=timezone.now(),
                             next_action_date=timezone.now() + timezone.timedelta(days=first_stage.days_until_followup or 3),
-                            ai_notes=f"First contact via {channel.upper()} Composer"
+                            ai_notes=f"First contact via {channel_used.upper()} Composer"
                         )
                         total_deals += 1
                     else:
@@ -2791,7 +2790,12 @@ class EmailDraftAdmin(ModelAdmin):
         from django.http import HttpResponseRedirect
         from django.urls import reverse
 
-        msg = f"📤 Sent {sent_count} {channel.upper()} message(s)"
+        parts = []
+        if wa_count > 0:
+            parts.append(f"{wa_count} WhatsApp")
+        if sms_count > 0:
+            parts.append(f"{sms_count} SMS")
+        msg = f"Sent {' + '.join(parts)} message(s)"
         if total_deals > 0:
             msg += f", created {total_deals} new deal(s)"
         if failed_count > 0:
@@ -3548,7 +3552,7 @@ class LeadSearchAdmin(ModelAdmin):
                     draft = EmailDraft.objects.create(
                         brand=brand,
                         pipeline=pipeline,
-                        channel='sms',
+                        channel='phone',
                         manual_phones='\n'.join(manual_phone_lines),
                     )
                     if phoneable:

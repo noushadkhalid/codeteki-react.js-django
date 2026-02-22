@@ -2099,10 +2099,8 @@ Respond in JSON format:
         Returns {'body': str, 'subject': str (email only), 'success': bool}
         """
         channel = context.get('channel', 'email')
-        if channel == 'sms':
+        if channel == 'phone':
             return self.compose_sms(context)
-        elif channel == 'whatsapp':
-            return self.compose_whatsapp(context)
         return self.compose_email_from_context(context)
 
     def compose_sms(self, context: dict) -> dict:

@@ -699,8 +699,7 @@
                     <label>Channel:</label>
                     <select id="channelSelect" style="min-width:100px;">
                         <option value="email">Email</option>
-                        <option value="sms">SMS</option>
-                        <option value="whatsapp">WhatsApp</option>
+                        <option value="phone">SMS/WhatsApp</option>
                     </select>
                 </div>
                 <div class="header-select">
@@ -940,7 +939,7 @@ document.addEventListener('DOMContentLoaded', function() {
         currentChannel = channel;
         if (idChannel) idChannel.value = channel;
 
-        const isPhone = channel === 'sms' || channel === 'whatsapp';
+        const isPhone = channel === 'phone';
 
         // Toggle subject row visibility
         if (subjectRow) {
@@ -950,15 +949,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Toggle char counter
         if (charCounter) {
             charCounter.classList.toggle('show', isPhone);
-            charLimit.textContent = channel === 'sms' ? '160' : '1024';
+            charLimit.textContent = '160';
         }
 
         // Update To input placeholder
         if (isPhone) {
             toInput.placeholder = 'Type phone + Enter, or search contacts...';
-            bodyInput.placeholder = channel === 'sms'
-                ? 'Write your SMS here (max 160 chars)...'
-                : 'Write your WhatsApp message here...';
+            bodyInput.placeholder = 'Write your message here (WhatsApp first, SMS fallback)...';
         } else {
             toInput.placeholder = 'Type email + Enter, or search contacts...';
             bodyInput.placeholder = 'Write your email here...';
@@ -966,7 +963,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Update send button text
         if (sendBtn) {
-            sendBtn.innerHTML = isPhone ? `Send ${channel.toUpperCase()} & Add to Pipeline` : 'Send & Add to Pipeline';
+            sendBtn.innerHTML = isPhone ? 'Send SMS/WhatsApp & Add to Pipeline' : 'Send & Add to Pipeline';
         }
 
         updateCharCount();
@@ -976,15 +973,11 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateCharCount() {
         if (currentChannel === 'email') return;
         const len = bodyInput.value.length;
-        const limit = currentChannel === 'sms' ? 160 : 1024;
+        const limit = 160;
         charCount.textContent = len;
         charCount.className = 'count' + (len > limit ? ' over' : len > limit * 0.9 ? ' warn' : '');
-        if (currentChannel === 'sms') {
-            const segments = Math.ceil(len / 160) || 1;
-            segmentInfo.textContent = segments > 1 ? `(${segments} segments)` : '(1 segment)';
-        } else {
-            segmentInfo.textContent = '';
-        }
+        const segments = Math.ceil(len / 160) || 1;
+        segmentInfo.textContent = segments > 1 ? `(${segments} SMS segments)` : '(1 segment)';
     }
 
     channelSelect.addEventListener('change', () => switchChannel(channelSelect.value));
@@ -1061,14 +1054,8 @@ document.addEventListener('DOMContentLoaded', function() {
             { value: 'partnership_followup', label: 'Partnership Follow-up' },
             { value: 'custom', label: 'Custom' }
         ],
-        // SMS/WhatsApp campaigns
-        'sms_campaign': [
-            { value: 'services_intro', label: 'Services Introduction' },
-            { value: 'invitation', label: 'Invitation' },
-            { value: 'followup', label: 'Follow-up' },
-            { value: 'custom', label: 'Custom' }
-        ],
-        'whatsapp_campaign': [
+        // Phone campaigns (SMS/WhatsApp)
+        'phone_campaign': [
             { value: 'services_intro', label: 'Services Introduction' },
             { value: 'invitation', label: 'Invitation' },
             { value: 'followup', label: 'Follow-up' },
@@ -1100,9 +1087,8 @@ document.addEventListener('DOMContentLoaded', function() {
         else if (pipelineText.includes('sales')) pipelineType = 'sales';
         else if (pipelineText.includes('backlink')) pipelineType = 'backlink';
         else if (pipelineText.includes('partnership')) pipelineType = 'partnership';
-        // SMS/WhatsApp campaigns
-        else if (pipelineText.includes('sms')) pipelineType = 'sms_campaign';
-        else if (pipelineText.includes('whatsapp')) pipelineType = 'whatsapp_campaign';
+        // Phone campaigns
+        else if (pipelineText.includes('phone')) pipelineType = 'phone_campaign';
 
         const options = emailTypesByPipeline[pipelineType] || emailTypesByPipeline['default'];
 
@@ -1217,7 +1203,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Add recipient
     const addRecipient = (email, name = '', phone = '') => {
-        const isPhone = currentChannel === 'sms' || currentChannel === 'whatsapp';
+        const isPhone = currentChannel === 'phone';
         if (isPhone) {
             phone = phone || email;
             email = '';
@@ -1249,7 +1235,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Sync to Django form
     const syncRecipientsToForm = () => {
-        const isPhone = currentChannel === 'sms' || currentChannel === 'whatsapp';
+        const isPhone = currentChannel === 'phone';
         if (isPhone) {
             if (idManualPhones) {
                 idManualPhones.value = recipients.map(r => {
@@ -1265,7 +1251,7 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // Load existing recipients
-    if (currentChannel === 'sms' || currentChannel === 'whatsapp') {
+    if (currentChannel === 'phone') {
         // Load phone recipients
         if (idManualPhones && idManualPhones.value) {
             idManualPhones.value.split('\n').forEach(line => {
@@ -1305,7 +1291,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.key === 'Enter' || e.key === ',') {
             e.preventDefault();
             const value = toInput.value.trim().replace(',', '');
-            const isPhone = currentChannel === 'sms' || currentChannel === 'whatsapp';
+            const isPhone = currentChannel === 'phone';
             if (isPhone) {
                 if (isValidPhone(value)) {
                     addRecipient(value, '', value);
@@ -1331,7 +1317,7 @@ document.addEventListener('DOMContentLoaded', function() {
     toInput.addEventListener('paste', (e) => {
         e.preventDefault();
         const text = (e.clipboardData || window.clipboardData).getData('text');
-        const isPhone = currentChannel === 'sms' || currentChannel === 'whatsapp';
+        const isPhone = currentChannel === 'phone';
         if (isPhone) {
             text.split(/[\n,;]+/).map(s => s.trim()).filter(isValidPhone).forEach(phone => addRecipient(phone, '', phone));
         } else {
@@ -1371,7 +1357,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const colors = ['#f59e0b', '#3b82f6', '#22c55e', '#ec4899', '#6366f1',
                        '#a855f7', '#06b6d4', '#ef4444', '#eab308', '#10b981'];
-        const isPhone = currentChannel === 'sms' || currentChannel === 'whatsapp';
+        const isPhone = currentChannel === 'phone';
 
         contacts.forEach(c => {
             const item = document.createElement('div');
@@ -1418,7 +1404,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Update status
     const updateStatus = () => {
-        const isPhoneCh = currentChannel === 'sms' || currentChannel === 'whatsapp';
+        const isPhoneCh = currentChannel === 'phone';
         const hasSubject = isPhoneCh || subjectInput.value.trim();
         const hasBody = bodyInput.value.trim();
 
@@ -1460,11 +1446,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     scheduleToggle.addEventListener('change', () => {
         scheduleOptions.style.display = scheduleToggle.checked ? 'flex' : 'none';
-        const isPhoneCh = currentChannel === 'sms' || currentChannel === 'whatsapp';
+        const isPhoneCh = currentChannel === 'phone';
         if (scheduleToggle.checked) {
             sendBtn.innerHTML = 'Preview & Schedule';
         } else {
-            sendBtn.innerHTML = isPhoneCh ? `Send ${currentChannel.toUpperCase()} & Add to Pipeline` : 'Send & Add to Pipeline';
+            sendBtn.innerHTML = isPhoneCh ? 'Send SMS/WhatsApp & Add to Pipeline' : 'Send & Add to Pipeline';
         }
     });
 
@@ -1482,7 +1468,7 @@ document.addEventListener('DOMContentLoaded', function() {
     sendBtn.addEventListener('click', () => {
         if (isSending) return;
 
-        const isPhoneCh = currentChannel === 'sms' || currentChannel === 'whatsapp';
+        const isPhoneCh = currentChannel === 'phone';
         if (recipients.length === 0) { showToast('Add at least one recipient'); return; }
         if (!pipelineSelect.value) { showToast('Select a pipeline'); return; }
         if (!isPhoneCh && !subjectInput.value.trim()) { showToast('Enter a subject'); return; }
@@ -1588,7 +1574,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
 
             if (data.success) {
-                const isPhoneCh = currentChannel === 'sms' || currentChannel === 'whatsapp';
+                const isPhoneCh = currentChannel === 'phone';
                 // Fill in the subject and body
                 if (!isPhoneCh) {
                     subjectInput.value = data.subject || '';
@@ -1601,7 +1587,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 updateStatus();
                 updateCharCount();
-                const label = isPhoneCh ? currentChannel.toUpperCase() + ' message' : 'Email';
+                const label = isPhoneCh ? 'SMS/WhatsApp message' : 'Email';
                 showToast(`${label} generated successfully!`);
             } else {
                 showToast(data.error || 'Failed to generate');
