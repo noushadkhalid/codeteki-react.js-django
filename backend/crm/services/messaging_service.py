@@ -161,13 +161,28 @@ class TwilioMessagingService:
             }
 
         try:
+            import time
             client = self._get_client()
             message = client.messages.create(
                 body=body,
                 from_=f'whatsapp:{self.whatsapp_number}',
                 to=f'whatsapp:{to}',
             )
-            logger.info(f"WhatsApp sent to {to}: SID={message.sid}")
+            logger.info(f"WhatsApp queued to {to}: SID={message.sid}, status={message.status}")
+
+            # Twilio accepts WhatsApp messages as 'queued' even when they'll fail
+            # (e.g. template not approved, user not on WhatsApp). Wait and re-check.
+            if message.status in ('queued', 'accepted'):
+                time.sleep(3)
+                updated = client.messages(message.sid).fetch()
+                if updated.status == 'failed':
+                    logger.warning(f"WhatsApp failed after queue for {to}: error={updated.error_code}")
+                    return {
+                        'success': False,
+                        'message_sid': message.sid,
+                        'error': f'WhatsApp failed: error {updated.error_code}',
+                    }
+
             return {
                 'success': True,
                 'message_sid': message.sid,
