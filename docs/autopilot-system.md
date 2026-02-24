@@ -228,6 +228,43 @@ Some pipeline stages have **pre-designed email templates** (not AI-generated).
 The system checks for a template first. If one exists, it uses that instead of AI.
 This is common for initial outreach emails where we want consistent messaging.
 
+### SMS & WhatsApp Campaigns (Phone Channel)
+
+The AI has separate composers for each channel:
+- `compose_whatsapp()` — up to 1024 chars, WhatsApp formatting (*bold*, _italic_), buttons
+- `compose_sms()` — up to 140 chars, plain text only
+
+### Smart Fallback: WhatsApp → SMS
+
+When sending via the phone channel, `send_smart()` tries WhatsApp first (cheaper per
+character), then falls back to SMS if the recipient isn't on WhatsApp.
+
+The key: **SMS gets a shorter message**, not the same long WhatsApp message.
+
+```
+Compose WhatsApp message (up to 1024 chars)
+  │
+  ├─ If body > 140 chars:
+  │   └─ AI auto-generates a short 140-char SMS version (once, before the send loop)
+  │
+  ├─ For each recipient:
+  │   ├─ Try WhatsApp first → send full message (1 WhatsApp charge)
+  │   │
+  │   └─ WhatsApp failed? (user not on WhatsApp)
+  │       └─ Fall back to SMS → send SHORT version (1 SMS charge, not 3-4)
+```
+
+**Cost comparison for a 450-char message:**
+
+| Without smart fallback | With smart fallback |
+|---|---|
+| 3 SMS segments = ~$0.20 | 1 SMS segment = ~$0.07 |
+
+Costs per message (Australia):
+- WhatsApp business-initiated: ~$0.08-0.12 AUD
+- SMS: ~$0.06-0.08 AUD per 160-char segment
+- WhatsApp user-initiated (reply window): ~$0.03-0.05 AUD
+
 ---
 
 ## 5. The Email Sending Flow (`queue_deal_email`)
