@@ -2748,20 +2748,21 @@ class EmailDraftAdmin(ModelAdmin):
         from crm.tasks import is_office_hours, get_next_send_time
         from django.contrib import messages
 
-        if not is_office_hours():
-            next_time = get_next_send_time()
-            draft.scheduled_for = next_time
-            draft.schedule_status = 'scheduled'
-            draft.save(update_fields=['scheduled_for', 'schedule_status'])
-            display = next_time.strftime('%a %d %b %I:%M %p AEST')
-            self.message_user(
-                request,
-                f"Outside business hours (Mon-Fri 9AM-6PM, Sat 9AM-1PM). Auto-scheduled for {display}.",
-                messages.WARNING,
-            )
-            from django.http import HttpResponseRedirect
-            from django.urls import reverse
-            return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))
+        # TODO: Re-enable business hours check after testing is complete
+        # if not is_office_hours():
+        #     next_time = get_next_send_time()
+        #     draft.scheduled_for = next_time
+        #     draft.schedule_status = 'scheduled'
+        #     draft.save(update_fields=['scheduled_for', 'schedule_status'])
+        #     display = next_time.strftime('%a %d %b %I:%M %p AEST')
+        #     self.message_user(
+        #         request,
+        #         f"Outside business hours (Mon-Fri 9AM-6PM, Sat 9AM-1PM). Auto-scheduled for {display}.",
+        #         messages.WARNING,
+        #     )
+        #     from django.http import HttpResponseRedirect
+        #     from django.urls import reverse
+        #     return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))
 
         if draft.channel == 'phone':
             return self._execute_messaging_send(request, draft, valid_recipients, body_text)
