@@ -2100,7 +2100,9 @@ Respond in JSON format:
         """
         channel = context.get('channel', 'email')
         if channel == 'phone':
-            return self.compose_sms(context)
+            # Generate WhatsApp-length message (up to 1024 chars)
+            # SMS fallback is handled by send_smart() at send time
+            return self.compose_whatsapp(context)
         return self.compose_email_from_context(context)
 
     def compose_sms(self, context: dict) -> dict:
@@ -2168,6 +2170,7 @@ Respond with ONLY the SMS message text, nothing else. No quotes, no labels."""
         """
         brand_name = context.get('brand_name', 'Our Company')
         brand_description = context.get('brand_description', '')
+        brand_website = context.get('brand_website', '')
         value_proposition = context.get('value_proposition', '')
         suggestions = context.get('suggestions', '')
         recipient_name = context.get('recipient_name', '')
@@ -2182,12 +2185,13 @@ CONSTRAINTS:
 - Maximum 1024 characters
 - Use WhatsApp formatting: *bold*, _italic_, ~strikethrough~
 - Conversational, friendly tone (WhatsApp is informal)
-- Include a clear call-to-action
+- Include a clear call-to-action with the website link if available
 - No HTML
 - No subject line needed
 
 CONTEXT:
 - Brand: {brand_name}
+- Brand website: {brand_website or 'None'}
 - Brand description: {brand_description}
 - Value proposition: {value_proposition}
 - Email type: {email_type}
