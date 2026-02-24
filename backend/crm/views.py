@@ -1457,9 +1457,9 @@ def pipeline_dashboard(request):
     """
     from django.contrib import admin
 
-    pipelines = Pipeline.objects.filter(is_active=True).prefetch_related(
+    pipelines = Pipeline.objects.prefetch_related(
         'stages', 'deals'
-    ).order_by('name')
+    ).order_by('brand__name', 'name')
 
     pipeline_data = []
     for pipeline in pipelines:
