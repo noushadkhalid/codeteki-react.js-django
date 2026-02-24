@@ -2556,10 +2556,16 @@ class EmailDraftAdmin(ModelAdmin):
 
         subject = draft.final_subject or draft.generated_subject
         body_text = draft.final_body or draft.generated_body
+        is_phone = draft.channel == 'phone'
 
-        if not subject or not body_text:
-            self.message_user(request, f"⚠️ {draft}: No content - generate first", messages.WARNING)
-            return
+        if is_phone:
+            if not body_text:
+                self.message_user(request, f"⚠️ {draft}: No message content - generate first", messages.WARNING)
+                return
+        else:
+            if not subject or not body_text:
+                self.message_user(request, f"⚠️ {draft}: No content - generate first", messages.WARNING)
+                return
 
         # Get all recipients and categorize them
         all_recipients = draft.get_all_recipients()
@@ -2573,50 +2579,84 @@ class EmailDraftAdmin(ModelAdmin):
         in_pipeline_count = 0
         blocked_count = 0
 
-        for recipient in all_recipients:
-            recipient_email = Contact.normalize_email(recipient['email'])
-            if not recipient_email:
-                continue
+        if is_phone:
+            for recipient in all_recipients:
+                phone = recipient.get('phone', '')
+                if not phone:
+                    continue
 
-            contact = recipient.get('contact')
-            if not contact:
-                contact = Contact.objects.filter(email__iexact=recipient_email, brand=draft.brand).first()
+                contact = recipient.get('contact')
+                if not contact:
+                    contact = Contact.objects.filter(phone=phone, brand=draft.brand).first()
 
-            brand_slug = draft.brand.slug if draft.brand else None
-            status = 'ok'
+                status = 'ok'
+                if contact and contact.sms_opted_out:
+                    status = 'blocked'
+                    blocked_count += 1
+                elif contact and not draft.send_to_pipeline_contacts:
+                    if Deal.objects.filter(contact=contact, status='active').exists():
+                        status = 'pipeline'
+                        in_pipeline_count += 1
 
-            # Check unsubscribed
-            if contact and (contact.is_unsubscribed or contact.is_unsubscribed_from_brand(brand_slug)):
-                status = 'blocked'
-                blocked_count += 1
-            # Check in pipeline
-            elif contact and not draft.send_to_pipeline_contacts:
-                if Deal.objects.filter(contact=contact, status='active').exists():
-                    status = 'pipeline'
-                    in_pipeline_count += 1
+                if status == 'ok':
+                    valid_recipients.append({
+                        'phone': phone,
+                        'name': recipient.get('name', ''),
+                        'company': recipient.get('company', ''),
+                        'contact': contact,
+                    })
 
-            if status == 'ok':
-                valid_recipients.append({
+                recipients_preview.append({
+                    'phone': phone,
+                    'name': recipient.get('name', ''),
+                    'company': recipient.get('company', ''),
+                    'status': status,
+                })
+        else:
+            for recipient in all_recipients:
+                recipient_email = Contact.normalize_email(recipient['email'])
+                if not recipient_email:
+                    continue
+
+                contact = recipient.get('contact')
+                if not contact:
+                    contact = Contact.objects.filter(email__iexact=recipient_email, brand=draft.brand).first()
+
+                brand_slug = draft.brand.slug if draft.brand else None
+                status = 'ok'
+
+                # Check unsubscribed
+                if contact and (contact.is_unsubscribed or contact.is_unsubscribed_from_brand(brand_slug)):
+                    status = 'blocked'
+                    blocked_count += 1
+                # Check in pipeline
+                elif contact and not draft.send_to_pipeline_contacts:
+                    if Deal.objects.filter(contact=contact, status='active').exists():
+                        status = 'pipeline'
+                        in_pipeline_count += 1
+
+                if status == 'ok':
+                    valid_recipients.append({
+                        'email': recipient_email,
+                        'name': recipient.get('name', ''),
+                        'company': recipient.get('company', ''),
+                        'website': recipient.get('website', ''),
+                        'contact': contact,
+                    })
+
+                recipients_preview.append({
                     'email': recipient_email,
                     'name': recipient.get('name', ''),
                     'company': recipient.get('company', ''),
-                    'website': recipient.get('website', ''),
-                    'contact': contact,
+                    'status': status,
                 })
 
-            recipients_preview.append({
-                'email': recipient_email,
-                'name': recipient.get('name', ''),
-                'company': recipient.get('company', ''),
-                'status': status,
-            })
-
-        # If confirmation received, send emails
+        # If confirmation received, send
         if 'confirm_send' in request.POST:
             try:
                 return self._execute_send(request, draft, valid_recipients, subject, body_text)
             except Exception as e:
-                self.message_user(request, f"❌ Error sending emails: {str(e)}", messages.ERROR)
+                self.message_user(request, f"❌ Error sending: {str(e)}", messages.ERROR)
                 from django.http import HttpResponseRedirect
                 from django.urls import reverse
                 return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))
@@ -2631,7 +2671,30 @@ class EmailDraftAdmin(ModelAdmin):
                 from django.urls import reverse
                 return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))
 
-        # Generate preview HTML for first recipient (use any recipient for preview, even if in pipeline)
+        # Phone channel — show message preview
+        if is_phone:
+            sms_fallback = ''
+            if len(body_text) > 140:
+                sms_fallback = body_text[:137] + '...'
+
+            context = {
+                **self.admin_site.each_context(request),
+                'title': f'Message Preview',
+                'draft': draft,
+                'body_text': body_text,
+                'sms_fallback': sms_fallback,
+                'char_count': len(body_text),
+                'recipients_preview': recipients_preview[:20],
+                'valid_count': len(valid_recipients),
+                'in_pipeline_count': in_pipeline_count,
+                'blocked_count': blocked_count,
+                'total_count': len(all_recipients),
+                'action_checkbox_name': ACTION_CHECKBOX_NAME,
+                'opts': self.model._meta,
+            }
+            return TemplateResponse(request, 'admin/crm/emaildraft/message_preview.html', context)
+
+        # Email channel — generate preview HTML
         preview_html = None
         preview_recipients = valid_recipients if valid_recipients else all_recipients
         if preview_recipients:
@@ -2658,7 +2721,7 @@ class EmailDraftAdmin(ModelAdmin):
             )
             preview_html = styled.get('html', '')
 
-        # Show preview page
+        # Show email preview page
         draft_title = draft.final_subject or draft.generated_subject or draft.get_email_type_display()
         context = {
             **self.admin_site.each_context(request),
@@ -3145,13 +3208,18 @@ class EmailDraftAdmin(ModelAdmin):
             self.message_user(request, f"❌ No pipeline selected!", messages.ERROR)
             return HttpResponseRedirect(request.path)
 
-        # Get email content
         subject = draft.final_subject or draft.generated_subject
         body_text = draft.final_body or draft.generated_body
+        is_phone = draft.channel == 'phone'
 
-        if not subject or not body_text:
-            self.message_user(request, f"⚠️ No content - generate or write email first", messages.WARNING)
-            return HttpResponseRedirect(request.path)
+        if is_phone:
+            if not body_text:
+                self.message_user(request, f"⚠️ No message content - generate first", messages.WARNING)
+                return HttpResponseRedirect(request.path)
+        else:
+            if not subject or not body_text:
+                self.message_user(request, f"⚠️ No content - generate or write email first", messages.WARNING)
+                return HttpResponseRedirect(request.path)
 
         # Get all recipients
         all_recipients = draft.get_all_recipients()
@@ -3165,51 +3233,82 @@ class EmailDraftAdmin(ModelAdmin):
         in_pipeline_count = 0
         blocked_count = 0
 
-        for recipient in all_recipients:
-            recipient_email = Contact.normalize_email(recipient['email'])
-            if not recipient_email:
-                continue
+        if is_phone:
+            for recipient in all_recipients:
+                phone = recipient.get('phone', '')
+                if not phone:
+                    continue
 
-            contact = recipient.get('contact')
-            if not contact:
-                contact = Contact.objects.filter(email__iexact=recipient_email, brand=draft.brand).first()
+                contact = recipient.get('contact')
+                if not contact:
+                    contact = Contact.objects.filter(phone=phone, brand=draft.brand).first()
 
-            brand_slug = draft.brand.slug if draft.brand else None
-            status = 'ok'
+                status = 'ok'
+                if contact and contact.sms_opted_out:
+                    status = 'blocked'
+                    blocked_count += 1
+                elif contact and not draft.send_to_pipeline_contacts:
+                    if Deal.objects.filter(contact=contact, status='active').exists():
+                        status = 'pipeline'
+                        in_pipeline_count += 1
 
-            # Check unsubscribed
-            if contact and (contact.is_unsubscribed or contact.is_unsubscribed_from_brand(brand_slug)):
-                status = 'blocked'
-                blocked_count += 1
-            # Check in pipeline
-            elif contact and not draft.send_to_pipeline_contacts:
-                if Deal.objects.filter(contact=contact, status='active').exists():
-                    status = 'pipeline'
-                    in_pipeline_count += 1
+                if status == 'ok':
+                    valid_recipients.append({
+                        'phone': phone,
+                        'name': recipient.get('name', ''),
+                        'company': recipient.get('company', ''),
+                        'contact': contact,
+                    })
 
-            if status == 'ok':
-                valid_recipients.append({
+                recipients_preview.append({
+                    'phone': phone,
+                    'name': recipient.get('name', ''),
+                    'company': recipient.get('company', ''),
+                    'status': status,
+                })
+        else:
+            for recipient in all_recipients:
+                recipient_email = Contact.normalize_email(recipient['email'])
+                if not recipient_email:
+                    continue
+
+                contact = recipient.get('contact')
+                if not contact:
+                    contact = Contact.objects.filter(email__iexact=recipient_email, brand=draft.brand).first()
+
+                brand_slug = draft.brand.slug if draft.brand else None
+                status = 'ok'
+
+                if contact and (contact.is_unsubscribed or contact.is_unsubscribed_from_brand(brand_slug)):
+                    status = 'blocked'
+                    blocked_count += 1
+                elif contact and not draft.send_to_pipeline_contacts:
+                    if Deal.objects.filter(contact=contact, status='active').exists():
+                        status = 'pipeline'
+                        in_pipeline_count += 1
+
+                if status == 'ok':
+                    valid_recipients.append({
+                        'email': recipient_email,
+                        'name': recipient.get('name', ''),
+                        'company': recipient.get('company', ''),
+                        'website': recipient.get('website', ''),
+                        'contact': contact,
+                    })
+
+                recipients_preview.append({
                     'email': recipient_email,
                     'name': recipient.get('name', ''),
                     'company': recipient.get('company', ''),
-                    'website': recipient.get('website', ''),
-                    'contact': contact,
+                    'status': status,
                 })
 
-            recipients_preview.append({
-                'email': recipient_email,
-                'name': recipient.get('name', ''),
-                'company': recipient.get('company', ''),
-                'status': status,
-            })
-
-        # If confirmation received, send emails
+        # If confirmation received, send
         if 'confirm_send' in request.POST:
             try:
                 return self._execute_send(request, draft, valid_recipients, subject, body_text)
             except Exception as e:
-                self.message_user(request, f"❌ Error sending emails: {str(e)}", messages.ERROR)
-                from django.http import HttpResponseRedirect
+                self.message_user(request, f"❌ Error sending: {str(e)}", messages.ERROR)
                 from django.urls import reverse
                 return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))
 
@@ -3219,11 +3318,33 @@ class EmailDraftAdmin(ModelAdmin):
                 return self._schedule_send(request, draft, len(valid_recipients))
             except Exception as e:
                 self.message_user(request, f"❌ Error scheduling: {str(e)}", messages.ERROR)
-                from django.http import HttpResponseRedirect
                 from django.urls import reverse
                 return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))
 
-        # Generate preview HTML for first recipient (use any recipient for preview, even if in pipeline)
+        # Phone channel — show message preview
+        if is_phone:
+            sms_fallback = ''
+            if len(body_text) > 140:
+                sms_fallback = body_text[:137] + '...'
+
+            context = {
+                **self.admin_site.each_context(request),
+                'title': f'Message Preview',
+                'draft': draft,
+                'body_text': body_text,
+                'sms_fallback': sms_fallback,
+                'char_count': len(body_text),
+                'recipients_preview': recipients_preview[:20],
+                'valid_count': len(valid_recipients),
+                'in_pipeline_count': in_pipeline_count,
+                'blocked_count': blocked_count,
+                'total_count': len(all_recipients),
+                'action_checkbox_name': ACTION_CHECKBOX_NAME,
+                'opts': self.model._meta,
+            }
+            return TemplateResponse(request, 'admin/crm/emaildraft/message_preview.html', context)
+
+        # Email channel — generate preview HTML
         preview_html = None
         preview_recipients = valid_recipients if valid_recipients else all_recipients
         if preview_recipients:
@@ -3250,10 +3371,7 @@ class EmailDraftAdmin(ModelAdmin):
             )
             preview_html = styled.get('html', '')
 
-        # Show preview page
         draft_title = draft.final_subject or draft.generated_subject or draft.get_email_type_display()
-
-        # Check if schedule data was passed from composer
         schedule_preset = request.POST.get('schedule_preset', '')
         schedule_datetime = request.POST.get('schedule_datetime', '')
 
@@ -3270,7 +3388,6 @@ class EmailDraftAdmin(ModelAdmin):
             'total_count': len(all_recipients),
             'action_checkbox_name': ACTION_CHECKBOX_NAME,
             'opts': self.model._meta,
-            # Pre-fill schedule if passed from composer
             'schedule_preset': schedule_preset,
             'schedule_datetime': schedule_datetime,
         }
