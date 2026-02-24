@@ -2796,6 +2796,7 @@ class EmailDraftAdmin(ModelAdmin):
             sms_result = agent.compose_sms({
                 'brand_name': draft.brand.name if draft.brand else '',
                 'brand_description': draft.brand.description if draft.brand else '',
+                'brand_website': draft.brand.website if draft.brand else '',
                 'suggestions': f'Shorten this message for SMS: {body_text}',
             })
             sms_fallback = sms_result.get('body', '') if sms_result.get('success') else body_text[:137] + '...'

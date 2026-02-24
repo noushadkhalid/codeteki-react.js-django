@@ -2107,53 +2107,59 @@ Respond in JSON format:
 
     def compose_sms(self, context: dict) -> dict:
         """
-        Compose a concise SMS message (max ~140 chars to leave room for opt-out text).
+        Compose a concise SMS message. Always includes the website link.
 
         Returns:
             {'body': str, 'subject': '', 'success': bool}
         """
         brand_name = context.get('brand_name', 'Our Company')
+        brand_website = context.get('brand_website', '')
+
+        # Desi Firms: pre-built SMS with registration link (always consistent)
+        if 'desi' in brand_name.lower():
+            body = "You're invited! List your business FREE on Desi Firms, Australia's South Asian directory. Join now: desifirms.com.au"
+            return {'body': body, 'subject': '', 'success': True}
+
+        # Other brands: short message + link
         brand_description = context.get('brand_description', '')
-        value_proposition = context.get('value_proposition', '')
         suggestions = context.get('suggestions', '')
         recipient_name = context.get('recipient_name', '')
         recipient_company = context.get('recipient_company', '')
-        email_type = context.get('email_type', 'custom')
         tone = context.get('tone', 'friendly')
 
-        brand_website = context.get('brand_website', '')
+        # Extract short domain for the link (e.g. "https://www.example.com" -> "example.com")
+        short_link = brand_website.replace('https://www.', '').replace('https://', '').replace('http://www.', '').replace('http://', '').rstrip('/')
 
-        prompt = f"""Write a SHORT SMS message for a business outreach campaign.
+        prompt = f"""Write a SHORT SMS message for business outreach.
 
-STRICT CONSTRAINTS:
-- Maximum 120 characters (system appends opt-out text separately)
-- No HTML, no markdown, no formatting, no emojis
-- Plain text only
-- Must include the website link if available
-- One short sentence + link
-- No subject line needed
+STRICT RULES:
+- Maximum 100 characters for the text part (the link is appended separately)
+- Plain text only — no HTML, no markdown, no emojis
+- One punchy sentence that makes the reader want to click the link
+- Do NOT include any URL or link — it will be appended automatically
 
 CONTEXT:
 - Brand: {brand_name}
-- Brand website: {brand_website or 'None'}
-- Value proposition: {value_proposition}
+- Description: {brand_description}
 - Tone: {tone}
 - Recipient: {recipient_name or 'Business owner'} at {recipient_company or 'their business'}
-- User suggestions: {suggestions or 'None'}
+- Suggestions: {suggestions or 'None'}
 
-EXAMPLE (Desi Firms): Hi! List your business FREE on Desi Firms - Australia's South Asian directory. desifirms.com.au
-
-Respond with ONLY the SMS message text, nothing else. No quotes, no labels."""
+Respond with ONLY the SMS text, nothing else."""
 
         try:
             result = self.ai_engine.generate(
                 prompt=prompt,
-                system_prompt="You are an SMS copywriter. Write extremely concise business messages under 140 characters.",
+                system_prompt="You are an SMS copywriter. Extremely concise, under 100 characters.",
             )
 
             body = result.get('output', '').strip()
             if not body:
-                return {'body': '', 'subject': '', 'success': False, 'error': 'AI returned empty content'}
+                body = f"Check out {brand_name}"
+
+            # Always append the link
+            if short_link and short_link not in body.lower():
+                body = f"{body} {short_link}"
 
             # Trim if too long
             if len(body) > 140:
@@ -2163,7 +2169,9 @@ Respond with ONLY the SMS message text, nothing else. No quotes, no labels."""
 
         except Exception as e:
             logger.error(f"SMS compose failed: {e}")
-            return {'body': '', 'subject': '', 'success': False, 'error': str(e)}
+            # Fallback: at minimum always include the link
+            fallback = f"{brand_name}: {short_link}" if short_link else brand_name
+            return {'body': fallback, 'subject': '', 'success': True}
 
     def compose_whatsapp(self, context: dict) -> dict:
         """
