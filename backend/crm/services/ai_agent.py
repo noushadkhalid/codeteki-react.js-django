@@ -2117,7 +2117,7 @@ Respond in JSON format:
 
         # Desi Firms: pre-built SMS with listings page link
         if 'desi' in brand_name.lower():
-            body = "Hi! Desi Firms is a FREE directory for South Asian businesses in Australia. Check it out: desifirms.com.au/all-listings"
+            body = "We've built Desi Firms for the South Asian community. You're invited! Check it out & list your business FREE: desifirms.com.au/all-listings"
             return {'body': body, 'subject': '', 'success': True}
 
         # Other brands: short message + link
