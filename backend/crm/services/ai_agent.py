@@ -2145,7 +2145,7 @@ Respond with ONLY the SMS message text, nothing else. No quotes, no labels."""
                 system_prompt="You are an SMS copywriter. Write extremely concise business messages under 140 characters.",
             )
 
-            body = result.get('content', '').strip()
+            body = result.get('output', '').strip()
             if not body:
                 return {'body': '', 'subject': '', 'success': False, 'error': 'AI returned empty content'}
 
@@ -2204,7 +2204,7 @@ Respond with ONLY the WhatsApp message text, nothing else. No quotes, no labels.
                 system_prompt="You are a WhatsApp business messaging expert. Write engaging, conversational messages using WhatsApp formatting (*bold*, _italic_).",
             )
 
-            body = result.get('content', '').strip()
+            body = result.get('output', '').strip()
             if not body:
                 return {'body': '', 'subject': '', 'success': False, 'error': 'AI returned empty content'}
 
