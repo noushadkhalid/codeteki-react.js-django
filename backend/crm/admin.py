@@ -2675,7 +2675,13 @@ class EmailDraftAdmin(ModelAdmin):
         if is_phone:
             sms_fallback = ''
             if len(body_text) > 140:
-                sms_fallback = body_text[:137] + '...'
+                from crm.services.ai_agent import CRMAIAgent
+                sms_agent = CRMAIAgent()
+                sms_result = sms_agent.compose_sms({
+                    'brand_name': draft.brand.name if draft.brand else '',
+                    'brand_website': draft.brand.website if draft.brand else '',
+                })
+                sms_fallback = sms_result.get('body', '') if sms_result.get('success') else body_text[:137] + '...'
 
             context = {
                 **self.admin_site.each_context(request),
@@ -3345,7 +3351,13 @@ class EmailDraftAdmin(ModelAdmin):
         if is_phone:
             sms_fallback = ''
             if len(body_text) > 140:
-                sms_fallback = body_text[:137] + '...'
+                from crm.services.ai_agent import CRMAIAgent
+                sms_agent = CRMAIAgent()
+                sms_result = sms_agent.compose_sms({
+                    'brand_name': draft.brand.name if draft.brand else '',
+                    'brand_website': draft.brand.website if draft.brand else '',
+                })
+                sms_fallback = sms_result.get('body', '') if sms_result.get('success') else body_text[:137] + '...'
 
             context = {
                 **self.admin_site.each_context(request),
