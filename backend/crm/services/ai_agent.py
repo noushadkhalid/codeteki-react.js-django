@@ -2115,9 +2115,9 @@ Respond in JSON format:
         brand_name = context.get('brand_name', 'Our Company')
         brand_website = context.get('brand_website', '')
 
-        # Desi Firms: pre-built SMS with registration link (always consistent)
+        # Desi Firms: pre-built SMS with listings page link
         if 'desi' in brand_name.lower():
-            body = "You're invited! List your business FREE on Desi Firms, Australia's South Asian directory. Join now: desifirms.com.au"
+            body = "Hi! Desi Firms is a FREE directory for South Asian businesses in Australia. Check it out: desifirms.com.au/all-listings"
             return {'body': body, 'subject': '', 'success': True}
 
         # Other brands: short message + link
@@ -2194,17 +2194,20 @@ Respond with ONLY the SMS text, nothing else."""
         # Build brand-specific reference style for AI
         if 'desi' in brand_name.lower():
             brand_context = f"""BRAND: Desi Firms — a community platform connecting South Asian businesses in Australia.
-REGISTRATION LINK: https://www.desifirms.com.au/api/register/?next=%2F
+LISTINGS PAGE: https://desifirms.com.au/all-listings
 WEBSITE: https://www.desifirms.com.au
 
 REFERENCE (this is the style from our email campaigns — use it as inspiration, NOT copy-paste):
 - Opening: "You're invited to be a founding member of Desi Firms"
 - Key stat: Australia's 1.6 million-strong South Asian community has no dedicated platform to discover local businesses
 - Benefits: 100% FREE listing forever, connect with the community, showcase products & services, no credit card
-- CTA: "List your business in 2 mins" + registration link
+- CTA: Link to the listings page (desifirms.com.au/all-listings) so they can browse real businesses first
 - Sign-off: "— Noushad, Desi Firms"
 
-IMPORTANT: The user's suggestions below should OVERRIDE or CUSTOMIZE the message. If they say
+IMPORTANT: Use the LISTINGS PAGE link (desifirms.com.au/all-listings), NOT a registration link.
+Let them see the platform first — that builds trust and doesn't look like spam.
+
+The user's suggestions below should OVERRIDE or CUSTOMIZE the message. If they say
 "mention our free listing offer" — focus on that. If they say "highlight events" — talk about events.
 The reference above is just the default style when no specific suggestions are given."""
         else:
