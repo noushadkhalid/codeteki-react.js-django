@@ -2744,7 +2744,25 @@ class EmailDraftAdmin(ModelAdmin):
         return TemplateResponse(request, 'admin/crm/emaildraft/send_preview.html', context)
 
     def _execute_send(self, request, draft, valid_recipients, subject, body_text):
-        """Send emails/SMS/WhatsApp after confirmation. Dispatches by channel."""
+        """Send emails/SMS/WhatsApp after confirmation. Auto-schedules if outside business hours."""
+        from crm.tasks import is_office_hours, get_next_send_time
+        from django.contrib import messages
+
+        if not is_office_hours():
+            next_time = get_next_send_time()
+            draft.scheduled_for = next_time
+            draft.schedule_status = 'scheduled'
+            draft.save(update_fields=['scheduled_for', 'schedule_status'])
+            display = next_time.strftime('%a %d %b %I:%M %p AEST')
+            self.message_user(
+                request,
+                f"Outside business hours (Mon-Fri 9AM-6PM, Sat 9AM-1PM). Auto-scheduled for {display}.",
+                messages.WARNING,
+            )
+            from django.http import HttpResponseRedirect
+            from django.urls import reverse
+            return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))
+
         if draft.channel == 'phone':
             return self._execute_messaging_send(request, draft, valid_recipients, body_text)
         return self._execute_email_send(request, draft, valid_recipients, subject, body_text)

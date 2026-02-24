@@ -333,10 +333,44 @@
         <input type="hidden" name="index" value="0">
         <input type="hidden" name="select_across" value="0">
 
+        {% if valid_count > 0 %}
+        <!-- Scheduling Options -->
+        <div style="background: #f0f9ff; border: 1px solid #0284c7; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+            <h3 style="margin: 0 0 15px 0; color: #0369a1; font-size: 16px;">Schedule Send (Optional)</h3>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-end;">
+                <div>
+                    <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 5px; font-weight: 500;">Quick Schedule (AEST)</label>
+                    <select name="schedule_preset" id="schedule-preset" style="padding: 10px 15px; border-radius: 6px; border: 1px solid #d1d5db; min-width: 220px; font-size: 14px;">
+                        <option value="">-- Choose preset time --</option>
+                        <option value="tomorrow_9">Tomorrow 9:00 AM</option>
+                        <option value="tomorrow_10">Tomorrow 10:00 AM</option>
+                        <option value="tomorrow_14">Tomorrow 2:00 PM</option>
+                        <option value="tomorrow_15">Tomorrow 3:00 PM</option>
+                        <option value="monday_9">Next Monday 9:00 AM</option>
+                        <option value="monday_10">Next Monday 10:00 AM</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 5px; font-weight: 500;">Or Custom Date/Time (AEST)</label>
+                    <input type="datetime-local" name="schedule_datetime" id="schedule-datetime"
+                           style="padding: 10px 15px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 14px;">
+                </div>
+            </div>
+            <p style="font-size: 12px; color: #6b7280; margin-top: 12px; margin-bottom: 0;">
+                <strong>Business hours:</strong> Mon-Fri 9AM-6PM, Sat 9AM-1PM AEST.
+                Sends outside these hours are auto-scheduled to the next available window.
+            </p>
+        </div>
+        {% endif %}
+
         <div class="btn-group">
             {% if valid_count > 0 %}
             <button type="submit" name="confirm_send" value="1" class="btn btn-success" id="send-btn">
                 Send {{ valid_count }} Message{{ valid_count|pluralize }} Now
+            </button>
+            <button type="button" class="btn" id="schedule-btn"
+                    style="background: #0284c7; color: white; border: none;">
+                Schedule Send
             </button>
             {% endif %}
             <a href="{% url 'admin:crm_emaildraft_changelist' %}" class="btn btn-secondary">
@@ -360,7 +394,10 @@
 (function() {
     var form = document.getElementById('send-form');
     var sendBtn = document.getElementById('send-btn');
+    var scheduleBtn = document.getElementById('schedule-btn');
     var overlay = document.getElementById('send-loading-overlay');
+    var loadingTitle = overlay ? overlay.querySelector('.loading-title') : null;
+    var loadingMessage = overlay ? overlay.querySelector('.loading-message') : null;
 
     if (form && sendBtn) {
         sendBtn.addEventListener('click', function(e) {
@@ -377,6 +414,37 @@
             document.body.classList.add('sending');
             sendBtn.disabled = true;
             sendBtn.textContent = 'Sending...';
+
+            setTimeout(function() { form.submit(); }, 50);
+        });
+    }
+
+    if (form && scheduleBtn) {
+        scheduleBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            var preset = document.getElementById('schedule-preset').value;
+            var customDatetime = document.getElementById('schedule-datetime').value;
+
+            if (!preset && !customDatetime) {
+                alert('Please select a schedule time (preset or custom date/time)');
+                return;
+            }
+
+            var confirmInput = document.createElement('input');
+            confirmInput.type = 'hidden';
+            confirmInput.name = 'confirm_schedule';
+            confirmInput.value = '1';
+            form.appendChild(confirmInput);
+
+            if (loadingTitle) loadingTitle.textContent = 'Scheduling...';
+            if (loadingMessage) loadingMessage.textContent = 'Setting up scheduled send. Please wait.';
+
+            if (overlay) overlay.classList.add('active');
+            document.body.classList.add('sending');
+            scheduleBtn.disabled = true;
+            scheduleBtn.textContent = 'Scheduling...';
 
             setTimeout(function() { form.submit(); }, 50);
         });

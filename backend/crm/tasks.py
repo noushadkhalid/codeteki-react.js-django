@@ -16,16 +16,45 @@ from django.db import transaction
 
 logger = logging.getLogger(__name__)
 
-# Office hours: Mon-Fri 9AM-5PM (server timezone)
+# Office hours: Mon-Fri 9AM-6PM, Saturday 9AM-1PM (AEST)
 OFFICE_HOUR_START = 9
-OFFICE_HOUR_END = 17  # 5 PM
+OFFICE_HOUR_END = 18  # 6 PM
+SATURDAY_HOUR_END = 13  # 1 PM
 OFFICE_DAYS = range(0, 5)  # Monday=0 through Friday=4
 
 
 def is_office_hours() -> bool:
-    """Check if current time is within office hours (Mon-Fri 9AM-5PM)."""
+    """Check if current time is within sending hours (Mon-Fri 9AM-6PM, Sat 9AM-1PM AEST)."""
     now = timezone.localtime()
+    if now.weekday() == 5:  # Saturday
+        return OFFICE_HOUR_START <= now.hour < SATURDAY_HOUR_END
     return now.weekday() in OFFICE_DAYS and OFFICE_HOUR_START <= now.hour < OFFICE_HOUR_END
+
+
+def get_next_send_time():
+    """Get the next available send time within business hours (AEST)."""
+    import pytz
+    sydney = pytz.timezone('Australia/Sydney')
+    now = timezone.now().astimezone(sydney)
+
+    # Try today first
+    if now.weekday() <= 4:  # Mon-Fri
+        if now.hour < OFFICE_HOUR_START:
+            return now.replace(hour=OFFICE_HOUR_START, minute=0, second=0, microsecond=0)
+        elif now.hour < OFFICE_HOUR_END:
+            return now  # within hours right now
+    elif now.weekday() == 5:  # Saturday
+        if now.hour < OFFICE_HOUR_START:
+            return now.replace(hour=OFFICE_HOUR_START, minute=0, second=0, microsecond=0)
+        elif now.hour < SATURDAY_HOUR_END:
+            return now  # within hours right now
+
+    # Next available day
+    from datetime import timedelta
+    target = now + timedelta(days=1)
+    while target.weekday() == 6:  # skip Sunday
+        target = target + timedelta(days=1)
+    return target.replace(hour=OFFICE_HOUR_START, minute=0, second=0, microsecond=0)
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
@@ -1005,43 +1034,61 @@ def send_scheduled_draft(self, draft_id: str):
 
         subject = draft.final_subject or draft.generated_subject
         body_text = draft.final_body or draft.generated_body
+        is_phone = draft.channel == 'phone'
 
-        if not subject or not body_text:
-            raise ValueError("No email content")
+        if is_phone:
+            if not body_text:
+                raise ValueError("No message content")
+        else:
+            if not subject or not body_text:
+                raise ValueError("No email content")
 
         # Get all valid recipients
         all_recipients = draft.get_all_recipients()
         valid_recipients = []
 
-        for recipient in all_recipients:
-            recipient_email = Contact.normalize_email(recipient['email'])
-            if not recipient_email:
-                continue
-
-            contact = recipient.get('contact')
-            if not contact:
-                contact = Contact.objects.filter(
-                    email__iexact=recipient_email,
-                    brand=draft.brand
-                ).first()
-
-            # Check unsubscribed
-            brand_slug = draft.brand.slug if draft.brand else None
-            if contact and (contact.is_unsubscribed or contact.is_unsubscribed_from_brand(brand_slug)):
-                continue
-
-            # Check in pipeline (unless override is set)
-            if contact and not draft.send_to_pipeline_contacts:
-                if Deal.objects.filter(contact=contact, status='active').exists():
+        if is_phone:
+            for recipient in all_recipients:
+                phone = recipient.get('phone', '')
+                if not phone:
                     continue
-
-            valid_recipients.append({
-                'email': recipient_email,
-                'name': recipient.get('name', ''),
-                'company': recipient.get('company', ''),
-                'website': recipient.get('website', ''),
-                'contact': contact,
-            })
+                contact = recipient.get('contact')
+                if not contact:
+                    contact = Contact.objects.filter(phone=phone, brand=draft.brand).first()
+                if contact and contact.sms_opted_out:
+                    continue
+                if contact and not draft.send_to_pipeline_contacts:
+                    if Deal.objects.filter(contact=contact, status='active').exists():
+                        continue
+                valid_recipients.append({
+                    'phone': phone,
+                    'name': recipient.get('name', ''),
+                    'company': recipient.get('company', ''),
+                    'contact': contact,
+                })
+        else:
+            for recipient in all_recipients:
+                recipient_email = Contact.normalize_email(recipient['email'])
+                if not recipient_email:
+                    continue
+                contact = recipient.get('contact')
+                if not contact:
+                    contact = Contact.objects.filter(
+                        email__iexact=recipient_email, brand=draft.brand
+                    ).first()
+                brand_slug = draft.brand.slug if draft.brand else None
+                if contact and (contact.is_unsubscribed or contact.is_unsubscribed_from_brand(brand_slug)):
+                    continue
+                if contact and not draft.send_to_pipeline_contacts:
+                    if Deal.objects.filter(contact=contact, status='active').exists():
+                        continue
+                valid_recipients.append({
+                    'email': recipient_email,
+                    'name': recipient.get('name', ''),
+                    'company': recipient.get('company', ''),
+                    'website': recipient.get('website', ''),
+                    'contact': contact,
+                })
 
         if not valid_recipients:
             raise ValueError("No valid recipients")
@@ -1057,34 +1104,82 @@ def send_scheduled_draft(self, draft_id: str):
         if not invited_stage:
             raise ValueError("Pipeline has no stages")
 
-        # Initialize services (uses ZeptoMail if configured, else Zoho)
-        from crm.services.email_service import get_email_service
-        email_service = get_email_service(brand=draft.brand)
-        if not email_service.enabled:
-            raise ValueError(f"Email service not configured for {draft.brand.name}")
-
-        ai_agent = CRMAIAgent()
-
-        # Send to each recipient
         sent_count = 0
         failed_count = 0
         total_deals = 0
 
-        for recipient in valid_recipients:
-            try:
-                result = _send_scheduled_to_recipient(
-                    draft, recipient, subject, body_text,
-                    invited_stage, email_service, ai_agent
-                )
-                if result['success']:
-                    sent_count += 1
-                    if result.get('deal_created'):
-                        total_deals += 1
-                else:
+        if is_phone:
+            # Phone channel: use messaging service
+            from crm.services.messaging_service import get_messaging_service
+            messaging_service = get_messaging_service(brand=draft.brand)
+
+            # Generate SMS fallback
+            if len(body_text) > 140:
+                ai_agent = CRMAIAgent()
+                sms_result = ai_agent.compose_sms({
+                    'brand_name': draft.brand.name if draft.brand else '',
+                    'brand_description': draft.brand.description if draft.brand else '',
+                    'brand_website': draft.brand.website if draft.brand else '',
+                    'suggestions': f'Shorten this message for SMS: {body_text}',
+                })
+                sms_fallback = sms_result.get('body', '') if sms_result.get('success') else body_text[:137] + '...'
+            else:
+                sms_fallback = body_text
+
+            for recipient in valid_recipients:
+                try:
+                    to_phone = recipient['phone']
+                    result = messaging_service.send_smart(to=to_phone, body=body_text, sms_body=sms_fallback)
+                    channel_used = result.get('channel_used', 'sms')
+
+                    if result.get('success'):
+                        sent_count += 1
+                        from crm.models import EmailLog
+                        EmailLog.objects.create(
+                            deal=None,
+                            channel=channel_used,
+                            subject='',
+                            body=body_text if channel_used == 'whatsapp' else sms_fallback,
+                            to_phone=to_phone,
+                            message_sid=result.get('message_sid', ''),
+                            delivery_status='sent',
+                            sent_at=timezone.now(),
+                            ai_generated=bool(draft.generated_body),
+                        )
+                        contact = recipient.get('contact')
+                        if contact:
+                            contact.last_sms_at = timezone.now()
+                            contact.sms_count = (contact.sms_count or 0) + 1
+                            contact.save(update_fields=['last_sms_at', 'sms_count'])
+                    else:
+                        failed_count += 1
+                except Exception as e:
+                    logger.error(f"Error sending to {recipient['phone']}: {e}")
                     failed_count += 1
-            except Exception as e:
-                logger.error(f"Error sending to {recipient['email']}: {e}")
-                failed_count += 1
+        else:
+            # Email channel: existing logic
+            from crm.services.email_service import get_email_service
+            email_service = get_email_service(brand=draft.brand)
+            if not email_service.enabled:
+                raise ValueError(f"Email service not configured for {draft.brand.name}")
+
+            ai_agent = CRMAIAgent()
+
+            for recipient in valid_recipients:
+                try:
+                    result = _send_scheduled_to_recipient(
+                        draft, recipient, subject, body_text,
+                        invited_stage, email_service, ai_agent
+                    )
+                    if result['success']:
+                        sent_count += 1
+                        if result.get('deal_created'):
+                            total_deals += 1
+                    else:
+                        failed_count += 1
+                except Exception as e:
+                    logger.error(f"Error sending to {recipient['email']}: {e}")
+                    failed_count += 1
 
         # Update draft tracking
         draft.sent_count = (draft.sent_count or 0) + sent_count
