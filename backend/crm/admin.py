@@ -2772,8 +2772,8 @@ class EmailDraftAdmin(ModelAdmin):
 
         # Pre-generate short SMS fallback if WhatsApp body is too long for SMS
         if len(body_text) > 140:
-            from crm.services.ai_agent import AIAgent
-            agent = AIAgent()
+            from crm.services.ai_agent import CRMAIAgent
+            agent = CRMAIAgent()
             sms_result = agent.compose_sms({
                 'brand_name': draft.brand.name if draft.brand else '',
                 'brand_description': draft.brand.description if draft.brand else '',
