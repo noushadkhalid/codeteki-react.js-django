@@ -197,9 +197,22 @@ class TwilioMessagingService:
             }
 
 
+    def _lookup_contact(self, phone: str):
+        """Find Contact by phone number for WhatsApp status check."""
+        from crm.models import Contact
+        contact = Contact.objects.filter(phone=phone).first()
+        if not contact:
+            contact = Contact.objects.filter(phone__endswith=phone[-10:]).first()
+        return contact
+
     def send_smart(self, to: str, body: str, sms_body: str = '') -> dict:
         """
-        Try WhatsApp first, fall back to SMS with a shorter message.
+        Smart send: WhatsApp for confirmed users, SMS for rest.
+
+        Filter logic:
+        - has_whatsapp=True  → try WhatsApp, fall back to SMS on failure
+        - has_whatsapp=False → skip WhatsApp, send SMS directly (saves money)
+        - has_whatsapp=None  → try WhatsApp once to discover, then cache result
 
         Args:
             to: Recipient phone in E.164 format
@@ -209,17 +222,30 @@ class TwilioMessagingService:
         Returns:
             {success, message_sid, channel_used, error}
         """
-        # TODO: Re-enable WhatsApp once Meta approves the business template.
-        # Currently disabled to avoid charges on failed attempts (error 63112).
-        # Uncomment the block below when template is approved:
-        #
-        # if self.whatsapp_enabled:
-        #     result = self.send_whatsapp(to, body)
-        #     if result['success']:
-        #         result['channel_used'] = 'whatsapp'
-        #         return result
-        #     logger.info(f"WhatsApp failed for {to}, falling back to SMS: {result.get('error')}")
-        logger.info(f"WhatsApp disabled (template pending). Sending SMS directly to {to}.")
+        contact = self._lookup_contact(to)
+
+        # Check if we know this contact's WhatsApp status
+        skip_whatsapp = False
+        if contact and contact.has_whatsapp is False:
+            skip_whatsapp = True
+            logger.info(f"Skipping WhatsApp for {to} — marked as no WhatsApp, sending SMS.")
+
+        # Try WhatsApp if enabled and not known to be absent
+        if self.whatsapp_enabled and not skip_whatsapp:
+            result = self.send_whatsapp(to, body)
+            if result['success']:
+                result['channel_used'] = 'whatsapp'
+                # Mark contact as confirmed WhatsApp user
+                if contact and contact.has_whatsapp is not True:
+                    contact.has_whatsapp = True
+                    contact.save(update_fields=['has_whatsapp'])
+                return result
+
+            # WhatsApp failed — mark contact so we skip next time
+            logger.info(f"WhatsApp failed for {to}, marking no-WhatsApp. Falling back to SMS. Error: {result.get('error')}")
+            if contact:
+                contact.has_whatsapp = False
+                contact.save(update_fields=['has_whatsapp'])
 
         # Fall back to SMS with shorter body
         if self.enabled:

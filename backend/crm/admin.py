@@ -2775,137 +2775,50 @@ class EmailDraftAdmin(ModelAdmin):
         return self._execute_email_send(request, draft, valid_recipients, subject, body_text)
 
     def _execute_messaging_send(self, request, draft, valid_recipients, body_text):
-        """Send messages via WhatsApp-first-then-SMS smart routing."""
+        """Dispatch phone campaign to async Celery task for background sending."""
         from crm.services.messaging_service import get_messaging_service
-        from crm.models import Contact, Deal, PipelineStage, EmailLog
         from django.contrib import messages
-        from django.utils import timezone
-
-        first_stage = PipelineStage.objects.filter(
-            pipeline=draft.pipeline
-        ).order_by('order').first()
-
-        if not first_stage:
-            self.message_user(request, f"❌ {draft}: Pipeline has no stages!", messages.ERROR)
-            return
-
-        messaging_service = get_messaging_service(brand=draft.brand)
-
-        if not messaging_service.enabled and not messaging_service.whatsapp_enabled:
-            self.message_user(request, f"❌ Twilio not configured for {draft.brand.name}!", messages.ERROR)
-            return
-
-        # Pre-generate short SMS fallback if WhatsApp body is too long for SMS
-        if len(body_text) > 140:
-            from crm.services.ai_agent import CRMAIAgent
-            agent = CRMAIAgent()
-            sms_result = agent.compose_sms({
-                'brand_name': draft.brand.name if draft.brand else '',
-                'brand_description': draft.brand.description if draft.brand else '',
-                'brand_website': draft.brand.website if draft.brand else '',
-                'suggestions': f'Shorten this message for SMS: {body_text}',
-            })
-            sms_fallback = sms_result.get('body', '') if sms_result.get('success') else body_text[:137] + '...'
-        else:
-            sms_fallback = body_text
-
-        sent_count = 0
-        failed_count = 0
-        total_deals = 0
-        wa_count = 0
-        sms_count = 0
-        first_error = None
-
-        for recipient in valid_recipients:
-            contact = recipient.get('contact')
-            to_phone = recipient.get('phone', '')
-
-            if not to_phone:
-                continue
-
-            # Smart send: try WhatsApp first, fall back to shorter SMS
-            result = messaging_service.send_smart(to=to_phone, body=body_text, sms_body=sms_fallback)
-            channel_used = result.get('channel_used', 'sms')
-
-            if result.get('success'):
-                sent_count += 1
-                if channel_used == 'whatsapp':
-                    wa_count += 1
-                else:
-                    sms_count += 1
-
-                # Create log for tracking
-                EmailLog.objects.create(
-                    deal=None,
-                    channel=channel_used,
-                    subject='',
-                    body=body_text,
-                    to_phone=to_phone,
-                    message_sid=result.get('message_sid', ''),
-                    delivery_status='sent',
-                    sent_at=timezone.now(),
-                    ai_generated=bool(draft.generated_body),
-                )
-
-                # Update contact stats
-                if not contact:
-                    contact = Contact.objects.filter(phone=to_phone, brand=draft.brand).first()
-
-                if contact:
-                    contact.last_sms_at = timezone.now()
-                    contact.sms_count = (contact.sms_count or 0) + 1
-                    contact.status = 'contacted'
-                    contact.save(update_fields=['last_sms_at', 'sms_count', 'status'])
-
-                    # Create/update deal
-                    existing_deal = Deal.objects.filter(
-                        contact=contact, pipeline=draft.pipeline, status='active'
-                    ).first()
-                    if not existing_deal:
-                        Deal.objects.create(
-                            contact=contact,
-                            pipeline=draft.pipeline,
-                            current_stage=first_stage,
-                            status='active',
-                            emails_sent=1,
-                            last_contact_date=timezone.now(),
-                            next_action_date=timezone.now() + timezone.timedelta(days=first_stage.days_until_followup or 3),
-                            ai_notes=f"First contact via {channel_used.upper()} Composer"
-                        )
-                        total_deals += 1
-                    else:
-                        existing_deal.emails_sent = (existing_deal.emails_sent or 0) + 1
-                        existing_deal.last_contact_date = timezone.now()
-                        existing_deal.save(update_fields=['emails_sent', 'last_contact_date'])
-            else:
-                failed_count += 1
-                if failed_count == 1:
-                    first_error = result.get('error', 'Unknown error')
-
-        # Update draft tracking
-        draft.sent_count = (draft.sent_count or 0) + sent_count
-        draft.deals_created = (draft.deals_created or 0) + total_deals
-        draft.is_sent = True
-        draft.sent_at = timezone.now()
-        draft.save(update_fields=['sent_count', 'deals_created', 'is_sent', 'sent_at'])
-
         from django.http import HttpResponseRedirect
         from django.urls import reverse
 
-        parts = []
-        if wa_count > 0:
-            parts.append(f"{wa_count} WhatsApp")
-        if sms_count > 0:
-            parts.append(f"{sms_count} SMS")
-        msg = f"Sent {' + '.join(parts)} message(s)"
-        if total_deals > 0:
-            msg += f", created {total_deals} new deal(s)"
-        if failed_count > 0:
-            msg += f" ({failed_count} failed)"
-            if first_error:
-                msg += f" - Error: {first_error}"
+        # Pre-flight checks (fast, before dispatching)
+        messaging_service = get_messaging_service(brand=draft.brand)
+        if not messaging_service.enabled and not messaging_service.whatsapp_enabled:
+            self.message_user(request, f"Twilio not configured for {draft.brand.name}!", messages.ERROR)
+            return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))
 
-        self.message_user(request, msg, messages.SUCCESS if sent_count > 0 else messages.WARNING)
+        recipient_count = sum(1 for r in valid_recipients if r.get('phone'))
+        if recipient_count == 0:
+            self.message_user(request, "No recipients with phone numbers found.", messages.WARNING)
+            return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))
+
+        # Mark draft as sent immediately so it's not sent again
+        from django.utils import timezone
+        draft.is_sent = True
+        draft.sent_at = timezone.now()
+        draft.save(update_fields=['is_sent', 'sent_at'])
+
+        # Dispatch to Celery for async sending
+        from crm.tasks import send_phone_campaign_async
+        send_phone_campaign_async.delay(str(draft.id))
+
+        # Count WhatsApp-known vs unknown for the status message
+        from crm.models import Contact
+        phones = [r['phone'] for r in valid_recipients if r.get('phone')]
+        wa_known = Contact.objects.filter(phone__in=phones, has_whatsapp=True).count()
+        wa_unknown = Contact.objects.filter(phone__in=phones, has_whatsapp=None).count()
+        sms_direct = Contact.objects.filter(phone__in=phones, has_whatsapp=False).count()
+
+        parts = [f"{recipient_count} recipient(s)"]
+        if wa_known > 0:
+            parts.append(f"{wa_known} confirmed WhatsApp")
+        if sms_direct > 0:
+            parts.append(f"{sms_direct} SMS-only")
+        if wa_unknown > 0:
+            parts.append(f"{wa_unknown} will be checked for WhatsApp")
+
+        msg = f"Phone campaign queued: {', '.join(parts)}. Sending in background..."
+        self.message_user(request, msg, messages.SUCCESS)
         return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))
 
     def _execute_email_send(self, request, draft, valid_recipients, subject, body_text):

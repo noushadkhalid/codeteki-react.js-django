@@ -183,6 +183,7 @@ class Contact(models.Model):
     sms_opted_out_at = models.DateTimeField(null=True, blank=True)
     last_sms_at = models.DateTimeField(null=True, blank=True)
     sms_count = models.IntegerField(default=0, help_text="Total SMS/WhatsApp messages sent")
+    has_whatsapp = models.BooleanField(null=True, blank=True, default=None, help_text="None=unknown, True=confirmed on WhatsApp, False=not on WhatsApp")
 
     # Status tracking (simplified pipeline)
     STATUS_CHOICES = [

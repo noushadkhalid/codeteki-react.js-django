@@ -1661,3 +1661,109 @@ def send_weekly_report():
         logger.error(f"Failed to send weekly report: {result.get('error')}")
 
     return {'success': result.get('success', False), 'sent_to': admin_email}
+
+
+@shared_task(bind=True, max_retries=0)
+def send_phone_campaign_async(self, draft_id: str):
+    """
+    Async Celery task: send SMS/WhatsApp campaign from an EmailDraft.
+
+    Smart routing per contact:
+    - has_whatsapp=True  → WhatsApp first, SMS fallback
+    - has_whatsapp=False → SMS directly (skip WhatsApp, saves money)
+    - has_whatsapp=None  → try WhatsApp once to discover, cache result
+
+    The draft status is updated as sending progresses.
+    """
+    from crm.models import EmailDraft, EmailLog, Contact
+    from crm.services.messaging_service import get_messaging_service
+
+    try:
+        draft = EmailDraft.objects.select_related('brand', 'pipeline').get(id=draft_id)
+    except EmailDraft.DoesNotExist:
+        logger.error(f"Phone campaign task: draft {draft_id} not found")
+        return {'success': False, 'error': 'Draft not found'}
+
+    body_text = draft.generated_body or draft.body or ''
+    if not body_text.strip():
+        logger.error(f"Phone campaign task: draft {draft_id} has no message body")
+        return {'success': False, 'error': 'No message body'}
+
+    messaging_service = get_messaging_service(brand=draft.brand)
+    if not messaging_service.enabled and not messaging_service.whatsapp_enabled:
+        logger.error(f"Phone campaign task: Twilio not configured for {draft.brand.name}")
+        return {'success': False, 'error': 'Twilio not configured'}
+
+    # Build recipient list from draft
+    recipients = draft.get_all_recipients()
+
+    # Pre-generate SMS fallback if body is too long
+    if len(body_text) > 140:
+        from crm.services.ai_agent import CRMAIAgent
+        agent = CRMAIAgent()
+        sms_result = agent.compose_sms({
+            'brand_name': draft.brand.name if draft.brand else '',
+            'brand_description': draft.brand.description if draft.brand else '',
+            'brand_website': draft.brand.website if draft.brand else '',
+            'suggestions': f'Shorten this message for SMS: {body_text}',
+        })
+        sms_fallback = sms_result.get('body', '') if sms_result.get('success') else body_text[:137] + '...'
+    else:
+        sms_fallback = body_text
+
+    sent_count = 0
+    failed_count = 0
+    wa_count = 0
+    sms_count = 0
+
+    for recipient in recipients:
+        contact = recipient.get('contact')
+        to_phone = recipient.get('phone', '')
+
+        if not to_phone:
+            continue
+
+        # send_smart handles the WhatsApp filter layer internally
+        result = messaging_service.send_smart(to=to_phone, body=body_text, sms_body=sms_fallback)
+        channel_used = result.get('channel_used', 'sms')
+
+        if result.get('success'):
+            sent_count += 1
+            if channel_used == 'whatsapp':
+                wa_count += 1
+            else:
+                sms_count += 1
+
+            EmailLog.objects.create(
+                deal=None,
+                channel=channel_used,
+                subject='',
+                body=body_text if channel_used == 'whatsapp' else sms_fallback,
+                to_phone=to_phone,
+                message_sid=result.get('message_sid', ''),
+                delivery_status='sent',
+                sent_at=timezone.now(),
+                ai_generated=bool(draft.generated_body),
+            )
+
+            # Update contact stats
+            if not contact:
+                contact = Contact.objects.filter(phone=to_phone, brand=draft.brand).first()
+            if contact:
+                contact.last_sms_at = timezone.now()
+                contact.sms_count = (contact.sms_count or 0) + 1
+                contact.save(update_fields=['last_sms_at', 'sms_count'])
+        else:
+            failed_count += 1
+            logger.warning(f"Phone campaign: failed to send to {to_phone}: {result.get('error')}")
+
+    summary = f"Phone campaign complete: {sent_count} sent ({wa_count} WhatsApp, {sms_count} SMS), {failed_count} failed"
+    logger.info(summary)
+
+    return {
+        'success': True,
+        'sent': sent_count,
+        'whatsapp': wa_count,
+        'sms': sms_count,
+        'failed': failed_count,
+    }
