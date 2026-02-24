@@ -209,13 +209,17 @@ class TwilioMessagingService:
         Returns:
             {success, message_sid, channel_used, error}
         """
-        # Try WhatsApp first if configured
-        if self.whatsapp_enabled:
-            result = self.send_whatsapp(to, body)
-            if result['success']:
-                result['channel_used'] = 'whatsapp'
-                return result
-            logger.info(f"WhatsApp failed for {to}, falling back to SMS: {result.get('error')}")
+        # TODO: Re-enable WhatsApp once Meta approves the business template.
+        # Currently disabled to avoid charges on failed attempts (error 63112).
+        # Uncomment the block below when template is approved:
+        #
+        # if self.whatsapp_enabled:
+        #     result = self.send_whatsapp(to, body)
+        #     if result['success']:
+        #         result['channel_used'] = 'whatsapp'
+        #         return result
+        #     logger.info(f"WhatsApp failed for {to}, falling back to SMS: {result.get('error')}")
+        logger.info(f"WhatsApp disabled (template pending). Sending SMS directly to {to}.")
 
         # Fall back to SMS with shorter body
         if self.enabled:
