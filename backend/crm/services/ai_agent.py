@@ -2121,23 +2121,27 @@ Respond in JSON format:
         email_type = context.get('email_type', 'custom')
         tone = context.get('tone', 'friendly')
 
+        brand_website = context.get('brand_website', '')
+
         prompt = f"""Write a SHORT SMS message for a business outreach campaign.
 
 STRICT CONSTRAINTS:
-- Maximum 140 characters (the system auto-appends "Reply STOP to opt out" which takes ~20 chars)
-- No HTML, no markdown, no formatting
-- Include a clear call-to-action
-- Conversational and direct
+- Maximum 120 characters (system appends opt-out text separately)
+- No HTML, no markdown, no formatting, no emojis
+- Plain text only
+- Must include the website link if available
+- One short sentence + link
 - No subject line needed
 
 CONTEXT:
 - Brand: {brand_name}
-- Brand description: {brand_description}
+- Brand website: {brand_website or 'None'}
 - Value proposition: {value_proposition}
-- Email type: {email_type}
 - Tone: {tone}
 - Recipient: {recipient_name or 'Business owner'} at {recipient_company or 'their business'}
 - User suggestions: {suggestions or 'None'}
+
+EXAMPLE (Desi Firms): Hi! List your business FREE on Desi Firms - Australia's South Asian directory. desifirms.com.au
 
 Respond with ONLY the SMS message text, nothing else. No quotes, no labels."""
 
@@ -2179,26 +2183,33 @@ Respond with ONLY the SMS message text, nothing else. No quotes, no labels."""
         tone = context.get('tone', 'friendly')
         business_updates = context.get('business_updates', '')
 
-        prompt = f"""Write a WhatsApp business message for outreach.
+        prompt = f"""Write a short WhatsApp business message for outreach.
 
 CONSTRAINTS:
-- Maximum 1024 characters
-- Use WhatsApp formatting: *bold*, _italic_, ~strikethrough~
-- Conversational, friendly tone (WhatsApp is informal)
-- Include a clear call-to-action with the website link if available
-- No HTML
-- No subject line needed
+- Maximum 300 characters (keep it SHORT like a text message, not an email)
+- Use WhatsApp formatting sparingly: *bold* for brand name only
+- Conversational and direct — get to the point fast
+- Include the website link if available
+- No HTML, no subject line
+- 2-3 sentences max
+- No long introductions, no bullet points, no signatures
+
+TONE RULES:
+- Humble and inviting, NOT salesy
+- We're inviting them, not selling to them
+- Never say "we can help you" or "boost your business"
 
 CONTEXT:
 - Brand: {brand_name}
 - Brand website: {brand_website or 'None'}
 - Brand description: {brand_description}
 - Value proposition: {value_proposition}
-- Email type: {email_type}
 - Tone: {tone}
 - Recipient: {recipient_name or 'Business owner'} at {recipient_company or 'their business'}
-- Business updates: {business_updates or 'None'}
 - User suggestions: {suggestions or 'None'}
+
+EXAMPLE (Desi Firms):
+Hi! We've just launched *Desi Firms*, a FREE directory for South Asian businesses in Australia. We'd love to have {recipient_company or 'your business'} as a founding member — takes 2 mins to list: {brand_website}
 
 Respond with ONLY the WhatsApp message text, nothing else. No quotes, no labels."""
 
