@@ -2707,6 +2707,19 @@ class EmailDraftAdmin(ModelAdmin):
             self.message_user(request, f"❌ Twilio not configured for {draft.brand.name}!", messages.ERROR)
             return
 
+        # Pre-generate short SMS fallback if WhatsApp body is too long for SMS
+        if len(body_text) > 140:
+            from crm.services.ai_agent import AIAgent
+            agent = AIAgent()
+            sms_result = agent.compose_sms({
+                'brand_name': draft.brand.name if draft.brand else '',
+                'brand_description': draft.brand.description if draft.brand else '',
+                'suggestions': f'Shorten this message for SMS: {body_text}',
+            })
+            sms_fallback = sms_result.get('body', '') if sms_result.get('success') else body_text[:137] + '...'
+        else:
+            sms_fallback = body_text
+
         sent_count = 0
         failed_count = 0
         total_deals = 0
@@ -2721,8 +2734,8 @@ class EmailDraftAdmin(ModelAdmin):
             if not to_phone:
                 continue
 
-            # Smart send: try WhatsApp first, fall back to SMS
-            result = messaging_service.send_smart(to=to_phone, body=body_text)
+            # Smart send: try WhatsApp first, fall back to shorter SMS
+            result = messaging_service.send_smart(to=to_phone, body=body_text, sms_body=sms_fallback)
             channel_used = result.get('channel_used', 'sms')
 
             if result.get('success'):

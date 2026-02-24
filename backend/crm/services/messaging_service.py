@@ -182,9 +182,14 @@ class TwilioMessagingService:
             }
 
 
-    def send_smart(self, to: str, body: str) -> dict:
+    def send_smart(self, to: str, body: str, sms_body: str = '') -> dict:
         """
-        Try WhatsApp first (cheaper), fall back to SMS if WhatsApp fails.
+        Try WhatsApp first, fall back to SMS with a shorter message.
+
+        Args:
+            to: Recipient phone in E.164 format
+            body: WhatsApp message (up to 1024 chars)
+            sms_body: Shorter SMS fallback (up to 140 chars). Uses body if not provided.
 
         Returns:
             {success, message_sid, channel_used, error}
@@ -197,9 +202,9 @@ class TwilioMessagingService:
                 return result
             logger.info(f"WhatsApp failed for {to}, falling back to SMS: {result.get('error')}")
 
-        # Fall back to SMS
+        # Fall back to SMS with shorter body
         if self.enabled:
-            result = self.send_sms(to, body)
+            result = self.send_sms(to, sms_body or body)
             result['channel_used'] = 'sms'
             return result
 
