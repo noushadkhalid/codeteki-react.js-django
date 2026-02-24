@@ -2140,7 +2140,7 @@ CONTEXT:
 Respond with ONLY the SMS message text, nothing else. No quotes, no labels."""
 
         try:
-            result = self.ai_engine.generate_content(
+            result = self.ai_engine.generate(
                 prompt=prompt,
                 system_prompt="You are an SMS copywriter. Write extremely concise business messages under 140 characters.",
                 max_tokens=100,
@@ -2200,7 +2200,7 @@ CONTEXT:
 Respond with ONLY the WhatsApp message text, nothing else. No quotes, no labels."""
 
         try:
-            result = self.ai_engine.generate_content(
+            result = self.ai_engine.generate(
                 prompt=prompt,
                 system_prompt="You are a WhatsApp business messaging expert. Write engaging, conversational messages using WhatsApp formatting (*bold*, _italic_).",
                 max_tokens=400,
