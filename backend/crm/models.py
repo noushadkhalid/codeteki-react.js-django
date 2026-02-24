@@ -465,6 +465,7 @@ class Pipeline(models.Model):
         ('realestate', 'Real Estate'),
         ('classifieds', 'Classifieds'),
         ('registered_users', 'Registered Users (Nudge)'),
+        ('user_registration', 'User Registration'),
         # Phone campaigns (SMS/WhatsApp)
         ('phone_campaign', 'Phone Campaign (SMS/WhatsApp)'),
     ]

@@ -990,37 +990,33 @@ class DesiFirmsWebhookView(View):
         # Business journey
         'business_created': {
             'outreach_pipeline': 'Business Listings',
-            'nudge_pipeline': 'Registered Users - Business',
             'outreach_stage': 'Signed Up',
-            'nudge_stage': 'Listed',
+            'registration_stage': 'Business Listed',
         },
         'business_approved': {
             'outreach_pipeline': 'Business Listings',
-            'nudge_pipeline': 'Registered Users - Business',
             'outreach_stage': 'Listed',
-            'nudge_stage': 'Listed',
+            'registration_stage': 'Listing Approved',
         },
         # Events journey
         'event_created': {
             'outreach_pipeline': 'Desi Firms Events',
-            'nudge_pipeline': 'Registered Users - Events',
             'outreach_stage': 'Signed Up',
-            'nudge_stage': 'Event Posted',
+            'registration_stage': 'Event Posted',
         },
         'event_approved': {
             'outreach_pipeline': 'Desi Firms Events',
-            'nudge_pipeline': 'Registered Users - Events',
             'outreach_stage': 'Event Listed',
-            'nudge_stage': 'Event Posted',
+            'registration_stage': 'Listing Approved',
         },
-        # Real estate journey — Agents & Agencies pipeline
-        'agency_created': {'stage': 'Agency Created'},
-        'agent_created': {'stage': 'Profile Complete'},
+        # Real estate journey — Agents & Agencies pipeline (outreach) or User Registration
+        'agency_created': {'stage': 'Agency Created', 'registration_stage': 'Agent/Agency Created'},
+        'agent_created': {'stage': 'Profile Complete', 'registration_stage': 'Agent/Agency Created'},
         'agent_invitation_sent': {'stage': 'Team Invited'},
         'agent_invitation_accepted': {'stage': 'Profile Complete'},
         'agent_verified': {'stage': 'Verified'},
         'property_submitted': {'stage': 'First Listing'},
-        'property_approved': {'stage': 'Active Lister'},
+        'property_approved': {'stage': 'Active Lister', 'registration_stage': 'Listing Approved'},
     }
 
     def post(self, request):
@@ -1094,23 +1090,25 @@ class DesiFirmsWebhookView(View):
             if p:
                 return p
 
-        # Fallback: Agents & Agencies for realestate, or first registered_users
+        # Fallback: Agents & Agencies for realestate, or Registered Users - Business
         if pipeline_hint == 'realestate':
             return Pipeline.objects.filter(
                 brand=brand, name__icontains='Agents', is_active=True,
             ).first()
 
+        # Default to Business registered users (not Real Estate or Events)
         return Pipeline.objects.filter(
+            brand=brand, name='Registered Users - Business', is_active=True,
+        ).first() or Pipeline.objects.filter(
             brand=brand, pipeline_type='registered_users', is_active=True,
         ).first()
 
     def _handle_registration(self, data, email, brand, logger):
-        """User registered on Desi Firms. Create contact + deal in nudge pipeline."""
+        """User registered on Desi Firms. Create contact + deal in User Registration pipeline."""
         from crm.models import Pipeline, PipelineStage
 
         contact, _ = self._get_or_create_contact(email, brand, data)
         phone = data.get('phone', '')
-        pipeline_hint = data.get('pipeline_hint', '')
 
         # Check for existing active deal in ANY Desi Firms pipeline
         existing_deal = Deal.objects.filter(
@@ -1141,18 +1139,20 @@ class DesiFirmsWebhookView(View):
                 'pipeline': existing_deal.pipeline.name,
             })
 
-        # No existing deal — create in appropriate Registered Users pipeline
-        pipeline = self._find_nudge_pipeline(brand, pipeline_hint)
+        # No existing deal — create in User Registration pipeline
+        pipeline = Pipeline.objects.filter(
+            brand=brand, pipeline_type='user_registration', is_active=True,
+        ).first()
         if not pipeline:
-            logger.warning(f"Desi Firms webhook: no nudge pipeline for hint={pipeline_hint}")
+            logger.warning("Desi Firms webhook: no user_registration pipeline found")
             return JsonResponse({
                 'status': 'contact_created',
                 'contact_id': str(contact.id),
             })
 
         first_stage = PipelineStage.objects.filter(
-            pipeline=pipeline
-        ).order_by('order').first()
+            pipeline=pipeline, name='Registered',
+        ).first()
 
         notes = f"Registered on Desi Firms via webhook."
         if phone:
@@ -1199,25 +1199,18 @@ class DesiFirmsWebhookView(View):
         ).select_related('pipeline', 'current_stage').first()
 
         if not deal:
-            # No deal yet — auto-create in the right pipeline
-            if 'nudge_pipeline' in mapping:
-                # Business/Events: use nudge pipeline
-                pipeline = Pipeline.objects.filter(
-                    brand=brand, name=mapping['nudge_pipeline'], is_active=True,
-                ).first()
-            else:
-                # Real estate events: use Agents & Agencies pipeline
-                pipeline = Pipeline.objects.filter(
-                    brand=brand, name__icontains='Agents', is_active=True,
-                ).first()
+            # No deal yet — auto-create in User Registration pipeline
+            pipeline = Pipeline.objects.filter(
+                brand=brand, pipeline_type='user_registration', is_active=True,
+            ).first()
 
             if not pipeline:
-                logger.info(f"Desi Firms webhook: no pipeline for {event_type}")
+                logger.info(f"Desi Firms webhook: no user_registration pipeline for {event_type}")
                 return JsonResponse({'status': 'ignored', 'message': 'No matching pipeline'})
 
             first_stage = PipelineStage.objects.filter(
-                pipeline=pipeline
-            ).order_by('order').first()
+                pipeline=pipeline, name='Registered',
+            ).first()
 
             deal = Deal.objects.create(
                 contact=contact,
@@ -1235,33 +1228,17 @@ class DesiFirmsWebhookView(View):
             logger.info(f"Desi Firms webhook: auto-created deal {deal.id} for {email}")
 
         # Determine target stage name based on which pipeline the deal is in
-        if 'outreach_pipeline' in mapping and mapping['outreach_pipeline'] in deal.pipeline.name:
+        if deal.pipeline.pipeline_type == 'user_registration':
+            # Deal is in the unified User Registration pipeline
+            target_stage_name = mapping.get('registration_stage')
+        elif 'outreach_pipeline' in mapping and mapping['outreach_pipeline'] in deal.pipeline.name:
+            # Deal is in an outreach pipeline (from email campaigns) — keep existing logic
             target_stage_name = mapping['outreach_stage']
-        elif 'nudge_pipeline' in mapping and mapping['nudge_pipeline'] in deal.pipeline.name:
-            target_stage_name = mapping['nudge_stage']
         elif 'stage' in mapping:
+            # Deal is in Agents & Agencies or other specific pipeline
             target_stage_name = mapping['stage']
         else:
             target_stage_name = None
-
-        # For real estate events: if deal is in a non-RE pipeline, move to Agents & Agencies
-        if 'stage' in mapping and 'Agents' not in deal.pipeline.name and 'Real Estate' not in deal.pipeline.name:
-            re_pipeline = Pipeline.objects.filter(
-                brand=brand, name__icontains='Agents', is_active=True,
-            ).first()
-            if re_pipeline:
-                old_name = deal.pipeline.name
-                first_stage = PipelineStage.objects.filter(
-                    pipeline=re_pipeline
-                ).order_by('order').first()
-                deal.pipeline = re_pipeline
-                deal.current_stage = first_stage
-                deal.save(update_fields=['pipeline', 'current_stage'])
-                DealActivity.objects.create(
-                    deal=deal,
-                    activity_type='stage_change',
-                    description=f"[Webhook] Moved {old_name} → {re_pipeline.name} ({event_type})",
-                )
 
         # Advance to target stage
         if target_stage_name:
