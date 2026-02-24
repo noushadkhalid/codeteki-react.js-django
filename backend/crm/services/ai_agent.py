@@ -2183,35 +2183,53 @@ Respond with ONLY the SMS message text, nothing else. No quotes, no labels."""
         tone = context.get('tone', 'friendly')
         business_updates = context.get('business_updates', '')
 
-        prompt = f"""Write a short WhatsApp business message for outreach.
+        prompt = f"""Write a WhatsApp outreach message for a business directory invitation.
+
+STRUCTURE (follow this pattern):
+1. Greeting + one-line intro of what we are
+2. Key benefits (2-3 short lines with checkmarks)
+3. Clear CTA with link
 
 CONSTRAINTS:
-- Maximum 300 characters (keep it SHORT like a text message, not an email)
-- Use WhatsApp formatting sparingly: *bold* for brand name only
-- Conversational and direct — get to the point fast
-- Include the website link if available
-- No HTML, no subject line
-- 2-3 sentences max
-- No long introductions, no bullet points, no signatures
+- Maximum 400 characters
+- Use WhatsApp formatting: *bold* for brand name and key phrases
+- Use checkmarks (✓) for benefits, NOT bullet points or emojis
+- Must end with the registration link as the CTA
+- No long paragraphs — use line breaks between sections
+- No email-style signature, no "regards", no phone number
 
-TONE RULES:
-- Humble and inviting, NOT salesy
-- We're inviting them, not selling to them
-- Never say "we can help you" or "boost your business"
+TONE:
+- Friendly invitation, NOT a sales pitch
+- "You're invited" energy, not "buy from us"
+- Direct and clear — every word earns its place
+
+KEY SELLING POINTS (pick 2-3):
+- 100% FREE listing, no catch, no credit card
+- Connect with the South Asian community in Australia
+- Showcase products & services
+- Founding member opportunity
+- Takes 2 minutes to list
 
 CONTEXT:
 - Brand: {brand_name}
-- Brand website: {brand_website or 'None'}
-- Brand description: {brand_description}
+- Website: {brand_website or 'https://www.desifirms.com.au'}
+- Registration link: {brand_website + '/api/register/?next=%2F' if brand_website else 'https://www.desifirms.com.au/api/register/?next=%2F'}
+- Description: {brand_description}
 - Value proposition: {value_proposition}
-- Tone: {tone}
-- Recipient: {recipient_name or 'Business owner'} at {recipient_company or 'their business'}
+- Recipient: {recipient_name or 'there'} at {recipient_company or 'their business'}
 - User suggestions: {suggestions or 'None'}
 
-EXAMPLE (Desi Firms):
-Hi! We've just launched *Desi Firms*, a FREE directory for South Asian businesses in Australia. We'd love to have {recipient_company or 'your business'} as a founding member — takes 2 mins to list: {brand_website}
+EXAMPLE:
+Hi! *Desi Firms* is a new FREE directory for South Asian businesses in Australia 🇦🇺
 
-Respond with ONLY the WhatsApp message text, nothing else. No quotes, no labels."""
+✓ Free listing forever — no credit card
+✓ Connect with the South Asian community
+✓ Showcase your products & services
+
+We'd love to have you as a founding member. List your business in 2 mins:
+https://www.desifirms.com.au/api/register/?next=%2F
+
+Respond with ONLY the WhatsApp message text. No quotes, no labels, no explanation."""
 
         try:
             result = self.ai_engine.generate(
