@@ -886,7 +886,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const idChannel = document.getElementById('id_channel');
     const idBrand = document.getElementById('id_brand');
     const idPipeline = document.getElementById('id_pipeline');
-    console.log('Composer init:', {djangoForm: !!djangoForm, idBrand: !!idBrand, idPipeline: !!idPipeline, idChannel: !!idChannel});
     const idEmailType = document.getElementById('id_email_type');
     const idTone = document.getElementById('id_tone');
     const idSuggestions = document.getElementById('id_your_suggestions');
@@ -1003,8 +1002,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    console.log('idManualEmails:', !!idManualEmails, idManualEmails ? idManualEmails.value.substring(0, 100) : 'null');
-    console.log('idBrand options:', idBrand ? idBrand.options.length : 0, 'idPipeline options:', idPipeline ? idPipeline.options.length : 0);
     syncSelect(idBrand, brandSelect);
     syncSelect(idPipeline, pipelineSelect);
     // Note: Don't sync email type - it's dynamically populated based on pipeline
@@ -1107,7 +1104,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Sync to Django field
         if (idEmailType) idEmailType.value = emailTypeSelect.value;
 
-        console.log('Pipeline:', pipelineText, '-> Type:', pipelineType, '-> Options:', options.length);
     }
 
     // Sync custom selects back to Django fields

@@ -3326,18 +3326,23 @@ class LeadSearchAdmin(ModelAdmin):
         return False
 
     def has_change_permission(self, request, obj=None):
-        if obj:
-            return True  # Allow viewing detail page (all fields are readonly)
         return True
 
     def has_delete_permission(self, request, obj=None):
         return True
+
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        """Redirect to the full results view instead of the default change form."""
+        from django.shortcuts import redirect
+        return redirect(reverse('admin:crm_leadsearch_results', args=[object_id]))
 
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
             path('search/', self.admin_site.admin_view(self.search_view),
                  name='crm_leadsearch_search'),
+            path('<path:object_id>/results/', self.admin_site.admin_view(self.results_view),
+                 name='crm_leadsearch_results'),
         ]
         return custom_urls + urls
 
@@ -3612,6 +3617,171 @@ class LeadSearchAdmin(ModelAdmin):
             'brands': brands,
             'pipelines': pipelines,
             'show_results': False,
+        }
+        return TemplateResponse(request, 'admin/crm/leadsearch/places_search.html', context)
+
+    def results_view(self, request, object_id):
+        """View saved search results using the same template as live search."""
+        from django.template.response import TemplateResponse
+        from django.shortcuts import redirect
+        from django.contrib import messages
+        import json as _json
+
+        try:
+            lead_search = LeadSearch.objects.get(id=object_id)
+        except LeadSearch.DoesNotExist:
+            messages.error(request, "Search not found.")
+            return redirect(reverse('admin:crm_leadsearch_changelist'))
+
+        brands = Brand.objects.filter(is_active=True)
+        pipelines = Pipeline.objects.select_related('brand').all()
+
+        # Handle import from history view (same logic as search_view)
+        is_import = request.method == 'POST' and (
+            'do_import' in request.POST or 'do_import_and_compose' in request.POST
+            or 'do_import_and_sms' in request.POST
+        )
+        if is_import:
+            brand_id = request.POST.get('brand_id', '')
+            search_id = request.POST.get('search_id', '')
+            pipeline_id = request.POST.get('pipeline', '')
+            selected = request.POST.getlist('selected_places')
+
+            if not selected:
+                messages.warning(request, "No businesses selected for import.")
+                return redirect(reverse('admin:crm_leadsearch_results', args=[object_id]))
+
+            try:
+                brand = Brand.objects.get(id=brand_id, is_active=True)
+            except Brand.DoesNotExist:
+                messages.error(request, "Brand not found.")
+                return redirect(reverse('admin:crm_leadsearch_results', args=[object_id]))
+
+            pipeline = None
+            if pipeline_id:
+                try:
+                    pipeline = Pipeline.objects.get(id=pipeline_id)
+                except Pipeline.DoesNotExist:
+                    pass
+
+            imported_contacts = []
+            imported = 0
+            skipped = 0
+            for place_json in selected:
+                biz = _json.loads(place_json)
+
+                if Contact.objects.filter(google_place_id=biz['place_id'], brand=brand).exists():
+                    skipped += 1
+                    continue
+
+                biz_email = biz.get('email', '').strip()
+                if biz_email and Contact.objects.filter(email=biz_email, brand=brand).exists():
+                    existing = Contact.objects.filter(email=biz_email, brand=brand).first()
+                    imported_contacts.append(existing)
+                    skipped += 1
+                    continue
+
+                contact = Contact.objects.create(
+                    brand=brand,
+                    name=biz.get('name', ''),
+                    email=biz_email,
+                    phone=biz.get('phone', ''),
+                    company=biz.get('name', ''),
+                    website=biz.get('website', ''),
+                    address=biz.get('address', ''),
+                    industry=biz.get('industry', ''),
+                    google_place_id=biz.get('place_id', ''),
+                    google_rating=biz.get('rating'),
+                    source='google_places',
+                    contact_type='lead',
+                )
+                imported_contacts.append(contact)
+                imported += 1
+
+            if search_id:
+                LeadSearch.objects.filter(id=search_id).update(imported_count=imported)
+
+            messages.success(
+                request,
+                f"Imported {imported} contact(s) under {brand.name}. Skipped {skipped} duplicate(s).",
+            )
+
+            open_composer = 'do_import_and_compose' in request.POST
+            open_sms_composer = 'do_import_and_sms' in request.POST
+
+            if (open_composer or open_sms_composer) and imported_contacts:
+                from .models import EmailDraft
+
+                if open_sms_composer:
+                    phoneable = [c for c in imported_contacts if c.phone]
+                    manual_phone_lines = [
+                        f"{c.name} <{c.phone}>" if c.name else c.phone
+                        for c in phoneable
+                    ]
+                    draft = EmailDraft.objects.create(
+                        brand=brand, pipeline=pipeline, channel='phone',
+                        manual_phones='\n'.join(manual_phone_lines),
+                    )
+                    if phoneable:
+                        draft.contacts.set(phoneable)
+                        messages.info(request, f"SMS Composer created with {len(phoneable)} contacts with phone numbers.")
+                    else:
+                        messages.warning(request, "SMS Composer created but none of the imported contacts have phone numbers.")
+                else:
+                    emailable = [c for c in imported_contacts if c.email]
+                    manual_lines = [
+                        f"{c.name} <{c.email}>" if c.name else c.email
+                        for c in emailable
+                    ]
+                    draft = EmailDraft.objects.create(
+                        brand=brand, pipeline=pipeline,
+                        manual_emails='\n'.join(manual_lines),
+                    )
+                    if emailable:
+                        draft.contacts.set(emailable)
+                        messages.info(request, f"Email Composer created with {len(emailable)} contacts with email addresses.")
+                    else:
+                        messages.warning(request, "Email Composer created but none have email. Try 'Import & Open in SMS Composer'.")
+                return redirect(reverse('admin:crm_emaildraft_change', args=[draft.pk]))
+
+            return redirect(reverse('admin:crm_leadsearch_changelist'))
+
+        # GET — render saved results using the same template
+        businesses = lead_search.results or []
+        for biz in businesses:
+            biz['has_website'] = bool(biz.get('website'))
+            biz['json_value'] = _json.dumps({
+                'name': biz.get('name', ''), 'phone': biz.get('phone', ''),
+                'email': biz.get('email', ''),
+                'address': biz.get('address', ''), 'website': biz.get('website', ''),
+                'rating': biz.get('rating'), 'place_id': biz.get('place_id', ''),
+                'industry': biz.get('industry', ''),
+            })
+
+        with_email = sum(1 for b in businesses if b.get('email'))
+        with_phone = sum(1 for b in businesses if b.get('phone'))
+        without_website = sum(1 for b in businesses if not b.get('website'))
+
+        context = {
+            **self.admin_site.each_context(request),
+            'title': f'Search Results — {lead_search.query}',
+            'businesses': businesses,
+            'total': lead_search.results_count,
+            'with_email': with_email,
+            'with_phone': with_phone,
+            'without_website': without_website,
+            'search_id': str(lead_search.id),
+            'brand_id': str(lead_search.brand_id),
+            'industry': lead_search.industry,
+            'keywords': '',
+            'location': lead_search.location,
+            'radius_km': lead_search.radius_km,
+            'opts': self.model._meta,
+            'industry_choices': Contact.INDUSTRY_CHOICES,
+            'brands': brands,
+            'pipelines': pipelines,
+            'show_results': True,
+            'from_history': True,
         }
         return TemplateResponse(request, 'admin/crm/leadsearch/places_search.html', context)
 

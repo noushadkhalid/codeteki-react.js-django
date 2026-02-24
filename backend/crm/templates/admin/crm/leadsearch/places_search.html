@@ -22,10 +22,17 @@
     .info-box strong { color: #1e40af; }
     .search-form {
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr 1fr auto auto;
+        grid-template-columns: 1fr 1fr 1fr auto;
         gap: 12px;
         align-items: end;
-        margin-bottom: 24px;
+        margin-bottom: 12px;
+    }
+    .search-row-2 {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 12px;
+        align-items: end;
+        margin-bottom: 20px;
     }
     .form-group { display: flex; flex-direction: column; gap: 4px; }
     .form-group label { font-weight: 600; font-size: 13px; color: #374151; }
@@ -35,10 +42,96 @@
         border-radius: 8px;
         font-size: 14px;
     }
+
+    /* Keyword presets */
+    .keyword-presets {
+        margin-bottom: 20px;
+        padding: 16px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+    }
+    .keyword-presets h4 {
+        margin: 0 0 10px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+    }
+    .preset-groups {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+    .preset-group {
+        padding: 10px 14px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+    }
+    .preset-group-title {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #6b7280;
+        margin-bottom: 6px;
+    }
+    .preset-group label {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-right: 10px;
+        font-size: 13px;
+        color: #374151;
+        cursor: pointer;
+    }
+    .preset-group label input[type="checkbox"] {
+        accent-color: #3b82f6;
+    }
+
+    /* Result filters */
+    .result-filters {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-bottom: 16px;
+        padding: 12px 16px;
+        background: #fefce8;
+        border: 1px solid #facc15;
+        border-radius: 8px;
+    }
+    .result-filters span {
+        font-size: 13px;
+        font-weight: 600;
+        color: #854d0e;
+    }
+    .filter-btn {
+        padding: 5px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        background: #fff;
+        color: #374151;
+        transition: all 0.15s;
+    }
+    .filter-btn:hover { background: #f3f4f6; }
+    .filter-btn.active {
+        background: #3b82f6;
+        color: white;
+        border-color: #3b82f6;
+    }
+    .filter-count {
+        font-size: 12px;
+        color: #6b7280;
+        margin-left: auto;
+    }
+
     .stats-bar {
         display: flex;
         gap: 20px;
-        margin-bottom: 20px;
+        margin-bottom: 16px;
         padding: 12px 16px;
         background: #f0fdf4;
         border: 1px solid #22c55e;
@@ -65,8 +158,18 @@
         vertical-align: top;
     }
     .results-table tr:hover { background: #f9fafb; }
+    .results-table tr.hidden-row { display: none; }
     .website-yes { color: #16a34a; font-weight: 600; }
     .website-no { color: #dc2626; font-weight: 700; }
+    .website-link {
+        color: #2563eb;
+        font-size: 12px;
+        word-break: break-all;
+        text-decoration: none;
+        max-width: 200px;
+        display: inline-block;
+    }
+    .website-link:hover { text-decoration: underline; }
     .email-found { color: #16a34a; font-weight: 600; font-size: 12px; word-break: break-all; }
     .email-none { color: #9ca3af; }
     .rating-stars { color: #eab308; }
@@ -123,7 +226,7 @@
 
     <div class="info-box">
         <strong>How it works:</strong> Search for local businesses by industry and location.
-        Use keywords to narrow results (e.g. "Indian", "Pakistani" for ethnic-specific businesses).
+        Select a brand first to see relevant keyword suggestions, then tick keywords or type your own.
         We'll grab phone, website, and email for each result automatically.
     </div>
 
@@ -135,10 +238,10 @@
         <div class="search-form">
             <div class="form-group">
                 <label>Brand *</label>
-                <select name="brand" required>
+                <select name="brand" id="brandSelect" required>
                     <option value="">Select Brand</option>
                     {% for brand in brands %}
-                    <option value="{{ brand.id }}" {% if brand.id|stringformat:"s" == brand_id %}selected{% endif %}>{{ brand.name }}</option>
+                    <option value="{{ brand.id }}" data-slug="{{ brand.slug }}" {% if brand.id|stringformat:"s" == brand_id %}selected{% endif %}>{{ brand.name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -152,16 +255,67 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>Keywords</label>
-                <input type="text" name="keywords" placeholder="e.g. Indian, Pakistani, Nepali" value="{{ keywords|default:'' }}">
-            </div>
-            <div class="form-group">
                 <label>Location *</label>
                 <input type="text" name="location" placeholder="e.g. Parramatta NSW" value="{{ location|default:'' }}" required>
             </div>
             <div class="form-group">
                 <label>Radius (km)</label>
                 <input type="number" name="radius_km" min="1" max="50" value="{{ radius_km|default:'5' }}" style="width: 80px;">
+            </div>
+        </div>
+
+        <!-- Keyword Presets (brand-aware) -->
+        <div class="keyword-presets" id="keywordPresets">
+            <h4>Quick Keywords <span style="font-weight:400;color:#9ca3af;">(tick to add to search)</span></h4>
+
+            <!-- Desi Firms presets -->
+            <div id="desiFirmsPresets" class="preset-groups" style="display:none;">
+                <div class="preset-group">
+                    <div class="preset-group-title">Cuisine / Ethnic</div>
+                    <label><input type="checkbox" class="kw-preset" value="Indian"> Indian</label>
+                    <label><input type="checkbox" class="kw-preset" value="Pakistani"> Pakistani</label>
+                    <label><input type="checkbox" class="kw-preset" value="Bangladeshi"> Bangladeshi</label>
+                    <label><input type="checkbox" class="kw-preset" value="Nepali"> Nepali</label>
+                    <label><input type="checkbox" class="kw-preset" value="Sri Lankan"> Sri Lankan</label>
+                    <label><input type="checkbox" class="kw-preset" value="Afghan"> Afghan</label>
+                </div>
+                <div class="preset-group">
+                    <div class="preset-group-title">Business Type</div>
+                    <label><input type="checkbox" class="kw-preset" value="restaurant"> Restaurant</label>
+                    <label><input type="checkbox" class="kw-preset" value="grocery"> Grocery</label>
+                    <label><input type="checkbox" class="kw-preset" value="butcher halal"> Halal Butcher</label>
+                    <label><input type="checkbox" class="kw-preset" value="sweets"> Sweets</label>
+                    <label><input type="checkbox" class="kw-preset" value="clothing"> Clothing</label>
+                    <label><input type="checkbox" class="kw-preset" value="beauty salon"> Beauty Salon</label>
+                </div>
+            </div>
+
+            <!-- Codeteki presets -->
+            <div id="codetekiPresets" class="preset-groups" style="display:none;">
+                <div class="preset-group">
+                    <div class="preset-group-title">Business Type</div>
+                    <label><input type="checkbox" class="kw-preset" value="restaurant"> Restaurant</label>
+                    <label><input type="checkbox" class="kw-preset" value="cafe"> Cafe</label>
+                    <label><input type="checkbox" class="kw-preset" value="gym fitness"> Gym / Fitness</label>
+                    <label><input type="checkbox" class="kw-preset" value="plumber electrician"> Trades</label>
+                    <label><input type="checkbox" class="kw-preset" value="dentist"> Dentist</label>
+                    <label><input type="checkbox" class="kw-preset" value="physio"> Physio</label>
+                </div>
+                <div class="preset-group">
+                    <div class="preset-group-title">Target Profile</div>
+                    <label><input type="checkbox" class="kw-preset" value="small business"> Small Business</label>
+                    <label><input type="checkbox" class="kw-preset" value="local"> Local</label>
+                    <label><input type="checkbox" class="kw-preset" value="cleaning"> Cleaning</label>
+                    <label><input type="checkbox" class="kw-preset" value="landscaping"> Landscaping</label>
+                    <label><input type="checkbox" class="kw-preset" value="mechanic"> Mechanic</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="search-row-2">
+            <div class="form-group">
+                <label>Keywords <span style="font-weight:400;color:#9ca3af;">(auto-filled from presets, or type your own)</span></label>
+                <input type="text" name="keywords" id="keywordsInput" placeholder="e.g. Indian restaurant, Pakistani grocery" value="{{ keywords|default:'' }}">
             </div>
             <div class="form-group">
                 <label>&nbsp;</label>
@@ -171,6 +325,11 @@
     </form>
 
     {% if show_results %}
+    {% if from_history %}
+    <div style="margin-bottom: 16px; padding: 10px 16px; background: #eff6ff; border: 1px solid #93c5fd; border-radius: 8px; font-size: 13px; color: #1e40af;">
+        Viewing saved search results. You can still select and import contacts from here.
+    </div>
+    {% endif %}
     <!-- Results -->
     <div class="stats-bar">
         <div class="stat">Found <strong>{{ total }}</strong> businesses</div>
@@ -180,13 +339,23 @@
     </div>
 
     {% if businesses %}
+    <!-- Result Filters -->
+    <div class="result-filters">
+        <span>Filter results:</span>
+        <button type="button" class="filter-btn" data-filter="no-website" onclick="toggleFilter(this)">Without Website ({{ without_website }})</button>
+        <button type="button" class="filter-btn" data-filter="has-email" onclick="toggleFilter(this)">Has Email ({{ with_email }})</button>
+        <button type="button" class="filter-btn" data-filter="has-phone" onclick="toggleFilter(this)">Has Phone ({{ with_phone }})</button>
+        <button type="button" class="filter-btn" data-filter="no-email" onclick="toggleFilter(this)">No Email</button>
+        <span class="filter-count" id="visibleCount">Showing {{ total }} of {{ total }}</span>
+    </div>
+
     <form method="post" id="importForm">
         {% csrf_token %}
         <input type="hidden" name="search_id" value="{{ search_id }}">
         <input type="hidden" name="brand_id" value="{{ brand_id }}">
 
         <div class="select-controls">
-            <a onclick="selectAll()">Select All</a>
+            <a onclick="selectAll()">Select All Visible</a>
             <a onclick="selectNone()">Select None</a>
             <a onclick="selectWithEmail()">Select With Email</a>
             <a onclick="selectWithPhone()">Select With Phone</a>
@@ -224,7 +393,9 @@
                     <td>{{ biz.phone|default:"-" }}</td>
                     <td style="max-width: 220px;">{{ biz.address|default:"-" }}</td>
                     <td>
-                        {% if biz.has_website %}
+                        {% if biz.website %}
+                            <a href="{{ biz.website }}" target="_blank" rel="noopener" class="website-link">{{ biz.website }}</a>
+                        {% elif biz.has_website %}
                             <span class="website-yes">Has website</span>
                         {% else %}
                             <span class="website-no">NO WEBSITE</span>
@@ -274,17 +445,120 @@
 </div>
 
 <script>
+// --- Loading overlay ---
 document.getElementById('searchForm').addEventListener('submit', function() {
     document.getElementById('loadingOverlay').classList.add('active');
     document.getElementById('searchBtn').disabled = true;
     document.getElementById('searchBtn').textContent = 'Searching...';
 });
 
+// --- Brand-aware keyword presets ---
+var brandSelect = document.getElementById('brandSelect');
+var desiFirmsPresets = document.getElementById('desiFirmsPresets');
+var codetekiPresets = document.getElementById('codetekiPresets');
+var keywordsInput = document.getElementById('keywordsInput');
+
+function updatePresetsVisibility() {
+    var selected = brandSelect.options[brandSelect.selectedIndex];
+    var slug = selected ? selected.getAttribute('data-slug') : '';
+
+    desiFirmsPresets.style.display = 'none';
+    codetekiPresets.style.display = 'none';
+
+    // Reset checkboxes when switching brands
+    document.querySelectorAll('.kw-preset').forEach(function(cb) { cb.checked = false; });
+
+    if (slug === 'desifirms') {
+        desiFirmsPresets.style.display = 'flex';
+    } else if (slug) {
+        codetekiPresets.style.display = 'flex';
+    }
+}
+
+brandSelect.addEventListener('change', updatePresetsVisibility);
+// Init on page load (if brand already selected from POST)
+updatePresetsVisibility();
+
+// Sync preset checkboxes to keywords input
+document.querySelectorAll('.kw-preset').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+        var checked = [];
+        // Only collect from the visible preset group
+        var visibleGroup = desiFirmsPresets.style.display !== 'none' ? desiFirmsPresets : codetekiPresets;
+        visibleGroup.querySelectorAll('.kw-preset:checked').forEach(function(el) {
+            checked.push(el.value);
+        });
+        keywordsInput.value = checked.join(' ');
+    });
+});
+
+// On load, check presets that match existing keywords
+(function() {
+    var existing = keywordsInput.value.toLowerCase().trim();
+    if (!existing) return;
+    document.querySelectorAll('.kw-preset').forEach(function(cb) {
+        if (existing.indexOf(cb.value.toLowerCase()) !== -1) {
+            cb.checked = true;
+        }
+    });
+})();
+
+// --- Result filters ---
+var activeFilters = new Set();
+var totalResults = {{ total|default:'0' }};
+
+function toggleFilter(btn) {
+    var filter = btn.getAttribute('data-filter');
+    if (activeFilters.has(filter)) {
+        activeFilters.delete(filter);
+        btn.classList.remove('active');
+    } else {
+        activeFilters.add(filter);
+        btn.classList.add('active');
+    }
+    applyFilters();
+}
+
+function applyFilters() {
+    var rows = document.querySelectorAll('.results-table tbody tr');
+    var visible = 0;
+
+    rows.forEach(function(row) {
+        var hasWebsite = row.getAttribute('data-has-website') === 'yes';
+        var hasEmail = row.getAttribute('data-has-email') === 'yes';
+        var hasPhone = row.getAttribute('data-has-phone') === 'yes';
+
+        var show = true;
+
+        if (activeFilters.size > 0) {
+            show = false;
+            // OR logic: show row if it matches ANY active filter
+            if (activeFilters.has('no-website') && !hasWebsite) show = true;
+            if (activeFilters.has('has-email') && hasEmail) show = true;
+            if (activeFilters.has('has-phone') && hasPhone) show = true;
+            if (activeFilters.has('no-email') && !hasEmail) show = true;
+        }
+
+        if (show) {
+            row.classList.remove('hidden-row');
+            visible++;
+        } else {
+            row.classList.add('hidden-row');
+            // Uncheck hidden rows
+            var cb = row.querySelector('.place-cb');
+            if (cb) cb.checked = false;
+        }
+    });
+
+    document.getElementById('visibleCount').textContent = 'Showing ' + visible + ' of ' + totalResults;
+}
+
+// --- Selection helpers ---
 function toggleAll(cb) {
-    document.querySelectorAll('.place-cb').forEach(function(el) { el.checked = cb.checked; });
+    document.querySelectorAll('.results-table tbody tr:not(.hidden-row) .place-cb').forEach(function(el) { el.checked = cb.checked; });
 }
 function selectAll() {
-    document.querySelectorAll('.place-cb').forEach(function(el) { el.checked = true; });
+    document.querySelectorAll('.results-table tbody tr:not(.hidden-row) .place-cb').forEach(function(el) { el.checked = true; });
     document.getElementById('selectAllCb').checked = true;
 }
 function selectNone() {
@@ -293,15 +567,15 @@ function selectNone() {
 }
 function selectWithEmail() {
     document.querySelectorAll('.place-cb').forEach(function(el) { el.checked = false; });
-    document.querySelectorAll('tr[data-has-email="yes"] .place-cb').forEach(function(el) { el.checked = true; });
+    document.querySelectorAll('tr:not(.hidden-row)[data-has-email="yes"] .place-cb').forEach(function(el) { el.checked = true; });
 }
 function selectWithPhone() {
     document.querySelectorAll('.place-cb').forEach(function(el) { el.checked = false; });
-    document.querySelectorAll('tr[data-has-phone="yes"] .place-cb').forEach(function(el) { el.checked = true; });
+    document.querySelectorAll('tr:not(.hidden-row)[data-has-phone="yes"] .place-cb').forEach(function(el) { el.checked = true; });
 }
 function selectNoWebsite() {
     document.querySelectorAll('.place-cb').forEach(function(el) { el.checked = false; });
-    document.querySelectorAll('tr[data-has-website="no"] .place-cb').forEach(function(el) { el.checked = true; });
+    document.querySelectorAll('tr:not(.hidden-row)[data-has-website="no"] .place-cb').forEach(function(el) { el.checked = true; });
 }
 </script>
 {% endblock %}
