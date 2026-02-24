@@ -2183,49 +2183,54 @@ Respond with ONLY the SMS message text, nothing else. No quotes, no labels."""
         tone = context.get('tone', 'friendly')
         business_updates = context.get('business_updates', '')
 
-        # Desi Firms: use pre-written template (condensed version of email)
+        # Build brand-specific reference style for AI
         if 'desi' in brand_name.lower():
-            name_part = f"Hi {recipient_name}! " if recipient_name else "Hi there! "
-            reg_link = "https://www.desifirms.com.au/api/register/?next=%2F"
+            brand_context = f"""BRAND: Desi Firms — a community platform connecting South Asian businesses in Australia.
+REGISTRATION LINK: https://www.desifirms.com.au/api/register/?next=%2F
+WEBSITE: https://www.desifirms.com.au
 
-            body = (
-                f"{name_part}*You're invited* to be a founding member of *Desi Firms* 🎉\n"
-                f"\n"
-                f"We've launched a community platform to connect South Asian businesses in Australia. "
-                f"Our 1.6 million-strong community has no dedicated place to discover local businesses — we're building that bridge.\n"
-                f"\n"
-                f"🎁 *100% FREE — No Catch*\n"
-                f"✓ Free business listing forever\n"
-                f"✓ Connect with the South Asian community\n"
-                f"✓ Showcase your products & services\n"
-                f"✓ No credit card required\n"
-                f"\n"
-                f"List your business in 2 mins 👇\n"
-                f"{reg_link}\n"
-                f"\n"
-                f"Questions? Just reply here!\n"
-                f"— Noushad, Desi Firms"
-            )
-            return {'body': body, 'subject': '', 'success': True}
+REFERENCE (this is the style from our email campaigns — use it as inspiration, NOT copy-paste):
+- Opening: "You're invited to be a founding member of Desi Firms"
+- Key stat: Australia's 1.6 million-strong South Asian community has no dedicated platform to discover local businesses
+- Benefits: 100% FREE listing forever, connect with the community, showcase products & services, no credit card
+- CTA: "List your business in 2 mins" + registration link
+- Sign-off: "— Noushad, Desi Firms"
 
-        # Other brands: AI-generated
-        prompt = f"""Write a short WhatsApp business outreach message.
+IMPORTANT: The user's suggestions below should OVERRIDE or CUSTOMIZE the message. If they say
+"mention our free listing offer" — focus on that. If they say "highlight events" — talk about events.
+The reference above is just the default style when no specific suggestions are given."""
+        else:
+            brand_context = f"""BRAND: {brand_name}
+WEBSITE: {brand_website or 'None'}
+DESCRIPTION: {brand_description}
+VALUE PROPOSITION: {value_proposition}"""
 
-CONSTRAINTS:
-- Maximum 400 characters
-- Use WhatsApp formatting: *bold* for brand name and key phrases
-- Conversational, direct, with a clear CTA and link
-- No email-style signature
+        prompt = f"""Write a WhatsApp business outreach message.
 
-CONTEXT:
-- Brand: {brand_name}
-- Website: {brand_website or 'None'}
-- Description: {brand_description}
-- Value proposition: {value_proposition}
-- Recipient: {recipient_name or 'Business owner'} at {recipient_company or 'their business'}
-- User suggestions: {suggestions or 'None'}
+FORMAT RULES:
+- 400-600 characters (WhatsApp sweet spot — not too short, not an essay)
+- Use WhatsApp formatting: *bold* for brand name and key headings
+- Use ✓ checkmarks for benefit lists (2-4 items)
+- Structure: Greeting → Why we're reaching out → Benefits → CTA with link
+- End with "— Noushad, {brand_name}" (the sender)
+- Include "Questions? Just reply here!" before sign-off
 
-Respond with ONLY the WhatsApp message text."""
+TONE:
+- Inviting, not salesy — "you're invited" not "buy from us"
+- Humble and community-focused
+- Conversational like texting a friend, but professional
+
+{brand_context}
+
+USER'S SUGGESTIONS (THIS IS THE PRIORITY — shape the message around these):
+{suggestions or 'No specific suggestions — use the default reference style above.'}
+
+RECIPIENT: {recipient_name or 'there'}{f' at {recipient_company}' if recipient_company else ''}
+EMAIL TYPE: {email_type}
+TONE REQUESTED: {tone}
+{f'BUSINESS UPDATES: {business_updates}' if business_updates else ''}
+
+Respond with ONLY the WhatsApp message text. No quotes, no labels, no explanation."""
 
         try:
             result = self.ai_engine.generate(
