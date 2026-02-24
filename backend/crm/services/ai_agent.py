@@ -2183,65 +2183,60 @@ Respond with ONLY the SMS message text, nothing else. No quotes, no labels."""
         tone = context.get('tone', 'friendly')
         business_updates = context.get('business_updates', '')
 
-        prompt = f"""Write a WhatsApp outreach message for a business directory invitation.
+        # Desi Firms: use pre-written template (condensed version of email)
+        if 'desi' in brand_name.lower():
+            name_part = f"Hi {recipient_name}! " if recipient_name else "Hi there! "
+            reg_link = "https://www.desifirms.com.au/api/register/?next=%2F"
 
-STRUCTURE (follow this pattern):
-1. Greeting + one-line intro of what we are
-2. Key benefits (2-3 short lines with checkmarks)
-3. Clear CTA with link
+            body = (
+                f"{name_part}*You're invited* to be a founding member of *Desi Firms* 🎉\n"
+                f"\n"
+                f"We've launched a community platform to connect South Asian businesses in Australia. "
+                f"Our 1.6 million-strong community has no dedicated place to discover local businesses — we're building that bridge.\n"
+                f"\n"
+                f"🎁 *100% FREE — No Catch*\n"
+                f"✓ Free business listing forever\n"
+                f"✓ Connect with the South Asian community\n"
+                f"✓ Showcase your products & services\n"
+                f"✓ No credit card required\n"
+                f"\n"
+                f"List your business in 2 mins 👇\n"
+                f"{reg_link}\n"
+                f"\n"
+                f"Questions? Just reply here!\n"
+                f"— Noushad, Desi Firms"
+            )
+            return {'body': body, 'subject': '', 'success': True}
+
+        # Other brands: AI-generated
+        prompt = f"""Write a short WhatsApp business outreach message.
 
 CONSTRAINTS:
 - Maximum 400 characters
 - Use WhatsApp formatting: *bold* for brand name and key phrases
-- Use checkmarks (✓) for benefits, NOT bullet points or emojis
-- Must end with the registration link as the CTA
-- No long paragraphs — use line breaks between sections
-- No email-style signature, no "regards", no phone number
-
-TONE:
-- Friendly invitation, NOT a sales pitch
-- "You're invited" energy, not "buy from us"
-- Direct and clear — every word earns its place
-
-KEY SELLING POINTS (pick 2-3):
-- 100% FREE listing, no catch, no credit card
-- Connect with the South Asian community in Australia
-- Showcase products & services
-- Founding member opportunity
-- Takes 2 minutes to list
+- Conversational, direct, with a clear CTA and link
+- No email-style signature
 
 CONTEXT:
 - Brand: {brand_name}
-- Website: {brand_website or 'https://www.desifirms.com.au'}
-- Registration link: {brand_website + '/api/register/?next=%2F' if brand_website else 'https://www.desifirms.com.au/api/register/?next=%2F'}
+- Website: {brand_website or 'None'}
 - Description: {brand_description}
 - Value proposition: {value_proposition}
-- Recipient: {recipient_name or 'there'} at {recipient_company or 'their business'}
+- Recipient: {recipient_name or 'Business owner'} at {recipient_company or 'their business'}
 - User suggestions: {suggestions or 'None'}
 
-EXAMPLE:
-Hi! *Desi Firms* is a new FREE directory for South Asian businesses in Australia 🇦🇺
-
-✓ Free listing forever — no credit card
-✓ Connect with the South Asian community
-✓ Showcase your products & services
-
-We'd love to have you as a founding member. List your business in 2 mins:
-https://www.desifirms.com.au/api/register/?next=%2F
-
-Respond with ONLY the WhatsApp message text. No quotes, no labels, no explanation."""
+Respond with ONLY the WhatsApp message text."""
 
         try:
             result = self.ai_engine.generate(
                 prompt=prompt,
-                system_prompt="You are a WhatsApp business messaging expert. Write engaging, conversational messages using WhatsApp formatting (*bold*, _italic_).",
+                system_prompt="You are a WhatsApp business messaging expert. Write engaging, conversational messages.",
             )
 
             body = result.get('output', '').strip()
             if not body:
                 return {'body': '', 'subject': '', 'success': False, 'error': 'AI returned empty content'}
 
-            # Trim if too long
             if len(body) > 1024:
                 body = body[:1021] + '...'
 
