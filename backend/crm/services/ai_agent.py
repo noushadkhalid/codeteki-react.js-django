@@ -2202,7 +2202,7 @@ REFERENCE (this is the style from our email campaigns — use it as inspiration,
 - Key stat: Australia's 1.6 million-strong South Asian community has no dedicated platform to discover local businesses
 - Benefits: 100% FREE listing forever, connect with the community, showcase products & services, no credit card
 - CTA: Link to the listings page (desifirms.com.au/all-listings) so they can browse real businesses first
-- Sign-off: "— Noushad, Desi Firms"
+- Sign-off: "— Desi Firms"
 
 IMPORTANT: Use the LISTINGS PAGE link (desifirms.com.au/all-listings), NOT a registration link.
 Let them see the platform first — that builds trust and doesn't look like spam.
@@ -2223,7 +2223,7 @@ FORMAT RULES:
 - Use WhatsApp formatting: *bold* for brand name and key headings
 - Use ✓ checkmarks for benefit lists (2-4 items)
 - Structure: Greeting → Why we're reaching out → Benefits → CTA with link
-- End with "— Noushad, {brand_name}" (the sender)
+- End with "— {brand_name}"
 - Include "Questions? Just reply here!" before sign-off
 
 TONE:
