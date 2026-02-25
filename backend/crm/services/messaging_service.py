@@ -129,16 +129,21 @@ class TwilioMessagingService:
                 'error': str(e),
             }
 
-    def send_whatsapp(self, to: str, body: str) -> dict:
+    def send_whatsapp(self, to: str, body: str, contact_name: str = '', business_name: str = '') -> dict:
         """
-        Send WhatsApp message via Twilio.
+        Send WhatsApp message via Twilio using approved content template.
+
+        Business-initiated WhatsApp requires pre-approved templates.
+        Falls back to free-form body only if within a 24-hour user-initiated window.
 
         Args:
             to: Recipient phone in E.164 format
-            body: Message body (max ~1024 chars recommended)
+            body: Message body (used as fallback context)
+            contact_name: Recipient name for template variable {{1}}
+            business_name: Business name for template variable {{2}}
 
         Returns:
-            {success, message_sid, error}
+            {success, message_sid, error, is_recipient_issue}
         """
         if not self.whatsapp_enabled:
             brand_info = f" for {self.brand.name}" if self.brand else ""
@@ -146,6 +151,7 @@ class TwilioMessagingService:
                 'success': False,
                 'message_sid': None,
                 'error': f'Twilio WhatsApp not configured{brand_info}.',
+                'is_recipient_issue': False,
             }
 
         # Check opt-out
@@ -158,35 +164,72 @@ class TwilioMessagingService:
                 'success': False,
                 'message_sid': None,
                 'error': f'Recipient {to} has opted out of messages.',
+                'is_recipient_issue': False,
             }
+
+        # Use contact/brand info for template variables
+        if not contact_name and contact:
+            contact_name = (contact.name or '').split()[0] if contact.name else 'there'
+        if not business_name and contact:
+            business_name = contact.company or 'your business'
 
         try:
             import time
+            import json as _json
             client = self._get_client()
-            message = client.messages.create(
-                body=body,
-                from_=f'whatsapp:{self.whatsapp_number}',
-                to=f'whatsapp:{to}',
-            )
+
+            # Get WhatsApp content template SID from brand or env
+            import os
+            content_sid = ''
+            if self.brand:
+                content_sid = getattr(self.brand, 'whatsapp_template_sid', '') or ''
+            if not content_sid:
+                content_sid = os.environ.get('WHATSAPP_CONTENT_SID', '')
+
+            if content_sid:
+                # Business-initiated: use approved template
+                message = client.messages.create(
+                    from_=f'whatsapp:{self.whatsapp_number}',
+                    to=f'whatsapp:{to}',
+                    content_sid=content_sid,
+                    content_variables=_json.dumps({
+                        '1': contact_name or 'there',
+                        '2': business_name or 'your business',
+                    }),
+                )
+            else:
+                # No template configured — try free-form (works in 24h user-initiated window)
+                message = client.messages.create(
+                    body=body,
+                    from_=f'whatsapp:{self.whatsapp_number}',
+                    to=f'whatsapp:{to}',
+                )
+
             logger.info(f"WhatsApp queued to {to}: SID={message.sid}, status={message.status}")
 
-            # Twilio accepts WhatsApp messages as 'queued' even when they'll fail
-            # (e.g. template not approved, user not on WhatsApp). Wait and re-check.
+            # Twilio accepts WhatsApp messages as 'queued' even when they'll fail.
+            # Wait and re-check status.
             if message.status in ('queued', 'accepted'):
                 time.sleep(3)
                 updated = client.messages(message.sid).fetch()
                 if updated.status == 'failed':
-                    logger.warning(f"WhatsApp failed after queue for {to}: error={updated.error_code}")
+                    error_code = str(updated.error_code or '')
+                    logger.warning(f"WhatsApp failed after queue for {to}: error={error_code}")
+                    # 63003 = not on WhatsApp, 63001 = channel not found
+                    recipient_errors = {'63003', '63001'}
+                    is_recipient_issue = error_code in recipient_errors
                     return {
                         'success': False,
                         'message_sid': message.sid,
-                        'error': f'WhatsApp failed: error {updated.error_code}',
+                        'error': f'WhatsApp failed: error {error_code}',
+                        'is_recipient_issue': is_recipient_issue,
                     }
 
             return {
                 'success': True,
                 'message_sid': message.sid,
                 'error': None,
+                'is_recipient_issue': False,
             }
         except Exception as e:
             logger.error(f"Twilio WhatsApp send failed to {to}: {e}")
@@ -194,6 +237,7 @@ class TwilioMessagingService:
                 'success': False,
                 'message_sid': None,
                 'error': str(e),
+                'is_recipient_issue': False,
             }
 
 
@@ -241,11 +285,16 @@ class TwilioMessagingService:
                     contact.save(update_fields=['has_whatsapp'])
                 return result
 
-            # WhatsApp failed — mark contact so we skip next time
-            logger.info(f"WhatsApp failed for {to}, marking no-WhatsApp. Falling back to SMS. Error: {result.get('error')}")
-            if contact:
+            # WhatsApp failed — only mark no-WhatsApp if it's a RECIPIENT issue
+            # (e.g. 63003 = not on WhatsApp). Don't cache if it's a sender/template issue
+            # (e.g. 63112 = template not approved, 63016 = content rejected)
+            is_recipient_issue = result.get('is_recipient_issue', False)
+            if is_recipient_issue and contact:
+                logger.info(f"WhatsApp failed for {to} — recipient not on WhatsApp. Caching for future SMS-only.")
                 contact.has_whatsapp = False
                 contact.save(update_fields=['has_whatsapp'])
+            else:
+                logger.info(f"WhatsApp failed for {to} — sender/config issue, not caching. Error: {result.get('error')}")
 
         # Fall back to SMS with shorter body
         if self.enabled:
