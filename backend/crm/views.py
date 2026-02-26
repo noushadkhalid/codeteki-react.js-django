@@ -1857,3 +1857,114 @@ class TwilioInboundWebhookView(View):
             )
 
         return HttpResponse('', status=200)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class MetaWhatsAppWebhookView(View):
+    """
+    Meta WhatsApp Cloud API webhook.
+
+    - GET: Verification challenge (required by Meta to register webhook)
+    - POST: Inbound messages — marks contacts as has_whatsapp=True,
+      handles STOP opt-out, and logs incoming messages.
+
+    When a contact messages the DESI FIRMS WhatsApp number, we mark them
+    as has_whatsapp=True so send_smart() switches to WhatsApp for them.
+    """
+
+    def get(self, request):
+        """Meta webhook verification."""
+        import os
+        verify_token = os.environ.get('META_WHATSAPP_VERIFY_TOKEN', 'desifirms-whatsapp-verify-2026')
+        mode = request.GET.get('hub.mode')
+        token = request.GET.get('hub.verify_token')
+        challenge = request.GET.get('hub.challenge')
+
+        if mode == 'subscribe' and token == verify_token:
+            import logging
+            logging.getLogger(__name__).info("Meta WhatsApp webhook verified")
+            return HttpResponse(challenge, status=200, content_type='text/plain')
+
+        return HttpResponse('Forbidden', status=403)
+
+    def post(self, request):
+        """Process inbound WhatsApp messages from Meta."""
+        import logging
+        logger = logging.getLogger(__name__)
+
+        try:
+            data = json.loads(request.body)
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+        # Meta sends { object: "whatsapp_business_account", entry: [...] }
+        if data.get('object') != 'whatsapp_business_account':
+            return JsonResponse({'ok': True})
+
+        for entry in data.get('entry', []):
+            for change in entry.get('changes', []):
+                value = change.get('value', {})
+
+                # Process incoming messages
+                for message in value.get('messages', []):
+                    from_number = message.get('from', '')  # e.g. "61424538777"
+                    msg_type = message.get('type', '')
+                    msg_body = ''
+                    if msg_type == 'text':
+                        msg_body = message.get('text', {}).get('body', '').strip()
+
+                    if not from_number:
+                        continue
+
+                    # Normalise to E.164
+                    if not from_number.startswith('+'):
+                        from_number = f'+{from_number}'
+
+                    # Find contact
+                    contact = Contact.objects.filter(phone=from_number).first()
+                    if not contact:
+                        contact = Contact.objects.filter(
+                            phone__endswith=from_number[-10:]
+                        ).first()
+
+                    if not contact:
+                        sender_name = ''
+                        for c in value.get('contacts', []):
+                            sender_name = c.get('profile', {}).get('name', '')
+                            break
+                        logger.info(
+                            f"WhatsApp inbound from unknown number {from_number} "
+                            f"(name: {sender_name}): {msg_body[:50]}"
+                        )
+                        continue
+
+                    # Handle opt-out
+                    opt_out_keywords = {'STOP', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT'}
+                    if msg_body.upper() in opt_out_keywords:
+                        if not contact.sms_opted_out:
+                            contact.sms_opted_out = True
+                            contact.sms_opted_out_at = timezone.now()
+                            contact.save(update_fields=['sms_opted_out', 'sms_opted_out_at'])
+                            logger.info(f"WhatsApp opt-out from {from_number}")
+                        continue
+
+                    # Mark as confirmed WhatsApp user
+                    if contact.has_whatsapp is not True:
+                        contact.has_whatsapp = True
+                        contact.save(update_fields=['has_whatsapp'])
+                        logger.info(
+                            f"Contact {from_number} ({contact.name}) confirmed on WhatsApp. "
+                            f"Future messages will use WhatsApp."
+                        )
+
+                # Process delivery statuses (sent, delivered, read, failed)
+                for status_update in value.get('statuses', []):
+                    msg_id = status_update.get('id', '')
+                    delivery_status = status_update.get('status', '')
+                    if msg_id and delivery_status:
+                        from .models import EmailLog
+                        EmailLog.objects.filter(message_sid=msg_id).update(
+                            delivery_status=delivery_status
+                        )
+
+        return JsonResponse({'ok': True})

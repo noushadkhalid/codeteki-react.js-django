@@ -380,45 +380,32 @@ class MessagingService:
 
     def send_smart(self, to: str, body: str, sms_body: str = '') -> dict:
         """
-        Smart send: check WhatsApp status, route accordingly.
+        Smart send: SMS first, WhatsApp only for confirmed users.
 
-        - has_whatsapp=True  -> Meta WhatsApp
-        - has_whatsapp=False -> Twilio SMS (skip WhatsApp entirely)
-        - has_whatsapp=None  -> try Meta WhatsApp, cache result, SMS fallback
+        Meta silently drops marketing templates to recipients who haven't
+        messaged the business first. So we SMS by default, and only use
+        WhatsApp once the contact has replied on WhatsApp (has_whatsapp=True).
+
+        - has_whatsapp=True  -> Meta WhatsApp (they've messaged us)
+        - has_whatsapp=False -> Twilio SMS (confirmed no WhatsApp)
+        - has_whatsapp=None  -> Twilio SMS (unknown, first contact)
 
         Returns:
             {success, message_sid, channel_used, error}
         """
         contact = self._lookup_contact(to)
 
-        # Known non-WhatsApp user -> SMS directly
-        if contact and contact.has_whatsapp is False:
-            logger.info(f"Contact {to} marked as no WhatsApp -> SMS.")
-            if self.enabled:
-                result = self.send_sms(to, sms_body or body)
-                result['channel_used'] = 'sms'
-                return result
-
-        # Try WhatsApp via Meta
-        if self.whatsapp_enabled:
+        # Confirmed WhatsApp user -> send via Meta WhatsApp
+        if contact and contact.has_whatsapp is True and self.whatsapp_enabled:
+            logger.info(f"Contact {to} confirmed on WhatsApp -> Meta WhatsApp.")
             result = self.send_whatsapp(to, body)
             if result['success']:
                 result['channel_used'] = 'whatsapp'
-                if contact and contact.has_whatsapp is not True:
-                    contact.has_whatsapp = True
-                    contact.save(update_fields=['has_whatsapp'])
                 return result
+            # WhatsApp failed — fall through to SMS
+            logger.warning(f"WhatsApp failed for confirmed user {to}: {result.get('error')}. Falling back to SMS.")
 
-            # WhatsApp failed — cache if it's a recipient issue
-            is_recipient_issue = result.get('is_recipient_issue', False)
-            if is_recipient_issue and contact:
-                logger.info(f"WhatsApp failed for {to} — not on WhatsApp. Marking for SMS.")
-                contact.has_whatsapp = False
-                contact.save(update_fields=['has_whatsapp'])
-            else:
-                logger.info(f"WhatsApp failed for {to} — config/sender issue: {result.get('error')}")
-
-        # Fallback to SMS
+        # Default: send SMS (unknown contacts, no-WhatsApp, or WhatsApp failed)
         if self.enabled:
             result = self.send_sms(to, sms_body or body)
             result['channel_used'] = 'sms'

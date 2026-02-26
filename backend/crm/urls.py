@@ -40,6 +40,7 @@ from .views import (
     UnsubscribeView,
     TwilioStatusWebhookView,
     TwilioInboundWebhookView,
+    MetaWhatsAppWebhookView,
     # Dashboard views
     pipeline_dashboard,
     pipeline_board,
@@ -91,9 +92,12 @@ urlpatterns = [
     path('webhooks/bounce/', ZeptoMailBounceWebhookView.as_view(), name='webhook-bounce'),
     path('webhooks/desifirms/', DesiFirmsWebhookView.as_view(), name='webhook-desifirms'),
 
-    # Twilio webhooks (SMS/WhatsApp)
+    # Twilio webhooks (SMS)
     path('webhooks/twilio/status/', TwilioStatusWebhookView.as_view(), name='webhook-twilio-status'),
     path('webhooks/twilio/inbound/', TwilioInboundWebhookView.as_view(), name='webhook-twilio-inbound'),
+
+    # Meta WhatsApp Cloud API webhook (inbound messages + delivery status)
+    path('webhooks/whatsapp/', MetaWhatsAppWebhookView.as_view(), name='webhook-meta-whatsapp'),
 
     # Public unsubscribe page (clicked from emails)
     path('unsubscribe/', UnsubscribeView.as_view(), name='unsubscribe'),
