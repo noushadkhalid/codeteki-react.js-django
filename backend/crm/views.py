@@ -1949,13 +1949,17 @@ class MetaWhatsAppWebhookView(View):
                         continue
 
                     # Mark as confirmed WhatsApp user
-                    if contact.has_whatsapp is not True:
+                    was_new = contact.has_whatsapp is not True
+                    if was_new:
                         contact.has_whatsapp = True
                         contact.save(update_fields=['has_whatsapp'])
                         logger.info(
                             f"Contact {from_number} ({contact.name}) confirmed on WhatsApp. "
                             f"Future messages will use WhatsApp."
                         )
+
+                    # Notify owner of inbound WhatsApp message
+                    self._notify_owner(contact, from_number, msg_body, was_new)
 
                 # Process delivery statuses (sent, delivered, read, failed)
                 for status_update in value.get('statuses', []):
@@ -1968,3 +1972,44 @@ class MetaWhatsAppWebhookView(View):
                         )
 
         return JsonResponse({'ok': True})
+
+    def _notify_owner(self, contact, from_number, msg_body, is_new_whatsapp):
+        """Send WhatsApp + email notification to owner about inbound message."""
+        import os
+        import logging
+        logger = logging.getLogger(__name__)
+
+        owner_phone = os.environ.get('OWNER_NOTIFY_PHONE', '')
+        owner_email = os.environ.get('OWNER_NOTIFY_EMAIL', '')
+
+        new_badge = ' (NEW WhatsApp user)' if is_new_whatsapp else ''
+        contact_info = f"{contact.name} ({from_number})"
+        if contact.company:
+            contact_info += f" - {contact.company}"
+
+        # Notify via WhatsApp (free-form text — owner has 24h window open)
+        if owner_phone:
+            try:
+                from crm.services.messaging_service import MetaWhatsAppService
+                wa = MetaWhatsAppService()
+                if wa.enabled:
+                    wa.send_text(
+                        to=owner_phone,
+                        body=f"WhatsApp from {contact_info}{new_badge}:\n\n{msg_body[:500]}",
+                    )
+            except Exception as e:
+                logger.error(f"Owner WhatsApp notify failed: {e}")
+
+        # Notify via email
+        if owner_email:
+            try:
+                from django.core.mail import send_mail
+                send_mail(
+                    subject=f"WhatsApp from {contact.name}{new_badge}",
+                    message=f"Inbound WhatsApp message:\n\nFrom: {contact_info}\nMessage: {msg_body}\n\nReply via Meta Business Suite or WhatsApp on your phone.",
+                    from_email=None,
+                    recipient_list=[owner_email],
+                    fail_silently=True,
+                )
+            except Exception as e:
+                logger.error(f"Owner email notify failed: {e}")
