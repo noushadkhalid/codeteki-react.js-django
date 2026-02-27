@@ -1958,6 +1958,19 @@ class MetaWhatsAppWebhookView(View):
                             f"Future messages will use WhatsApp."
                         )
 
+                    # Save inbound message to EmailLog
+                    msg_id = message.get('id', '')
+                    from .models import EmailLog
+                    EmailLog.objects.create(
+                        channel='whatsapp',
+                        subject='Inbound WhatsApp',
+                        body=msg_body or f'[{msg_type} message]',
+                        to_phone=from_number,
+                        message_sid=msg_id,
+                        delivery_status='received',
+                        sent_at=timezone.now(),
+                    )
+
                     # Notify owner of inbound WhatsApp message
                     self._notify_owner(contact, from_number, msg_body, was_new)
 

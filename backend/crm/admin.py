@@ -1067,6 +1067,83 @@ class DesiFirmsContactAdmin(ContactAdmin):
         }),
     )
 
+    actions = ['mark_unsubscribed', 'resubscribe', 'add_to_pipeline_followup',
+               'reply_on_whatsapp', 'view_whatsapp_messages']
+
+    @action(description="Reply on WhatsApp")
+    def reply_on_whatsapp(self, request, queryset):
+        if 'apply' in request.POST:
+            message = request.POST.get('whatsapp_message', '').strip()
+            if not message:
+                self.message_user(request, "Message cannot be empty.", level='error')
+                return
+
+            from django.utils import timezone
+            from crm.services.messaging_service import MetaWhatsAppService
+            wa = MetaWhatsAppService()
+            sent = 0
+            errors = []
+            for contact in queryset:
+                if not contact.phone:
+                    errors.append(f"{contact.name}: no phone number")
+                    continue
+                result = wa.send_text(to=contact.phone, body=message)
+                if result['success']:
+                    # Log the outbound message
+                    EmailLog.objects.create(
+                        channel='whatsapp',
+                        subject='Outbound WhatsApp',
+                        body=message,
+                        to_phone=contact.phone,
+                        message_sid=result.get('message_id', ''),
+                        delivery_status='sent',
+                        sent_at=timezone.now(),
+                    )
+                    sent += 1
+                else:
+                    errors.append(f"{contact.name}: {result.get('error', 'Unknown error')}")
+
+            msg = f"WhatsApp sent to {sent} contact(s)."
+            if errors:
+                msg += f" Errors: {'; '.join(errors)}"
+            self.message_user(request, msg, level='success' if sent else 'error')
+            return
+
+        context = {
+            **self.admin_site.each_context(request),
+            'title': 'Reply on WhatsApp',
+            'queryset': queryset,
+            'action_checkbox_name': admin.helpers.ACTION_CHECKBOX_NAME,
+            'action_name': 'reply_on_whatsapp',
+        }
+        return TemplateResponse(request, 'admin/crm/contact/whatsapp_reply.html', context)
+
+    @action(description="View WhatsApp Messages")
+    def view_whatsapp_messages(self, request, queryset):
+        phones = [c.phone for c in queryset if c.phone]
+        if not phones:
+            self.message_user(request, "No contacts with phone numbers selected.", level='error')
+            return
+
+        # Get all WhatsApp messages for these phones
+        from django.db.models import Q
+        phone_q = Q()
+        for phone in phones:
+            phone_q |= Q(to_phone=phone) | Q(to_phone__endswith=phone[-10:])
+
+        messages = EmailLog.objects.filter(
+            phone_q, channel='whatsapp'
+        ).order_by('sent_at')[:100]
+
+        context = {
+            **self.admin_site.each_context(request),
+            'title': 'WhatsApp Messages',
+            'queryset': queryset,
+            'messages': messages,
+            'contacts': {c.phone: c for c in queryset if c.phone},
+        }
+        return TemplateResponse(request, 'admin/crm/contact/whatsapp_messages.html', context)
+
     def get_queryset(self, request):
         return super().get_queryset(request).filter(brand__slug='desifirms')
 
