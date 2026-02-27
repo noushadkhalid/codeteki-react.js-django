@@ -169,6 +169,43 @@ def dashboard_callback(request, context):
             })
         context["pipeline_stats"] = pipeline_stats
 
+        # WhatsApp conversations — recent messages grouped by phone
+        wa_messages = EmailLog.objects.filter(
+            channel='whatsapp'
+        ).order_by('-sent_at')[:50]
+
+        # Group by phone, keep latest message per phone
+        wa_chats = {}
+        for msg in wa_messages:
+            phone = msg.to_phone
+            if phone and phone not in wa_chats:
+                # Try to find contact name
+                contact_name = None
+                try:
+                    contact = Contact.objects.filter(phone=phone).first()
+                    if not contact:
+                        # Try matching last 10 digits
+                        contact = Contact.objects.filter(phone__endswith=phone[-10:]).first()
+                    if contact:
+                        contact_name = contact.name
+                except Exception:
+                    pass
+                wa_chats[phone] = {
+                    'phone': phone,
+                    'contact_name': contact_name or phone,
+                    'last_message': (msg.body or '')[:80],
+                    'sent_at': msg.sent_at,
+                    'is_inbound': msg.delivery_status == 'received',
+                    'status': msg.delivery_status,
+                    'unread': msg.delivery_status == 'received',
+                }
+        # Count unread (received) messages
+        unread_count = EmailLog.objects.filter(
+            channel='whatsapp', delivery_status='received'
+        ).values('to_phone').distinct().count()
+        context["wa_chats"] = list(wa_chats.values())[:10]
+        context["wa_unread_count"] = unread_count
+
     # Recent activity - get conversation visitor name for leads with IDs for linking
     recent_leads = []
     for lead in ChatLead.objects.select_related('conversation').order_by("-created_at")[:5]:

@@ -68,6 +68,52 @@
     </div>
     {% endif %}
 
+    <!-- WhatsApp Chats -->
+    {% if wa_chats %}
+    <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 24px; border: 2px solid #25D366;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="background: #25D366; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                </div>
+                <h2 style="font-size: 18px; font-weight: 600; color: #111827; margin: 0;">
+                    WhatsApp Chats
+                    {% if wa_unread_count %}
+                    <span style="background: #25D366; color: white; font-size: 12px; padding: 2px 8px; border-radius: 12px; margin-left: 8px; vertical-align: middle;">{{ wa_unread_count }} new</span>
+                    {% endif %}
+                </h2>
+            </div>
+            <a href="{% url 'admin:crm_emaillog_changelist' %}?channel=whatsapp" style="font-size: 13px; color: #25D366; text-decoration: none; font-weight: 500;">View All Messages</a>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+            {% for chat in wa_chats %}
+            <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: {% if chat.unread %}#f0fdf4{% else %}#f9fafb{% endif %}; border-radius: 8px; cursor: pointer; transition: all 0.15s; border: 2px solid {% if chat.unread %}#bbf7d0{% else %}transparent{% endif %};"
+                 onmouseover="this.style.borderColor='#25D366';"
+                 onmouseout="this.style.borderColor='{% if chat.unread %}#bbf7d0{% else %}transparent{% endif %}';">
+                <div style="background: {% if chat.unread %}#25D366{% else %}#d1d5db{% endif %}; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                    <span style="color: white; font-weight: 700; font-size: 16px;">{{ chat.contact_name|make_list|first|upper }}</span>
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <p style="font-weight: 600; color: #111827; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ chat.contact_name }}</p>
+                        <span style="font-size: 11px; color: {% if chat.unread %}#25D366{% else %}#6b7280{% endif %}; white-space: nowrap; margin-left: 8px; font-weight: {% if chat.unread %}600{% else %}400{% endif %};">{{ chat.sent_at|timesince }} ago</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                        {% if not chat.is_inbound %}
+                        <span style="color: {% if chat.status == 'read' %}#53bdeb{% elif chat.status == 'delivered' %}#53bdeb{% else %}#6b7280{% endif %}; font-size: 14px;">&#10003;{% if chat.status == 'delivered' or chat.status == 'read' %}&#10003;{% endif %}</span>
+                        {% endif %}
+                        <p style="font-size: 13px; color: #6b7280; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ chat.last_message }}</p>
+                    </div>
+                </div>
+                {% if chat.unread %}
+                <div style="background: #25D366; border-radius: 50%; width: 10px; height: 10px; flex-shrink: 0;"></div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Website Stats Cards -->
     {% if cards %}
     <div style="margin-bottom: 24px;">
