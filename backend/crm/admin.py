@@ -1036,10 +1036,28 @@ class DesiFirmsContactAdmin(ContactAdmin):
     """Desi Firms-only contacts view - brand auto-selected."""
     form = DesiFirmsContactAdminForm
 
+    list_display = [
+        'name',
+        'email',
+        'company',
+        'phone',
+        'whatsapp_badge',
+        'status_badge',
+        'email_count',
+        'last_emailed_display',
+        'is_unsubscribed_badge',
+        'created_at',
+    ]
+    search_fields = ['name', 'email', 'company', 'website', 'phone']
+
     # Remove brand from fieldsets - it's auto-set
     fieldsets = (
         ('Contact Information', {
-            'fields': ('name', 'email', 'company', 'website')
+            'fields': ('name', 'email', 'phone', 'company', 'website')
+        }),
+        ('WhatsApp & SMS', {
+            'fields': ('has_whatsapp', 'sms_opted_out'),
+            'description': 'WhatsApp confirmed when contact messages our business number.'
         }),
         ('Status', {
             'fields': ('status', 'contact_type', 'source'),
@@ -1143,6 +1161,14 @@ class DesiFirmsContactAdmin(ContactAdmin):
             'contacts': {c.phone: c for c in queryset if c.phone},
         }
         return TemplateResponse(request, 'admin/crm/contact/whatsapp_messages.html', context)
+
+    @display(description="WhatsApp", ordering="has_whatsapp")
+    def whatsapp_badge(self, obj):
+        if obj.has_whatsapp is True:
+            return format_html('<span style="color:#25D366;">&#10003; WA</span>')
+        elif obj.has_whatsapp is False:
+            return format_html('<span style="color:#999;">No WA</span>')
+        return format_html('<span style="color:#ccc;">—</span>')
 
     def get_queryset(self, request):
         return super().get_queryset(request).filter(brand__slug='desifirms')
