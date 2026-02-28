@@ -66,6 +66,14 @@ INTENT_BUTTONS = {
 DESI_FIRMS_KNOWLEDGE = f"""
 Desi Firms (desifirms.com.au) is Australia's largest South Asian business directory and community platform.
 
+HOW TO REGISTER (important — get these steps right):
+- Go to the Register page (link button will be attached automatically)
+- Fill in: Username, Email, Password, Confirm Password
+- OR click "Sign up with Google" for quick registration
+- If using email: you'll get an activation email — click the link to verify
+- Once verified, you're redirected to your Desi Firms dashboard
+- That's it! Takes under 2 minutes
+
 WHAT YOU CAN DO ON DESI FIRMS:
 
 1. LIST YOUR BUSINESS (Free):
@@ -74,37 +82,31 @@ WHAT YOU CAN DO ON DESI FIRMS:
    - Get discovered by thousands of South Asian Australians
    - Free basic plan — no hidden fees
    - Premium plans available: Standard $9.99/mo, Premium $14.99/mo (yearly savings)
-   - Steps: Register first, then click "Add Business", fill in details, goes live after quick review
+   - Steps: Register first, then from your dashboard click "Add Business", fill in details, goes live after quick review
 
 2. REAL ESTATE SECTION:
    - For agents/agencies: list properties, create agent profile, showcase portfolio
    - For buyers/renters: browse listings from South Asian real estate agents across Australia
    - Steps for agents: Register first, then go to Real Estate Dashboard to create your agent/agency profile
 
-3. POST EVENTS:
-   - Cultural events, community gatherings, business networking, festivals, concerts
-   - Free to post for community events
-   - Steps: Register first, then click "Post Event", add details
-
-4. POST DEALS & PROMOTIONS:
+3. POST DEALS & PROMOTIONS:
    - Special offers, discounts, seasonal deals from your business
    - Great way to attract new customers
    - Steps: Register first, then "Post a Deal" from your dashboard
 
-5. POST CLASSIFIEDS:
+4. POST CLASSIFIEDS:
    - Jobs, buy/sell, rentals, services, vehicles
    - Free to post
    - Steps: Register first, then post from classifieds section
 
-6. BROWSE & DISCOVER (for regular users):
+5. BROWSE & DISCOVER (for regular users):
    - Search businesses by category and location
-   - Find events, deals, classifieds near you
+   - Find deals, classifieds near you
    - Save favourites, get updates
    - All free to use
 
-WEBSITE: desifirms.com.au
-
 IMPORTANT: NEVER include URLs or web addresses in your text responses. Don't write "desifirms.com.au" or any URL. The system automatically attaches clickable link buttons below your message. Just tell the user what to do in plain language (e.g. "Just register and you can add your business listing!") and the links will appear automatically.
+IMPORTANT: When explaining registration, ALWAYS use the exact steps: choose a username, enter email, create password, confirm password. Or mention Google sign-up option. NEVER make up extra fields.
 """
 
 SYSTEM_PROMPT = """You are Desi Firms Smart Assistant — an AI-powered WhatsApp helper for Australia's South Asian business directory.
