@@ -414,7 +414,7 @@
             </tbody>
         </table>
 
-        <div style="display: flex; align-items: end; gap: 16px; margin-top: 20px; padding: 16px; background: #f9fafb; border-radius: 8px;">
+        <div style="display: flex; align-items: end; gap: 16px; margin-top: 20px; padding: 16px; background: #f9fafb; border-radius: 8px; flex-wrap: wrap;">
             <div class="form-group" style="min-width: 200px;">
                 <label>Pipeline (optional)</label>
                 <select name="pipeline">
@@ -424,14 +424,18 @@
                     {% endfor %}
                 </select>
             </div>
+            <div class="form-group" style="min-width: 160px;">
+                <label>Channel</label>
+                <select name="channel" id="channelSelect">
+                    <option value="email">Email</option>
+                    <option value="sms">SMS / WhatsApp</option>
+                </select>
+            </div>
             <button type="submit" name="do_import" class="btn btn-success">
-                Import as Contacts
+                Import as Contacts Only
             </button>
-            <button type="submit" name="do_import_and_compose" class="btn btn-primary">
-                Import & Open in Email Composer
-            </button>
-            <button type="submit" name="do_import_and_sms" class="btn btn-primary" style="background:#8b5cf6;">
-                Import & Open in SMS Composer
+            <button type="submit" name="do_import_and_compose" class="btn btn-primary" id="composeBtn">
+                Import & Open Composer
             </button>
             <a href="{% url 'admin:crm_leadsearch_changelist' %}" class="btn btn-secondary">
                 Back
@@ -581,15 +585,12 @@ function selectNoWebsite() {
 // --- Import validation ---
 document.getElementById('importForm').addEventListener('submit', function(e) {
     var btn = e.submitter;
-    if (!btn) return;
-
-    var isEmail = btn.name === 'do_import_and_compose';
-    var isSMS = btn.name === 'do_import_and_sms';
-    if (!isEmail && !isSMS) return; // "Import as Contacts" — no validation needed
+    if (!btn || btn.name !== 'do_import_and_compose') return; // only validate composer button
 
     var checked = document.querySelectorAll('.place-cb:checked');
     if (checked.length === 0) return; // server handles empty selection
 
+    var channel = document.getElementById('channelSelect').value;
     var hasEmail = 0, hasPhone = 0, noEmail = 0, noPhone = 0;
     checked.forEach(function(cb) {
         var row = cb.closest('tr');
@@ -599,29 +600,27 @@ document.getElementById('importForm').addEventListener('submit', function(e) {
         else noPhone++;
     });
 
-    if (isEmail && hasEmail === 0) {
+    if (channel === 'email' && hasEmail === 0) {
         e.preventDefault();
-        alert('None of the selected contacts have email addresses.\n\nUse "Import & Open in SMS Composer" for phone-only contacts.');
+        alert('None of the selected contacts have email addresses.\n\nSwitch channel to "SMS / WhatsApp" or use "Select With Email".');
         return;
     }
 
-    if (isSMS && hasPhone === 0) {
+    if (channel === 'sms' && hasPhone === 0) {
         e.preventDefault();
-        alert('None of the selected contacts have phone numbers.\n\nUse "Import & Open in Email Composer" for email contacts.');
+        alert('None of the selected contacts have phone numbers.\n\nSwitch channel to "Email" or use "Select With Phone".');
         return;
     }
 
-    if (isEmail && noEmail > 0) {
-        if (!confirm(hasEmail + ' of ' + checked.length + ' selected contacts have email.\n' + noEmail + ' without email will be skipped in the composer.\n\nTip: Use "Select With Email" to pick only email contacts.\n\nContinue anyway?')) {
+    if (channel === 'email' && noEmail > 0) {
+        if (!confirm(hasEmail + ' of ' + checked.length + ' selected have email. ' + noEmail + ' without email will be skipped.\n\nTip: Use "Select With Email" to pick only email contacts.\n\nContinue anyway?')) {
             e.preventDefault();
-            return;
         }
     }
 
-    if (isSMS && noPhone > 0) {
-        if (!confirm(hasPhone + ' of ' + checked.length + ' selected contacts have phone.\n' + noPhone + ' without phone will be skipped in the composer.\n\nTip: Use "Select With Phone" to pick only phone contacts.\n\nContinue anyway?')) {
+    if (channel === 'sms' && noPhone > 0) {
+        if (!confirm(hasPhone + ' of ' + checked.length + ' selected have phone. ' + noPhone + ' without phone will be skipped.\n\nTip: Use "Select With Phone" to pick only phone contacts.\n\nContinue anyway?')) {
             e.preventDefault();
-            return;
         }
     }
 });

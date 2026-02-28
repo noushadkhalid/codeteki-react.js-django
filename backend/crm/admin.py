@@ -3582,7 +3582,6 @@ class LeadSearchAdmin(ModelAdmin):
 
         is_import = request.method == 'POST' and (
             'do_import' in request.POST or 'do_import_and_compose' in request.POST
-            or 'do_import_and_sms' in request.POST
         )
         if is_import:
             import json
@@ -3677,29 +3676,23 @@ class LeadSearchAdmin(ModelAdmin):
             if deals_created:
                 messages.success(request, f"Created {deals_created} deal(s) in '{pipeline.name}'.")
 
-            open_composer = 'do_import_and_compose' in request.POST
-            open_sms_composer = 'do_import_and_sms' in request.POST
-
-            if (open_composer or open_sms_composer) and imported_contacts:
+            if 'do_import_and_compose' in request.POST and imported_contacts:
                 from .models import EmailDraft
+                channel = request.POST.get('channel', 'email')
 
-                if open_sms_composer:
+                if channel == 'sms':
                     phoneable = [c for c in imported_contacts if c.phone]
                     manual_phone_lines = [
                         f"{c.name} <{c.phone}>" if c.name else c.phone
                         for c in phoneable
                     ]
                     draft = EmailDraft.objects.create(
-                        brand=brand,
-                        pipeline=pipeline,
-                        channel='phone',
+                        brand=brand, pipeline=pipeline, channel='phone',
                         manual_phones='\n'.join(manual_phone_lines),
                     )
                     if phoneable:
                         draft.contacts.set(phoneable)
                         messages.info(request, f"SMS Composer opened with {len(phoneable)} phone contacts.")
-                    else:
-                        messages.warning(request, "None of the contacts have phone numbers.")
                 else:
                     emailable = [c for c in imported_contacts if c.email]
                     manual_lines = [
@@ -3707,19 +3700,12 @@ class LeadSearchAdmin(ModelAdmin):
                         for c in emailable
                     ]
                     draft = EmailDraft.objects.create(
-                        brand=brand,
-                        pipeline=pipeline,
+                        brand=brand, pipeline=pipeline,
                         manual_emails='\n'.join(manual_lines),
                     )
                     if emailable:
                         draft.contacts.set(emailable)
                         messages.info(request, f"Email Composer opened with {len(emailable)} email contacts.")
-                    else:
-                        messages.warning(
-                            request,
-                            "None of the contacts have email addresses. "
-                            "Try 'Import & Open in SMS Composer' for phone-only contacts.",
-                        )
                 return redirect(reverse('admin:crm_emaildraft_change', args=[draft.pk]))
 
             return redirect(reverse('admin:crm_leadsearch_changelist'))
@@ -3755,7 +3741,6 @@ class LeadSearchAdmin(ModelAdmin):
         # Handle import from history view (same logic as search_view)
         is_import = request.method == 'POST' and (
             'do_import' in request.POST or 'do_import_and_compose' in request.POST
-            or 'do_import_and_sms' in request.POST
         )
         if is_import:
             brand_id = request.POST.get('brand_id', '')
@@ -3847,13 +3832,11 @@ class LeadSearchAdmin(ModelAdmin):
             if deals_created:
                 messages.success(request, f"Created {deals_created} deal(s) in '{pipeline.name}'.")
 
-            open_composer = 'do_import_and_compose' in request.POST
-            open_sms_composer = 'do_import_and_sms' in request.POST
-
-            if (open_composer or open_sms_composer) and imported_contacts:
+            if 'do_import_and_compose' in request.POST and imported_contacts:
                 from .models import EmailDraft
+                channel = request.POST.get('channel', 'email')
 
-                if open_sms_composer:
+                if channel == 'sms':
                     phoneable = [c for c in imported_contacts if c.phone]
                     manual_phone_lines = [
                         f"{c.name} <{c.phone}>" if c.name else c.phone
@@ -3866,8 +3849,6 @@ class LeadSearchAdmin(ModelAdmin):
                     if phoneable:
                         draft.contacts.set(phoneable)
                         messages.info(request, f"SMS Composer opened with {len(phoneable)} phone contacts.")
-                    else:
-                        messages.warning(request, "None of the contacts have phone numbers.")
                 else:
                     emailable = [c for c in imported_contacts if c.email]
                     manual_lines = [
@@ -3881,8 +3862,6 @@ class LeadSearchAdmin(ModelAdmin):
                     if emailable:
                         draft.contacts.set(emailable)
                         messages.info(request, f"Email Composer opened with {len(emailable)} email contacts.")
-                    else:
-                        messages.warning(request, "None have email. Try 'Import & Open in SMS Composer'.")
                 return redirect(reverse('admin:crm_emaildraft_change', args=[draft.pk]))
 
             return redirect(reverse('admin:crm_leadsearch_changelist'))
