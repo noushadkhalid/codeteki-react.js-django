@@ -58,9 +58,6 @@ INTENT_BUTTONS = {
     'browse': [
         {'title': 'Browse Businesses', 'url': DESI_FIRMS_URLS['browse_businesses']},
     ],
-    'browse_events': [
-        {'title': 'Browse Events', 'url': DESI_FIRMS_URLS['browse_events']},
-    ],
     'browse_realestate': [
         {'title': 'Browse Properties', 'url': DESI_FIRMS_URLS['browse_realestate']},
     ],
@@ -239,7 +236,11 @@ class WhatsAppAIService:
         return text
 
     def _detect_buttons(self, ai_response, conversation, customer_message):
-        """Auto-detect which buttons to attach based on context."""
+        """Auto-detect which buttons to attach based on context.
+
+        Only attach links AFTER the customer has expressed intent —
+        never on the greeting/discovery phase when AI is still asking questions.
+        """
         text = ai_response
         # Strip any URLs the AI snuck in
         text = re.sub(r'https?://\S+', '', text).strip()
@@ -248,36 +249,35 @@ class WhatsAppAIService:
         # Remove [BUTTONS:...] tag if AI added it
         text = re.sub(r'\[BUTTONS:\w+\]\s*$', '', text).strip()
 
-        combined = (customer_message + ' ' + ai_response).lower()
+        # Don't attach links in early conversation — let the customer speak first
+        if conversation.phase in ('greeting', 'discovery') and conversation.message_count <= 2:
+            return text, []
 
-        # Detect intent from the conversation + AI response
-        if any(w in combined for w in ['register', 'sign up', 'create account', 'get started']):
-            if conversation.user_type == 'business_owner' or 'list' in combined or 'business' in combined:
+        # Only match against CUSTOMER message (not AI response which mentions everything)
+        msg = customer_message.lower()
+
+        # Detect intent from what the CUSTOMER said
+        if any(w in msg for w in ['register', 'sign up', 'create account', 'get started']):
+            if conversation.user_type == 'business_owner' or 'list' in msg or 'business' in msg:
                 return text, INTENT_BUTTONS['list_business']
-            if 'agent' in combined or 'agency' in combined or 'real estate' in combined or 'property' in combined:
+            if 'agent' in msg or 'agency' in msg or 'real estate' in msg or 'property' in msg:
                 return text, INTENT_BUTTONS['realestate_agent']
-            if 'event' in combined:
-                return text, INTENT_BUTTONS['post_event']
-            if 'deal' in combined or 'promotion' in combined:
-                return text, INTENT_BUTTONS['post_deal']
             return text, INTENT_BUTTONS['register']
 
-        if any(w in combined for w in ['list your business', 'add listing', 'add your business', 'list my']):
+        if any(w in msg for w in ['list my business', 'add listing', 'add my business', 'list business']):
             return text, INTENT_BUTTONS['list_business']
 
-        if any(w in combined for w in ['real estate', 'agent profile', 'agency', 'property listing']):
+        if any(w in msg for w in ['real estate', 'agent profile', 'agency', 'property listing', 'property']):
             return text, INTENT_BUTTONS['realestate_agent']
 
-        if any(w in combined for w in ['post event', 'add event', 'list event']):
+        if any(w in msg for w in ['post event', 'add event']):
             return text, INTENT_BUTTONS['post_event']
 
-        if any(w in combined for w in ['post deal', 'add deal', 'promotion']):
+        if any(w in msg for w in ['post deal', 'add deal', 'promotion', 'deal']):
             return text, INTENT_BUTTONS['post_deal']
 
-        if any(w in combined for w in ['browse', 'search', 'find business', 'looking for']):
-            if 'event' in combined:
-                return text, INTENT_BUTTONS['browse_events']
-            if 'real estate' in combined or 'property' in combined:
+        if any(w in msg for w in ['browse', 'search', 'find business', 'looking for']):
+            if 'real estate' in msg or 'property' in msg:
                 return text, INTENT_BUTTONS['browse_realestate']
             return text, INTENT_BUTTONS['browse']
 
