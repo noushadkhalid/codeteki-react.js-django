@@ -575,6 +575,7 @@ class CodetekiContactAdmin(ContactAdmin):
         'company',
         'industry_badge',
         'phone',
+        'reach_badge',
         'status_badge',
         'email_count',
         'last_emailed_display',
@@ -628,6 +629,18 @@ class CodetekiContactAdmin(ContactAdmin):
         if not obj.industry:
             return "-", "default"
         return obj.get_industry_display(), "info"
+
+    @display(description="Reach")
+    def reach_badge(self, obj):
+        has_email = bool(obj.email)
+        has_phone = bool(obj.phone)
+        if has_email and has_phone:
+            return format_html('<span style="color:#059669" title="{} | {}">&#9993;&#128241;</span>', obj.email, obj.phone)
+        elif has_email:
+            return format_html('<span style="color:#3b82f6" title="{}">&#9993; Email</span>', obj.email)
+        elif has_phone:
+            return format_html('<span style="color:#8b5cf6" title="{}">&#128241; Phone</span>', obj.phone)
+        return format_html('<span style="color:#dc2626">&#10060; None</span>')
 
     def get_queryset(self, request):
         return super().get_queryset(request).filter(brand__slug='codeteki')
@@ -1159,6 +1172,7 @@ class PipelineStageAdmin(ModelAdmin):
 class DealAdmin(ModelAdmin):
     list_display = [
         'contact_name',
+        'channel_badge',
         'pipeline',
         'current_stage_display',
         'status_badge',
@@ -1170,7 +1184,7 @@ class DealAdmin(ModelAdmin):
         'created_at',
     ]
     list_filter = ['pipeline', 'current_stage', 'status', 'engagement_tier', 'autopilot_paused', 're_engagement_attempted', 'lost_reason', 'created_at']
-    search_fields = ['contact__name', 'contact__email', 'contact__company']
+    search_fields = ['contact__name', 'contact__email', 'contact__company', 'contact__phone']
     readonly_fields = ['id', 'created_at', 'updated_at', 'stage_entered_at', 'emails_sent', 'engagement_tier', 're_engagement_attempted']
     inlines = [DealActivityInline, EmailLogInline]
     ordering = ['-created_at']
@@ -1198,6 +1212,19 @@ class DealAdmin(ModelAdmin):
     @display(description="Contact")
     def contact_name(self, obj):
         return obj.contact.name
+
+    @display(description="Reach")
+    def channel_badge(self, obj):
+        contact = obj.contact
+        has_email = bool(contact.email)
+        has_phone = bool(contact.phone)
+        if has_email and has_phone:
+            return format_html('<span style="color:#059669" title="{}">&#9993;&#128241;</span>', f'{contact.email} | {contact.phone}')
+        elif has_email:
+            return format_html('<span style="color:#3b82f6" title="{}">&#9993; Email</span>', contact.email)
+        elif has_phone:
+            return format_html('<span style="color:#8b5cf6" title="{}">&#128241; Phone</span>', contact.phone)
+        return format_html('<span style="color:#dc2626">&#10060; None</span>')
 
     @display(description="Stage")
     def current_stage_display(self, obj):
