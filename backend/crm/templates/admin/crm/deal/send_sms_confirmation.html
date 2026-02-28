@@ -1,0 +1,374 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block content %}
+<style>
+    #send-loading-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(8px);
+        z-index: 999999;
+        justify-content: center;
+        align-items: center;
+    }
+    #send-loading-overlay.active { display: flex !important; }
+    .loading-content {
+        text-align: center;
+        color: white;
+        padding: 3rem;
+        max-width: 400px;
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.98) 0%, rgba(15, 23, 42, 0.98) 100%);
+        border-radius: 1rem;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .loading-spinner {
+        width: 4rem; height: 4rem;
+        border: 4px solid rgba(255, 255, 255, 0.2);
+        border-top-color: #10b981;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin: 0 auto 1.5rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-title { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.75rem; color: #f8fafc; }
+    .loading-message { font-size: 1rem; color: #94a3b8; margin-bottom: 1rem; line-height: 1.6; }
+    .loading-warning { font-size: 0.875rem; color: #fbbf24; font-weight: 500; }
+    body.sending * { pointer-events: none !important; }
+    body.sending #send-loading-overlay, body.sending #send-loading-overlay * { pointer-events: auto !important; }
+
+    .msg-confirm-form {
+        max-width: 1000px;
+        margin: 20px auto;
+        padding: 30px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .msg-confirm-form h2 { margin-bottom: 20px; color: #1f2937; }
+    .stats-row { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 25px; }
+    .stat-box {
+        background: #f3f4f6;
+        padding: 15px 20px;
+        border-radius: 8px;
+        text-align: center;
+        min-width: 120px;
+    }
+    .stat-box .number { font-size: 28px; font-weight: 700; color: #1f2937; }
+    .stat-box .label { font-size: 12px; color: #6b7280; text-transform: uppercase; }
+    .stat-box.success .number { color: #059669; }
+    .stat-box.warning .number { color: #d97706; }
+    .stat-box.danger .number { color: #dc2626; }
+
+    .stage-summary { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+    .stage-badge {
+        background: #e0e7ff; color: #3730a3;
+        padding: 6px 12px; border-radius: 20px;
+        font-size: 13px; font-weight: 500;
+    }
+
+    .preview-columns { display: flex; gap: 24px; margin-bottom: 20px; }
+    .preview-col { flex: 1; }
+
+    .phone-mockup {
+        background: #e5ddd5;
+        border-radius: 16px;
+        padding: 20px 16px;
+        max-width: 380px;
+        min-height: 200px;
+        border: 2px solid #d1d5db;
+    }
+    .phone-header {
+        background: #075e54;
+        color: white;
+        padding: 10px 14px;
+        border-radius: 12px 12px 0 0;
+        margin: -20px -16px 16px -16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    .phone-header .avatar {
+        width: 32px; height: 32px;
+        background: #25d366;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+    }
+    .wa-bubble {
+        background: #dcf8c6;
+        border-radius: 0 8px 8px 8px;
+        padding: 8px 12px;
+        margin-bottom: 6px;
+        max-width: 85%;
+        font-size: 14px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+        box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+    }
+    .wa-bubble .time {
+        float: right; font-size: 11px; color: #7d8e7d;
+        margin-left: 8px; margin-top: 4px;
+    }
+    .wa-label {
+        font-size: 12px; font-weight: 600; color: #075e54;
+        margin-bottom: 6px; text-transform: uppercase;
+    }
+
+    .sms-mockup {
+        background: #f3f4f6;
+        border-radius: 16px;
+        padding: 20px 16px;
+        max-width: 380px;
+        min-height: 120px;
+        border: 2px solid #d1d5db;
+    }
+    .sms-header {
+        background: #3b82f6;
+        color: white;
+        padding: 10px 14px;
+        border-radius: 12px 12px 0 0;
+        margin: -20px -16px 16px -16px;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    .sms-bubble {
+        background: #e5e7eb;
+        border-radius: 0 16px 16px 16px;
+        padding: 10px 14px;
+        max-width: 85%;
+        font-size: 14px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+    .sms-label {
+        font-size: 12px; font-weight: 600; color: #3b82f6;
+        margin-bottom: 6px; text-transform: uppercase;
+    }
+
+    .char-info { font-size: 12px; color: #6b7280; margin-top: 6px; }
+    .char-info.over { color: #dc2626; font-weight: 600; }
+
+    .info-box {
+        background: #dbeafe; border: 1px solid #3b82f6;
+        border-radius: 8px; padding: 15px; margin-bottom: 20px;
+    }
+    .info-box strong { color: #1e40af; }
+    .warning-box {
+        background: #fef3c7; border: 1px solid #f59e0b;
+        border-radius: 8px; padding: 15px; margin-bottom: 20px;
+    }
+
+    .recipients-list {
+        background: #f9fafb; border-radius: 8px;
+        padding: 15px; margin-bottom: 20px;
+        max-height: 300px; overflow-y: auto;
+    }
+    .recipients-list h3 {
+        margin: 0 0 10px 0; font-size: 14px; color: #374151;
+        position: sticky; top: 0; background: #f9fafb; padding-bottom: 10px;
+    }
+    .recipients-list ul { margin: 0; padding-left: 0; list-style: none; }
+    .recipients-list li {
+        padding: 8px 10px; border-bottom: 1px solid #e5e7eb;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .recipients-list li:last-child { border-bottom: none; }
+    .recipient-phone { font-weight: 500; color: #1f2937; font-family: monospace; }
+    .recipient-name { font-size: 13px; color: #6b7280; }
+    .recipient-status { font-size: 11px; padding: 3px 8px; border-radius: 12px; }
+    .status-ok { background: #d1fae5; color: #065f46; }
+    .status-skip { background: #fef3c7; color: #92400e; }
+    .status-blocked { background: #fee2e2; color: #991b1b; }
+
+    .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+    .btn {
+        padding: 12px 24px; border-radius: 8px; font-size: 14px;
+        font-weight: 600; cursor: pointer; border: none; text-decoration: none;
+    }
+    .btn-success { background: #059669; color: white; }
+    .btn-success:hover { background: #047857; }
+    .btn-secondary { background: #e5e7eb; color: #374151; }
+    .btn-secondary:hover { background: #d1d5db; }
+</style>
+
+<div class="msg-confirm-form">
+    <h2>Send SMS/WhatsApp to {{ deal_count }} Deal{{ deal_count|pluralize }}</h2>
+
+    <div class="stats-row">
+        <div class="stat-box success">
+            <div class="number">{{ valid_count }}</div>
+            <div class="label">Will Send</div>
+        </div>
+        <div class="stat-box warning">
+            <div class="number">{{ no_phone_count }}</div>
+            <div class="label">No Phone</div>
+        </div>
+        <div class="stat-box danger">
+            <div class="number">{{ opted_out_count }}</div>
+            <div class="label">Opted Out</div>
+        </div>
+        <div class="stat-box">
+            <div class="number">{{ deal_count }}</div>
+            <div class="label">Total</div>
+        </div>
+    </div>
+
+    <div class="info-box">
+        <strong>How smart send works:</strong>
+        <ul style="margin: 10px 0 0 20px;">
+            <li>WhatsApp is tried first (cheaper, richer formatting)</li>
+            <li>If recipient isn't on WhatsApp, falls back to SMS automatically</li>
+            <li>AI generates a personalized message for each contact</li>
+            <li>Deals are moved to the next pipeline stage after sending</li>
+        </ul>
+    </div>
+
+    <h3 style="font-size: 14px; color: #6b7280; margin-bottom: 8px;">Deals by Stage:</h3>
+    <div class="stage-summary">
+        {% for stage_name, count in stages.items %}
+        <span class="stage-badge">{{ stage_name }}: {{ count }}</span>
+        {% endfor %}
+    </div>
+
+    {% if preview_message %}
+    <!-- Message Previews -->
+    <div class="preview-columns">
+        <div class="preview-col">
+            <div class="wa-label">WhatsApp Preview ({{ preview_contact }})</div>
+            <div class="phone-mockup">
+                <div class="phone-header">
+                    <div class="avatar">{{ brand_initial }}</div>
+                    <span>{{ brand_name }}</span>
+                </div>
+                <div class="wa-bubble">{{ preview_message }}<span class="time">Now</span></div>
+            </div>
+            <div class="char-info">{{ char_count }} / 1024 characters</div>
+        </div>
+
+        <div class="preview-col">
+            <div class="sms-label">SMS Fallback Preview</div>
+            <div class="sms-mockup">
+                <div class="sms-header">SMS from {{ brand_name }}</div>
+                {% if sms_fallback %}
+                <div class="sms-bubble">{{ sms_fallback }}<br><span style="color: #6b7280; font-size: 12px;">Reply STOP to opt out</span></div>
+                <div class="char-info over">Original is {{ char_count }} chars — SMS will use a shorter version (max 140 chars)</div>
+                {% else %}
+                <div class="sms-bubble">{{ preview_message }}<br><span style="color: #6b7280; font-size: 12px;">Reply STOP to opt out</span></div>
+                <div class="char-info">{{ char_count }} / 140 characters (fits in 1 SMS)</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if preview_error %}
+    <div class="warning-box">
+        <strong>Preview Error:</strong> {{ preview_error }}
+    </div>
+    {% endif %}
+
+    <!-- Recipients List -->
+    <div class="recipients-list">
+        <h3>Recipients ({{ valid_count }} will receive message)</h3>
+        <ul>
+            {% for r in recipients_preview %}
+            <li>
+                <div>
+                    <span class="recipient-phone">{{ r.phone|default:"No phone" }}</span>
+                    <span class="recipient-name"> - {{ r.name }}</span>
+                    <span class="recipient-name"> ({{ r.stage }})</span>
+                </div>
+                <span class="recipient-status {% if r.status == 'ok' %}status-ok{% elif r.status == 'no_phone' %}status-skip{% else %}status-blocked{% endif %}">
+                    {% if r.status == 'ok' %}Will Send{% elif r.status == 'no_phone' %}No Phone{% else %}Opted Out{% endif %}
+                </span>
+            </li>
+            {% endfor %}
+            {% if deal_count > 20 %}
+            <li style="text-align: center; color: #6b7280; font-style: italic;">
+                ... and {{ deal_count|add:"-20" }} more
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+
+    {% if valid_count == 0 %}
+    <div class="warning-box">
+        <strong>No valid recipients!</strong>
+        None of the selected deals have contacts with phone numbers. Nothing will be sent.
+    </div>
+    {% else %}
+    <div class="warning-box">
+        <strong>This action cannot be undone.</strong>
+        {{ valid_count }} message{{ valid_count|pluralize }} will be sent via WhatsApp (with SMS fallback).
+    </div>
+    {% endif %}
+
+    <form method="post" action="{% url 'admin:crm_deal_changelist' %}" id="send-form">
+        {% csrf_token %}
+        {% for deal in queryset %}
+        <input type="hidden" name="{{ action_checkbox_name }}" value="{{ deal.pk }}">
+        {% endfor %}
+        <input type="hidden" name="action" value="send_sms_now">
+        <input type="hidden" name="index" value="0">
+        <input type="hidden" name="select_across" value="0">
+
+        <div class="btn-group">
+            {% if valid_count > 0 %}
+            <button type="submit" name="confirm_send" value="1" class="btn btn-success" id="send-btn">
+                Send {{ valid_count }} Message{{ valid_count|pluralize }} Now
+            </button>
+            {% endif %}
+            <a href="{% url 'admin:crm_deal_changelist' %}" class="btn btn-secondary">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Loading Overlay -->
+<div id="send-loading-overlay">
+    <div class="loading-content">
+        <div class="loading-spinner"></div>
+        <h2 class="loading-title">Sending Messages...</h2>
+        <p class="loading-message">Sending {{ valid_count }} message{{ valid_count|pluralize }} via WhatsApp + SMS fallback. This may take a moment.</p>
+        <p class="loading-warning">Do not close or navigate away</p>
+    </div>
+</div>
+
+<script>
+(function() {
+    var form = document.getElementById('send-form');
+    var sendBtn = document.getElementById('send-btn');
+    var overlay = document.getElementById('send-loading-overlay');
+
+    if (form && sendBtn) {
+        sendBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            var confirmInput = document.createElement('input');
+            confirmInput.type = 'hidden';
+            confirmInput.name = 'confirm_send';
+            confirmInput.value = '1';
+            form.appendChild(confirmInput);
+
+            if (overlay) overlay.classList.add('active');
+            document.body.classList.add('sending');
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Sending...';
+
+            setTimeout(function() { form.submit(); }, 50);
+        });
+    }
+})();
+</script>
+{% endblock %}

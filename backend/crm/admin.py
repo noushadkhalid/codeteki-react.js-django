@@ -1718,6 +1718,259 @@ class DealAdmin(ModelAdmin):
             context
         )
 
+    @action(description="📱 Send SMS/WhatsApp (with preview)")
+    def send_sms_now(self, request, queryset):
+        """Send SMS/WhatsApp message to selected deals - shows preview first."""
+        from crm.services.messaging_service import get_messaging_service
+        from crm.services.ai_agent import CRMAIAgent
+        from crm.services.email_templates import get_email_type_for_stage
+        from crm.models import EmailLog, DealActivity
+        from django.utils import timezone
+        from django.template.response import TemplateResponse
+        from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
+        from django.contrib import messages
+        from datetime import timedelta
+
+        # SEND — confirmed
+        if 'confirm_send' in request.POST:
+            sent_count = 0
+            failed_count = 0
+            skipped = 0
+
+            for deal in queryset:
+                contact = deal.contact
+                brand = deal.pipeline.brand if deal.pipeline else None
+
+                if not contact.phone:
+                    skipped += 1
+                    continue
+
+                if contact.sms_opted_out:
+                    skipped += 1
+                    continue
+
+                # Check if messaged recently (within 24 hours)
+                recent = EmailLog.objects.filter(
+                    deal=deal,
+                    channel__in=['sms', 'whatsapp'],
+                    sent_at__gte=timezone.now() - timedelta(hours=24)
+                ).exists()
+                if recent:
+                    skipped += 1
+                    continue
+
+                # Generate AI message for this contact
+                pipeline_type = deal.pipeline.pipeline_type if deal.pipeline else 'sales'
+                pipeline_name = deal.pipeline.name if deal.pipeline else ''
+                stage_name = deal.current_stage.name if deal.current_stage else 'follow_up'
+                email_type = get_email_type_for_stage(stage_name, pipeline_type, pipeline_name) or 'followup'
+
+                ai_agent = CRMAIAgent()
+                msg_result = ai_agent.compose_message({
+                    'brand_name': brand.name if brand else 'Codeteki',
+                    'brand_website': brand.website if brand else 'codeteki.au',
+                    'recipient_name': contact.name or 'there',
+                    'recipient_company': contact.company or '',
+                    'recipient_industry': contact.industry or '',
+                    'email_type': email_type,
+                    'channel': 'phone',
+                    'tone': 'friendly',
+                })
+
+                body = msg_result.get('body', '') if msg_result.get('success') else ''
+                if not body:
+                    failed_count += 1
+                    continue
+
+                # Send via smart routing (WhatsApp first, SMS fallback)
+                messaging_service = get_messaging_service(brand=brand)
+                sms_body = body[:140] + '...' if len(body) > 140 else body
+                result = messaging_service.send_smart(contact.phone, body, sms_body=sms_body)
+
+                if result.get('success'):
+                    channel_used = result.get('channel_used', 'sms')
+
+                    # Log the message
+                    EmailLog.objects.create(
+                        deal=deal,
+                        subject='',
+                        body=body[:5000],
+                        to_email='',
+                        to_phone=contact.phone,
+                        from_email='',
+                        channel=channel_used,
+                        message_sid=result.get('message_sid', ''),
+                        ai_generated=True,
+                        sent_at=timezone.now(),
+                    )
+
+                    # Update deal
+                    deal.emails_sent = (deal.emails_sent or 0) + 1
+                    deal.last_contact_date = timezone.now()
+
+                    # Move to next stage
+                    if deal.current_stage:
+                        next_stage = PipelineStage.objects.filter(
+                            pipeline=deal.pipeline,
+                            order__gt=deal.current_stage.order
+                        ).order_by('order').first()
+                        if next_stage:
+                            deal.current_stage = next_stage
+                            deal.next_action_date = timezone.now() + timedelta(days=next_stage.days_until_followup or 5)
+                    deal.save()
+
+                    # Log activity
+                    DealActivity.objects.create(
+                        deal=deal,
+                        activity_type='email_sent',
+                        description=f"SMS/WhatsApp sent via {channel_used}: {body[:80]}...",
+                        metadata={'channel': channel_used, 'message_sid': result.get('message_sid')}
+                    )
+
+                    # Update contact
+                    contact.last_sms_at = timezone.now()
+                    contact.sms_count = (contact.sms_count or 0) + 1
+                    contact.status = 'contacted'
+                    contact.save(update_fields=['last_sms_at', 'sms_count', 'status'])
+
+                    sent_count += 1
+                else:
+                    failed_count += 1
+                    self.message_user(
+                        request,
+                        f"Failed {contact.phone}: {result.get('error', 'Unknown error')}",
+                        messages.ERROR
+                    )
+
+            if sent_count:
+                self.message_user(request, f"Sent {sent_count} message(s) & moved to next stage!", messages.SUCCESS)
+            if skipped:
+                self.message_user(request, f"Skipped {skipped} (no phone, opted out, or recently contacted)", messages.WARNING)
+            if failed_count and not sent_count:
+                self.message_user(request, f"All {failed_count} messages failed to send", messages.ERROR)
+            return
+
+        # PREVIEW — generate message preview for first deal
+        preview_deal = queryset.first()
+        preview_message = None
+        preview_error = None
+        preview_contact = ''
+        sms_fallback = ''
+        char_count = 0
+        brand_name = ''
+        brand_initial = 'C'
+
+        if preview_deal:
+            brand = preview_deal.pipeline.brand if preview_deal.pipeline else None
+            brand_name = brand.name if brand else 'Codeteki'
+            brand_initial = brand_name[0].upper() if brand_name else 'C'
+            preview_contact = preview_deal.contact.name or preview_deal.contact.phone or 'Contact'
+
+            try:
+                pipeline_type = preview_deal.pipeline.pipeline_type if preview_deal.pipeline else 'sales'
+                pipeline_name = preview_deal.pipeline.name if preview_deal.pipeline else ''
+                stage_name = preview_deal.current_stage.name if preview_deal.current_stage else 'follow_up'
+                email_type = get_email_type_for_stage(stage_name, pipeline_type, pipeline_name) or 'followup'
+
+                ai_agent = CRMAIAgent()
+                msg_result = ai_agent.compose_message({
+                    'brand_name': brand_name,
+                    'brand_website': brand.website if brand else 'codeteki.au',
+                    'recipient_name': preview_deal.contact.name or 'there',
+                    'recipient_company': preview_deal.contact.company or '',
+                    'recipient_industry': preview_deal.contact.industry or '',
+                    'email_type': email_type,
+                    'channel': 'phone',
+                    'tone': 'friendly',
+                })
+
+                if msg_result.get('success'):
+                    preview_message = msg_result.get('body', '')
+                    char_count = len(preview_message)
+                    if char_count > 140:
+                        sms_fallback = preview_message[:137] + '...'
+                else:
+                    preview_error = msg_result.get('error', 'AI generation failed')
+            except Exception as e:
+                preview_error = str(e)
+
+        # Build recipients list
+        recipients_preview = []
+        valid_count = 0
+        no_phone_count = 0
+        opted_out_count = 0
+
+        for deal in queryset[:20]:
+            contact = deal.contact
+            if not contact.phone:
+                recipients_preview.append({
+                    'name': contact.name or 'Unknown',
+                    'phone': '',
+                    'stage': deal.current_stage.name if deal.current_stage else '-',
+                    'status': 'no_phone',
+                })
+                no_phone_count += 1
+            elif contact.sms_opted_out:
+                recipients_preview.append({
+                    'name': contact.name or 'Unknown',
+                    'phone': contact.phone,
+                    'stage': deal.current_stage.name if deal.current_stage else '-',
+                    'status': 'opted_out',
+                })
+                opted_out_count += 1
+            else:
+                recipients_preview.append({
+                    'name': contact.name or 'Unknown',
+                    'phone': contact.phone,
+                    'stage': deal.current_stage.name if deal.current_stage else '-',
+                    'status': 'ok',
+                })
+                valid_count += 1
+
+        # Count remaining deals beyond preview
+        if queryset.count() > 20:
+            for deal in queryset[20:]:
+                contact = deal.contact
+                if not contact.phone:
+                    no_phone_count += 1
+                elif contact.sms_opted_out:
+                    opted_out_count += 1
+                else:
+                    valid_count += 1
+
+        # Stage summary
+        stages = {}
+        for deal in queryset:
+            sn = deal.current_stage.name if deal.current_stage else 'No Stage'
+            stages[sn] = stages.get(sn, 0) + 1
+
+        context = {
+            **self.admin_site.each_context(request),
+            'title': 'Send SMS/WhatsApp to Deals',
+            'queryset': queryset,
+            'opts': self.model._meta,
+            'action_checkbox_name': ACTION_CHECKBOX_NAME,
+            'deal_count': queryset.count(),
+            'valid_count': valid_count,
+            'no_phone_count': no_phone_count,
+            'opted_out_count': opted_out_count,
+            'preview_message': preview_message,
+            'preview_error': preview_error,
+            'preview_contact': preview_contact,
+            'sms_fallback': sms_fallback,
+            'char_count': char_count,
+            'brand_name': brand_name,
+            'brand_initial': brand_initial,
+            'stages': stages,
+            'recipients_preview': recipients_preview,
+        }
+
+        return TemplateResponse(
+            request,
+            'admin/crm/deal/send_sms_confirmation.html',
+            context
+        )
+
     @action(description="⏸️ Pause automation")
     def pause_deals(self, request, queryset):
         """Pause selected deals to stop automated emails."""
@@ -1924,7 +2177,7 @@ class DealAdmin(ModelAdmin):
 
     actions = [
         'mark_as_won', 'mark_as_lost', 'move_to_next_stage',
-        'preview_email', 'generate_drafts', 'send_email_now',
+        'preview_email', 'generate_drafts', 'send_email_now', 'send_sms_now',
         'pause_deals', 'resume_deals',
         # Pipeline progression actions
         'move_to_registered_users_realestate', 'move_to_agents_agencies',
