@@ -1975,13 +1975,16 @@ class MetaWhatsAppWebhookView(View):
                         sent_at=timezone.now(),
                     )
 
-                    # Dispatch AI auto-responder (async)
-                    from crm.tasks import process_whatsapp_ai_response
-                    process_whatsapp_ai_response.delay(
-                        from_number,
-                        msg_body or f'[{msg_type} message]',
-                        sender_name,
-                    )
+                    # Dispatch AI auto-responder (async — must not break webhook)
+                    try:
+                        from crm.tasks import process_whatsapp_ai_response
+                        process_whatsapp_ai_response.delay(
+                            from_number,
+                            msg_body or f'[{msg_type} message]',
+                            sender_name,
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to dispatch AI task for {from_number}: {e}")
 
                     # Notify owner of inbound WhatsApp message (fallback — AI service also notifies)
                     if contact:
