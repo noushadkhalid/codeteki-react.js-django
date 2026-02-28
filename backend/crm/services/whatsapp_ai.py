@@ -232,9 +232,7 @@ class WhatsAppAIService:
 
         conversation.save()
 
-        # Notify owner with enhanced info
-        self._notify_owner(conversation, message, text)
-
+        # Only notify owner on handoff — regular AI chats don't need notification
         return text
 
     def _detect_buttons(self, ai_response, conversation, customer_message):

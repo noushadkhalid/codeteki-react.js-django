@@ -2019,12 +2019,8 @@ class MetaWhatsAppWebhookView(View):
         except Exception as e:
             logger.error(f"Failed to dispatch AI task for {from_number}: {e}")
 
-        # Notify owner of inbound WhatsApp message (fallback — AI service also notifies)
-        if contact:
-            try:
-                self._notify_owner(contact, from_number, msg_body, was_new)
-            except Exception as e:
-                logger.error(f"Owner notification failed for {from_number}: {e}")
+        # Owner notification now handled by AI service (only on handoff)
+        # No per-message notification — would be too noisy
 
     def _notify_owner(self, contact, from_number, msg_body, is_new_whatsapp):
         """Send WhatsApp + email notification to owner about inbound message."""
