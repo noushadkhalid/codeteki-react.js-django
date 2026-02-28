@@ -3651,10 +3651,31 @@ class LeadSearchAdmin(ModelAdmin):
             if search_id:
                 LeadSearch.objects.filter(id=search_id).update(imported_count=imported)
 
+            # Create deals in pipeline for all imported/reused contacts
+            deals_created = 0
+            if pipeline and imported_contacts:
+                from django.utils import timezone
+                first_stage = pipeline.stages.order_by('order').first()
+                if first_stage:
+                    for contact in imported_contacts:
+                        if not Deal.objects.filter(contact=contact, pipeline=pipeline, status='active').exists():
+                            Deal.objects.create(
+                                contact=contact,
+                                pipeline=pipeline,
+                                current_stage=first_stage,
+                                status='active',
+                                emails_sent=0,
+                                next_action_date=timezone.now() + timezone.timedelta(days=first_stage.days_until_followup or 3),
+                                ai_notes=f"Imported from Google Places into '{pipeline.name}'"
+                            )
+                            deals_created += 1
+
             if imported:
                 messages.success(request, f"Imported {imported} new contact(s) under {brand.name}.")
             if skipped:
                 messages.info(request, f"{skipped} contact(s) already existed — reusing for composer.")
+            if deals_created:
+                messages.success(request, f"Created {deals_created} deal(s) in '{pipeline.name}'.")
 
             open_composer = 'do_import_and_compose' in request.POST
             open_sms_composer = 'do_import_and_sms' in request.POST
@@ -3663,7 +3684,6 @@ class LeadSearchAdmin(ModelAdmin):
                 from .models import EmailDraft
 
                 if open_sms_composer:
-                    # SMS Composer - use phone-only contacts
                     phoneable = [c for c in imported_contacts if c.phone]
                     manual_phone_lines = [
                         f"{c.name} <{c.phone}>" if c.name else c.phone
@@ -3677,17 +3697,10 @@ class LeadSearchAdmin(ModelAdmin):
                     )
                     if phoneable:
                         draft.contacts.set(phoneable)
-                        messages.info(
-                            request,
-                            f"SMS Composer created with {len(phoneable)} contacts with phone numbers.",
-                        )
+                        messages.info(request, f"SMS Composer opened with {len(phoneable)} phone contacts.")
                     else:
-                        messages.warning(
-                            request,
-                            "SMS Composer created but none of the imported contacts have phone numbers.",
-                        )
+                        messages.warning(request, "None of the contacts have phone numbers.")
                 else:
-                    # Email Composer - use contacts with email
                     emailable = [c for c in imported_contacts if c.email]
                     manual_lines = [
                         f"{c.name} <{c.email}>" if c.name else c.email
@@ -3700,14 +3713,11 @@ class LeadSearchAdmin(ModelAdmin):
                     )
                     if emailable:
                         draft.contacts.set(emailable)
-                        messages.info(
-                            request,
-                            f"Email Composer created with {len(emailable)} contacts with email addresses.",
-                        )
+                        messages.info(request, f"Email Composer opened with {len(emailable)} email contacts.")
                     else:
                         messages.warning(
                             request,
-                            "Email Composer created but none of the imported contacts have email addresses. "
+                            "None of the contacts have email addresses. "
                             "Try 'Import & Open in SMS Composer' for phone-only contacts.",
                         )
                 return redirect(reverse('admin:crm_emaildraft_change', args=[draft.pk]))
@@ -3811,10 +3821,31 @@ class LeadSearchAdmin(ModelAdmin):
             if search_id:
                 LeadSearch.objects.filter(id=search_id).update(imported_count=imported)
 
+            # Create deals in pipeline for all imported/reused contacts
+            deals_created = 0
+            if pipeline and imported_contacts:
+                from django.utils import timezone
+                first_stage = pipeline.stages.order_by('order').first()
+                if first_stage:
+                    for contact in imported_contacts:
+                        if not Deal.objects.filter(contact=contact, pipeline=pipeline, status='active').exists():
+                            Deal.objects.create(
+                                contact=contact,
+                                pipeline=pipeline,
+                                current_stage=first_stage,
+                                status='active',
+                                emails_sent=0,
+                                next_action_date=timezone.now() + timezone.timedelta(days=first_stage.days_until_followup or 3),
+                                ai_notes=f"Imported from Google Places into '{pipeline.name}'"
+                            )
+                            deals_created += 1
+
             if imported:
                 messages.success(request, f"Imported {imported} new contact(s) under {brand.name}.")
             if skipped:
                 messages.info(request, f"{skipped} contact(s) already existed — reusing for composer.")
+            if deals_created:
+                messages.success(request, f"Created {deals_created} deal(s) in '{pipeline.name}'.")
 
             open_composer = 'do_import_and_compose' in request.POST
             open_sms_composer = 'do_import_and_sms' in request.POST
@@ -3834,9 +3865,9 @@ class LeadSearchAdmin(ModelAdmin):
                     )
                     if phoneable:
                         draft.contacts.set(phoneable)
-                        messages.info(request, f"SMS Composer created with {len(phoneable)} contacts with phone numbers.")
+                        messages.info(request, f"SMS Composer opened with {len(phoneable)} phone contacts.")
                     else:
-                        messages.warning(request, "SMS Composer created but none of the imported contacts have phone numbers.")
+                        messages.warning(request, "None of the contacts have phone numbers.")
                 else:
                     emailable = [c for c in imported_contacts if c.email]
                     manual_lines = [
@@ -3849,9 +3880,9 @@ class LeadSearchAdmin(ModelAdmin):
                     )
                     if emailable:
                         draft.contacts.set(emailable)
-                        messages.info(request, f"Email Composer created with {len(emailable)} contacts with email addresses.")
+                        messages.info(request, f"Email Composer opened with {len(emailable)} email contacts.")
                     else:
-                        messages.warning(request, "Email Composer created but none have email. Try 'Import & Open in SMS Composer'.")
+                        messages.warning(request, "None have email. Try 'Import & Open in SMS Composer'.")
                 return redirect(reverse('admin:crm_emaildraft_change', args=[draft.pk]))
 
             return redirect(reverse('admin:crm_leadsearch_changelist'))
