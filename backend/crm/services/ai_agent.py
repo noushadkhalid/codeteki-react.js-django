@@ -1778,6 +1778,38 @@ CRITICAL: These businesses may not be tech-savvy. Use ZERO jargon.
 Say "booking system" not "SaaS platform". Say "app" not "application".
 Say "online orders" not "e-commerce solution".''',
 
+            # Codeteki - No Website Outreach (businesses found via Google Places without a website)
+            'no_website_outreach': '''a personalized outreach email for a local business that does NOT have a website.
+
+CRITICAL: This business has NO website at all. You are offering to BUILD them one.
+The user's suggestions field contains: INDUSTRY, BUSINESS NAME, ADDRESS, PHONE, GOOGLE RATING.
+
+KEY ANGLES — weave these naturally:
+1. "We noticed your business doesn't have a website yet"
+2. Their competitors DO have websites — they're invisible to online searchers
+3. Most customers Google before visiting — no website = lost customers
+4. Use their INDUSTRY to pitch specific features:
+
+RESTAURANT/CAFE: online menu, table booking, online ordering, Google Maps integration
+TRADES: quote request form, service area map, before/after gallery, customer reviews
+HEALTH & BEAUTY: online booking, service catalog, client testimonials
+RETAIL: product showcase, click-and-collect, opening hours + directions
+FITNESS: class timetable, membership signup, trainer profiles
+MEDICAL: patient booking portal, service descriptions, new patient forms
+PROFESSIONAL SERVICES: client inquiry form, team profiles, service pages
+ACCOMMODATION: photo gallery, direct booking (save on OTA fees), guest reviews
+
+EMAIL RULES:
+1. Open by mentioning THEIR business by name — show you actually looked them up
+2. Lead with what they're MISSING OUT ON (customers searching online and not finding them)
+3. Keep it under 120 words — busy business owners
+4. Tone: like a helpful local, not a corporate sales pitch
+5. CTA: "Happy to mock up a quick homepage for you — no cost, no obligation"
+6. ZERO jargon. Say "website" not "web presence". Say "booking page" not "scheduling solution"
+7. If they have a good Google rating, mention it: "You've got great reviews — imagine if people could find you online too"
+
+CRITICAL: These businesses may not be tech-savvy. Keep it dead simple.''',
+
             # Generic
             'invitation': 'a professional invitation email',
             'followup': 'a professional follow-up email',

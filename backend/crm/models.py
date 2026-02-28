@@ -459,6 +459,7 @@ class Pipeline(models.Model):
         ('sales', 'Sales'),
         ('backlink', 'Backlink Outreach'),
         ('partnership', 'Partnership'),
+        ('no_website', 'Business Without Website'),
         # Desi Firms listing acquisition pipelines
         ('business', 'Business Listings'),
         ('deals', 'Deals & Promotions'),

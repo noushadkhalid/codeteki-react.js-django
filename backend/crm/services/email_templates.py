@@ -236,6 +236,18 @@ def get_email_type_for_stage(stage_name: str, pipeline_type: str = None, pipelin
         if stage_lower in backlink_map:
             return backlink_map[stage_lower]
 
+    elif pipeline_type == 'no_website':
+        no_website_map = {
+            'new lead': 'no_website_outreach',
+            'contacted': 'followup_1',
+            'interested': 'followup_2',
+            'proposal sent': None,  # Manual — no auto email
+            'won': None,  # Terminal
+            'lost': None,  # Terminal
+        }
+        if stage_lower in no_website_map:
+            return no_website_map[stage_lower]
+
     elif pipeline_type == 'registered_users':
         # For registered but inactive users - determine sub-type from pipeline name
         is_realestate = 'real estate' in pipeline_name_lower or 'realestate' in pipeline_name_lower
