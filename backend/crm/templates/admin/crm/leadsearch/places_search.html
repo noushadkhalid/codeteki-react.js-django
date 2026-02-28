@@ -577,5 +577,53 @@ function selectNoWebsite() {
     document.querySelectorAll('.place-cb').forEach(function(el) { el.checked = false; });
     document.querySelectorAll('tr:not(.hidden-row)[data-has-website="no"] .place-cb').forEach(function(el) { el.checked = true; });
 }
+
+// --- Import validation ---
+document.getElementById('importForm').addEventListener('submit', function(e) {
+    var btn = e.submitter;
+    if (!btn) return;
+
+    var isEmail = btn.name === 'do_import_and_compose';
+    var isSMS = btn.name === 'do_import_and_sms';
+    if (!isEmail && !isSMS) return; // "Import as Contacts" — no validation needed
+
+    var checked = document.querySelectorAll('.place-cb:checked');
+    if (checked.length === 0) return; // server handles empty selection
+
+    var hasEmail = 0, hasPhone = 0, noEmail = 0, noPhone = 0;
+    checked.forEach(function(cb) {
+        var row = cb.closest('tr');
+        if (row.getAttribute('data-has-email') === 'yes') hasEmail++;
+        else noEmail++;
+        if (row.getAttribute('data-has-phone') === 'yes') hasPhone++;
+        else noPhone++;
+    });
+
+    if (isEmail && hasEmail === 0) {
+        e.preventDefault();
+        alert('None of the selected contacts have email addresses.\n\nUse "Import & Open in SMS Composer" for phone-only contacts.');
+        return;
+    }
+
+    if (isSMS && hasPhone === 0) {
+        e.preventDefault();
+        alert('None of the selected contacts have phone numbers.\n\nUse "Import & Open in Email Composer" for email contacts.');
+        return;
+    }
+
+    if (isEmail && noEmail > 0) {
+        if (!confirm(hasEmail + ' of ' + checked.length + ' selected contacts have email.\n' + noEmail + ' without email will be skipped in the composer.\n\nTip: Use "Select With Email" to pick only email contacts.\n\nContinue anyway?')) {
+            e.preventDefault();
+            return;
+        }
+    }
+
+    if (isSMS && noPhone > 0) {
+        if (!confirm(hasPhone + ' of ' + checked.length + ' selected contacts have phone.\n' + noPhone + ' without phone will be skipped in the composer.\n\nTip: Use "Select With Phone" to pick only phone contacts.\n\nContinue anyway?')) {
+            e.preventDefault();
+            return;
+        }
+    }
+});
 </script>
 {% endblock %}
