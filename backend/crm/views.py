@@ -1927,20 +1927,21 @@ class MetaWhatsAppWebhookView(View):
                             phone__endswith=from_number[-10:]
                         ).first()
 
+                    # Extract sender name from Meta payload
+                    sender_name = ''
+                    for c in value.get('contacts', []):
+                        sender_name = c.get('profile', {}).get('name', '')
+                        break
+
                     if not contact:
-                        sender_name = ''
-                        for c in value.get('contacts', []):
-                            sender_name = c.get('profile', {}).get('name', '')
-                            break
                         logger.info(
                             f"WhatsApp inbound from unknown number {from_number} "
                             f"(name: {sender_name}): {msg_body[:50]}"
                         )
-                        continue
 
-                    # Handle opt-out
+                    # Handle opt-out (only if contact exists)
                     opt_out_keywords = {'STOP', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT'}
-                    if msg_body.upper() in opt_out_keywords:
+                    if contact and msg_body.upper() in opt_out_keywords:
                         if not contact.sms_opted_out:
                             contact.sms_opted_out = True
                             contact.sms_opted_out_at = timezone.now()
@@ -1949,14 +1950,17 @@ class MetaWhatsAppWebhookView(View):
                         continue
 
                     # Mark as confirmed WhatsApp user
-                    was_new = contact.has_whatsapp is not True
-                    if was_new:
-                        contact.has_whatsapp = True
-                        contact.save(update_fields=['has_whatsapp'])
-                        logger.info(
-                            f"Contact {from_number} ({contact.name}) confirmed on WhatsApp. "
-                            f"Future messages will use WhatsApp."
-                        )
+                    if contact:
+                        was_new = contact.has_whatsapp is not True
+                        if was_new:
+                            contact.has_whatsapp = True
+                            contact.save(update_fields=['has_whatsapp'])
+                            logger.info(
+                                f"Contact {from_number} ({contact.name}) confirmed on WhatsApp. "
+                                f"Future messages will use WhatsApp."
+                            )
+                    else:
+                        was_new = True
 
                     # Save inbound message to EmailLog
                     msg_id = message.get('id', '')
@@ -1971,8 +1975,17 @@ class MetaWhatsAppWebhookView(View):
                         sent_at=timezone.now(),
                     )
 
-                    # Notify owner of inbound WhatsApp message
-                    self._notify_owner(contact, from_number, msg_body, was_new)
+                    # Dispatch AI auto-responder (async)
+                    from crm.tasks import process_whatsapp_ai_response
+                    process_whatsapp_ai_response.delay(
+                        from_number,
+                        msg_body or f'[{msg_type} message]',
+                        sender_name,
+                    )
+
+                    # Notify owner of inbound WhatsApp message (fallback — AI service also notifies)
+                    if contact:
+                        self._notify_owner(contact, from_number, msg_body, was_new)
 
                 # Process delivery statuses (sent, delivered, read, failed)
                 for status_update in value.get('statuses', []):
@@ -2090,6 +2103,7 @@ def whatsapp_inbox(request):
     selected_phone = request.GET.get('phone', '')
     selected_messages = []
     selected_contact = None
+    selected_conversation = None
     if selected_phone:
         selected_messages = list(
             EmailLog.objects.filter(
@@ -2102,6 +2116,10 @@ def whatsapp_inbox(request):
         if not selected_contact and len(selected_phone) >= 10:
             selected_contact = Contact.objects.filter(phone__endswith=selected_phone[-10:]).first()
 
+        # Load WhatsApp conversation state
+        from crm.models import WhatsAppConversation
+        selected_conversation = WhatsAppConversation.objects.filter(phone=selected_phone).first()
+
     context = {
         **admin.site.each_context(request),
         'title': 'WhatsApp Inbox',
@@ -2110,6 +2128,7 @@ def whatsapp_inbox(request):
         'selected_messages_json': json.dumps(selected_messages, default=str),
         'selected_contact_name': selected_contact.name if selected_contact else selected_phone,
         'selected_contact': selected_contact,
+        'selected_conversation': selected_conversation,
     }
     return render(request, 'admin/crm/whatsapp_inbox.html', context)
 
@@ -2146,6 +2165,17 @@ def whatsapp_send_reply(request):
             delivery_status='sent',
             sent_at=timezone.now(),
         )
+
+        # Auto-handoff: owner manually replied, so deactivate AI
+        from crm.models import WhatsAppConversation
+        conv = WhatsAppConversation.objects.filter(phone=phone).first()
+        if conv and conv.ai_active:
+            conv.ai_active = False
+            conv.phase = 'handoff'
+            conv.handoff_at = timezone.now()
+            conv.handoff_reason = 'Owner replied manually from inbox'
+            conv.save(update_fields=['ai_active', 'phase', 'handoff_at', 'handoff_reason'])
+
         return JsonResponse({
             'success': True,
             'message_id': result.get('message_id', ''),
@@ -2156,3 +2186,49 @@ def whatsapp_send_reply(request):
             'success': False,
             'error': result.get('error', 'Failed to send'),
         }, status=400)
+
+
+@staff_member_required
+def whatsapp_toggle_ai(request):
+    """Toggle AI auto-responder on/off for a WhatsApp conversation."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    phone = data.get('phone', '').strip()
+    if not phone:
+        return JsonResponse({'error': 'Phone required'}, status=400)
+
+    from crm.models import WhatsAppConversation
+    conv = WhatsAppConversation.objects.filter(phone=phone).first()
+    if not conv:
+        return JsonResponse({'error': 'Conversation not found'}, status=404)
+
+    # Toggle
+    conv.ai_active = not conv.ai_active
+    update_fields = ['ai_active']
+
+    if not conv.ai_active:
+        conv.phase = 'handoff'
+        conv.handoff_at = timezone.now()
+        conv.handoff_reason = 'Owner toggled AI off'
+        update_fields += ['phase', 'handoff_at', 'handoff_reason']
+    else:
+        # Resuming AI — go back to engaged phase
+        if conv.phase == 'handoff':
+            conv.phase = 'engaged'
+            conv.handoff_at = None
+            conv.handoff_reason = ''
+            update_fields += ['phase', 'handoff_at', 'handoff_reason']
+
+    conv.save(update_fields=update_fields)
+
+    return JsonResponse({
+        'success': True,
+        'ai_active': conv.ai_active,
+        'phase': conv.get_phase_display(),
+    })

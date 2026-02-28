@@ -469,6 +469,7 @@ class Pipeline(models.Model):
         ('user_registration', 'User Registration'),
         # Phone campaigns (SMS/WhatsApp)
         ('phone_campaign', 'Phone Campaign (SMS/WhatsApp)'),
+        ('whatsapp_inquiry', 'WhatsApp Inquiry'),
     ]
 
     brand = models.ForeignKey(
@@ -1434,3 +1435,67 @@ class LeadSearch(models.Model):
 
     def __str__(self):
         return f"{self.query} - {self.location} ({self.results_count} results)"
+
+
+class WhatsAppConversation(models.Model):
+    """Tracks AI-managed WhatsApp conversations with customers."""
+
+    PHASE_CHOICES = [
+        ('greeting', 'Greeting'),
+        ('discovery', 'Discovery'),
+        ('info_shared', 'Info Shared'),
+        ('engaged', 'Engaged'),
+        ('handoff', 'Handed Off'),
+        ('closed', 'Closed'),
+    ]
+
+    USER_TYPE_CHOICES = [
+        ('unknown', 'Unknown'),
+        ('business_owner', 'Business Owner'),
+        ('regular_user', 'Regular User'),
+        ('existing_member', 'Existing Member'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    phone = models.CharField(max_length=20, unique=True, help_text="E.164 format")
+    contact = models.ForeignKey(
+        Contact, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='whatsapp_conversations',
+    )
+    deal = models.ForeignKey(
+        'Deal', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='whatsapp_conversations',
+    )
+
+    # Conversation state
+    phase = models.CharField(max_length=20, choices=PHASE_CHOICES, default='greeting')
+    user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='unknown')
+    ai_active = models.BooleanField(default=True, help_text="AI auto-responds when True")
+
+    # Extracted info
+    user_name = models.CharField(max_length=200, blank=True)
+    user_company = models.CharField(max_length=200, blank=True)
+    detected_intent = models.CharField(max_length=200, blank=True)
+    conversation_summary = models.TextField(blank=True)
+
+    # Stats
+    message_count = models.IntegerField(default=0)
+    ai_message_count = models.IntegerField(default=0)
+    last_inbound_at = models.DateTimeField(null=True, blank=True)
+    last_outbound_at = models.DateTimeField(null=True, blank=True)
+
+    # Handoff
+    handoff_at = models.DateTimeField(null=True, blank=True)
+    handoff_reason = models.CharField(max_length=200, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+        verbose_name = 'WhatsApp Conversation'
+        verbose_name_plural = 'WhatsApp Conversations'
+
+    def __str__(self):
+        name = self.user_name or self.phone
+        return f"{name} ({self.get_phase_display()}) {'[AI]' if self.ai_active else '[Human]'}"

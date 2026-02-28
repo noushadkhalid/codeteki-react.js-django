@@ -37,7 +37,7 @@ def sitemap_view(request, sitemaps, **kwargs):
         del response.headers['X-Robots-Tag']
     return response
 
-from crm.views import pipeline_dashboard, pipeline_board, move_deal_stage, UnsubscribeView
+from crm.views import pipeline_dashboard, pipeline_board, move_deal_stage, UnsubscribeView, whatsapp_inbox, whatsapp_send_reply, whatsapp_toggle_ai
 from core.otp_views import otp_verify_view, otp_setup_view, otp_setup_complete_view
 from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import redirect
@@ -52,6 +52,10 @@ urlpatterns = [
     path('admin/crm/dashboard/', staff_member_required(pipeline_dashboard), name='crm_dashboard'),
     path('admin/crm/board/<int:pipeline_id>/', staff_member_required(pipeline_board), name='crm_board'),
     path('admin/crm/board/move-deal/', staff_member_required(move_deal_stage), name='crm_move_deal'),
+    # WhatsApp Inbox (before admin catch-all)
+    path('admin/crm/whatsapp/', whatsapp_inbox, name='crm_whatsapp_inbox'),
+    path('admin/crm/whatsapp/send/', whatsapp_send_reply, name='crm_whatsapp_send'),
+    path('admin/crm/whatsapp/toggle-ai/', whatsapp_toggle_ai, name='crm_whatsapp_toggle_ai'),
     # Redirect /admin/crm/ to dashboard (fixes 404 on nav clicks)
     path('admin/crm/', lambda r: redirect('/admin/crm/dashboard/')),
 

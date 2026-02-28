@@ -35,6 +35,7 @@ from .models import (
     EmailDraft,
     ProspectScan,
     LeadSearch,
+    WhatsAppConversation,
 )
 
 
@@ -3892,3 +3893,43 @@ class LeadSearchAdmin(ModelAdmin):
         extra_context = extra_context or {}
         extra_context['search_url'] = reverse('admin:crm_leadsearch_search')
         return super().changelist_view(request, extra_context=extra_context)
+
+
+@admin.register(WhatsAppConversation)
+class WhatsAppConversationAdmin(ModelAdmin):
+    list_display = ['phone', 'user_name_display', 'user_type', 'phase', 'ai_status',
+                    'message_count', 'last_inbound_at']
+    list_filter = ['ai_active', 'user_type', 'phase']
+    search_fields = ['phone', 'user_name', 'user_company']
+    readonly_fields = ['id', 'phone', 'contact', 'deal', 'message_count', 'ai_message_count',
+                       'last_inbound_at', 'last_outbound_at', 'handoff_at', 'handoff_reason',
+                       'conversation_summary', 'detected_intent', 'created_at', 'updated_at']
+
+    fieldsets = (
+        (None, {
+            'fields': ('id', 'phone', 'contact', 'deal'),
+        }),
+        ('State', {
+            'fields': ('phase', 'user_type', 'ai_active', 'user_name', 'user_company', 'detected_intent'),
+        }),
+        ('Summary', {
+            'fields': ('conversation_summary',),
+        }),
+        ('Stats', {
+            'fields': ('message_count', 'ai_message_count', 'last_inbound_at', 'last_outbound_at'),
+        }),
+        ('Handoff', {
+            'fields': ('handoff_at', 'handoff_reason'),
+            'classes': ['collapse'],
+        }),
+    )
+
+    @display(description="Name")
+    def user_name_display(self, obj):
+        return obj.user_name or obj.phone
+
+    @display(description="AI")
+    def ai_status(self, obj):
+        if obj.ai_active:
+            return format_html('<span style="color:#25D366;font-weight:600;">AI Active</span>')
+        return format_html('<span style="color:#e74c3c;font-weight:600;">Human</span>')

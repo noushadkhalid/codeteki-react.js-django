@@ -48,6 +48,7 @@ from .views import (
     reactivate_deal,
     whatsapp_inbox,
     whatsapp_send_reply,
+    whatsapp_toggle_ai,
 )
 
 app_name = 'crm'
@@ -104,6 +105,7 @@ urlpatterns = [
     # WhatsApp Inbox
     path('whatsapp/', whatsapp_inbox, name='whatsapp_inbox'),
     path('whatsapp/send/', whatsapp_send_reply, name='whatsapp_send_reply'),
+    path('whatsapp/toggle-ai/', whatsapp_toggle_ai, name='whatsapp_toggle_ai'),
 
     # Public unsubscribe page (clicked from emails)
     path('unsubscribe/', UnsubscribeView.as_view(), name='unsubscribe'),

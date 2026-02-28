@@ -145,6 +145,58 @@
     }
     .wa-chat-header-name { font-weight: 600; font-size: 15px; }
     .wa-chat-header-sub { font-size: 12px; opacity: 0.8; }
+    .wa-ai-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+    .wa-ai-badge.active { background: #25D366; color: white; }
+    .wa-ai-badge.human { background: #e74c3c; color: white; }
+    .wa-toggle-btn {
+        padding: 5px 14px;
+        border-radius: 16px;
+        border: 1px solid rgba(255,255,255,0.4);
+        background: transparent;
+        color: white;
+        font-size: 12px;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+    .wa-toggle-btn:hover { background: rgba(255,255,255,0.15); }
+    .wa-conv-info-bar {
+        padding: 8px 20px;
+        background: #f0f2f5;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 12px;
+        color: #374151;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .wa-info-tag {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 600;
+        background: #e5e7eb;
+        color: #374151;
+    }
+    .wa-info-tag.biz { background: #dbeafe; color: #1e40af; }
+    .wa-info-tag.user { background: #fef3c7; color: #92400e; }
+    .wa-info-tag.member { background: #d1fae5; color: #065f46; }
+    .wa-summary-bar {
+        padding: 8px 20px;
+        background: #fffbeb;
+        font-size: 12px;
+        color: #78350f;
+        border-bottom: 1px solid #fde68a;
+        cursor: pointer;
+    }
+    .wa-summary-bar:hover { background: #fef3c7; }
     .wa-chat-messages {
         flex: 1;
         overflow-y: auto;
@@ -303,10 +355,38 @@
                 <div class="wa-chat-header-name">{{ selected_contact_name }}</div>
                 <div class="wa-chat-header-sub">{{ selected_phone }}{% if selected_contact.company %} &middot; {{ selected_contact.company }}{% endif %}</div>
             </div>
-            {% if selected_contact %}
-            <a href="{% url 'admin:crm_contact_change' selected_contact.pk %}" style="margin-left: auto; color: white; font-size: 12px; opacity: 0.8; text-decoration: none;">View Contact &rarr;</a>
+            <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
+                {% if selected_conversation %}
+                <span class="wa-ai-badge {% if selected_conversation.ai_active %}active{% else %}human{% endif %}" id="aiBadge">
+                    {% if selected_conversation.ai_active %}AI Active{% else %}Human Mode{% endif %}
+                </span>
+                <button class="wa-toggle-btn" id="toggleAiBtn" onclick="toggleAI()">
+                    {% if selected_conversation.ai_active %}Take Over{% else %}Resume AI{% endif %}
+                </button>
+                {% endif %}
+                {% if selected_contact %}
+                <a href="{% url 'admin:crm_contact_change' selected_contact.pk %}" style="color: white; font-size: 12px; opacity: 0.8; text-decoration: none;">View Contact &rarr;</a>
+                {% endif %}
+            </div>
+        </div>
+        {% if selected_conversation %}
+        <div class="wa-conv-info-bar">
+            <span class="wa-info-tag {% if selected_conversation.user_type == 'business_owner' %}biz{% elif selected_conversation.user_type == 'regular_user' %}user{% elif selected_conversation.user_type == 'existing_member' %}member{% endif %}">
+                {{ selected_conversation.get_user_type_display }}
+            </span>
+            <span class="wa-info-tag">{{ selected_conversation.get_phase_display }}</span>
+            <span style="color: #6b7280;">{{ selected_conversation.message_count }} messages</span>
+            {% if selected_conversation.ai_message_count %}
+            <span style="color: #6b7280;">&middot; {{ selected_conversation.ai_message_count }} AI replies</span>
             {% endif %}
         </div>
+        {% if selected_conversation.conversation_summary %}
+        <div class="wa-summary-bar" onclick="this.querySelector('.wa-summary-full').style.display = this.querySelector('.wa-summary-full').style.display === 'none' ? 'block' : 'none'">
+            <strong>Summary:</strong> <span style="opacity:0.7;">(click to expand)</span>
+            <div class="wa-summary-full" style="display: none; margin-top: 6px; white-space: pre-wrap;">{{ selected_conversation.conversation_summary }}</div>
+        </div>
+        {% endif %}
+        {% endif %}
         <div class="wa-chat-messages" id="chatMessages">
             <!-- Messages loaded via JS -->
         </div>
@@ -437,6 +517,42 @@ function handleReplyKey(e) {
         e.preventDefault();
         sendReply();
     }
+}
+
+// Toggle AI on/off
+function toggleAI() {
+    const btn = document.getElementById('toggleAiBtn');
+    const badge = document.getElementById('aiBadge');
+    if (!btn) return;
+
+    btn.disabled = true;
+    fetch('/admin/crm/whatsapp/toggle-ai/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                           document.cookie.split('; ').find(c => c.startsWith('csrftoken='))?.split('=')[1] || '',
+        },
+        body: JSON.stringify({ phone: '{{ selected_phone }}' }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            if (data.ai_active) {
+                badge.textContent = 'AI Active';
+                badge.className = 'wa-ai-badge active';
+                btn.textContent = 'Take Over';
+            } else {
+                badge.textContent = 'Human Mode';
+                badge.className = 'wa-ai-badge human';
+                btn.textContent = 'Resume AI';
+            }
+        } else {
+            alert('Error: ' + (data.error || 'Unknown'));
+        }
+    })
+    .catch(err => alert('Error: ' + err.message))
+    .finally(() => { btn.disabled = false; });
 }
 
 // Filter conversations

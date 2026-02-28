@@ -134,6 +134,31 @@ class MetaWhatsAppService:
                 'is_recipient_issue': False,
             }
 
+    def send_text_with_links(self, to: str, body: str, buttons: list) -> dict:
+        """
+        Send a text message followed by clickable link messages.
+
+        WhatsApp auto-generates rich link previews for URLs sent as plain text.
+        CTA URL buttons are only available in approved templates, so for
+        free-form AI responses we send text + separate link messages.
+
+        Args:
+            to: Phone in E.164 format
+            body: Message body text (no URLs)
+            buttons: List of dicts with 'title' and 'url' keys
+        """
+        # Send the main message first
+        result = self.send_text(to=to, body=body)
+        if not result['success']:
+            return result
+
+        # Send each link as a separate short message (gets rich preview)
+        for btn in buttons[:3]:
+            link_text = f"{btn['title']}: {btn['url']}"
+            self.send_text(to=to, body=link_text)
+
+        return result
+
     def send_text(self, to: str, body: str) -> dict:
         """
         Send free-form text message (only within 24h user-initiated window).

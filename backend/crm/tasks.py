@@ -1767,3 +1767,20 @@ def send_phone_campaign_async(self, draft_id: str):
         'sms': sms_count,
         'failed': failed_count,
     }
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=10)
+def process_whatsapp_ai_response(self, phone, message, sender_name=''):
+    """
+    Process an inbound WhatsApp message with AI auto-responder.
+    Dispatched from MetaWhatsAppWebhookView on each inbound message.
+    """
+    try:
+        from crm.services.whatsapp_ai import WhatsAppAIService
+        service = WhatsAppAIService()
+        response = service.handle_inbound(phone, message, sender_name)
+        logger.info(f"WhatsApp AI processed {phone}: {'responded' if response else 'skipped'}")
+        return {'success': True, 'responded': bool(response)}
+    except Exception as exc:
+        logger.error(f"WhatsApp AI task failed for {phone}: {exc}")
+        raise self.retry(exc=exc)
