@@ -3616,12 +3616,14 @@ class LeadSearchAdmin(ModelAdmin):
             for place_json in selected:
                 biz = json.loads(place_json)
 
-                # Skip if already imported by place_id
-                if Contact.objects.filter(google_place_id=biz['place_id'], brand=brand).exists():
+                # Already imported by place_id — reuse existing contact
+                existing_by_place = Contact.objects.filter(google_place_id=biz['place_id'], brand=brand).first()
+                if existing_by_place:
+                    imported_contacts.append(existing_by_place)
                     skipped += 1
                     continue
 
-                # Skip if email already exists for this brand
+                # Email already exists for this brand — reuse existing contact
                 biz_email = biz.get('email', '').strip()
                 if biz_email and Contact.objects.filter(email=biz_email, brand=brand).exists():
                     existing = Contact.objects.filter(email=biz_email, brand=brand).first()
@@ -3649,10 +3651,10 @@ class LeadSearchAdmin(ModelAdmin):
             if search_id:
                 LeadSearch.objects.filter(id=search_id).update(imported_count=imported)
 
-            messages.success(
-                request,
-                f"Imported {imported} contact(s) under {brand.name}. Skipped {skipped} duplicate(s).",
-            )
+            if imported:
+                messages.success(request, f"Imported {imported} new contact(s) under {brand.name}.")
+            if skipped:
+                messages.info(request, f"{skipped} contact(s) already existed — reusing for composer.")
 
             open_composer = 'do_import_and_compose' in request.POST
             open_sms_composer = 'do_import_and_sms' in request.POST
@@ -3677,7 +3679,7 @@ class LeadSearchAdmin(ModelAdmin):
                         draft.contacts.set(phoneable)
                         messages.info(
                             request,
-                            f"SMS Composer created with {len(phoneable)} contacts that have phone numbers.",
+                            f"SMS Composer created with {len(phoneable)} contacts with phone numbers.",
                         )
                     else:
                         messages.warning(
@@ -3700,7 +3702,7 @@ class LeadSearchAdmin(ModelAdmin):
                         draft.contacts.set(emailable)
                         messages.info(
                             request,
-                            f"Email Composer created with {len(emailable)} contacts that have email addresses.",
+                            f"Email Composer created with {len(emailable)} contacts with email addresses.",
                         )
                     else:
                         messages.warning(
@@ -3774,10 +3776,14 @@ class LeadSearchAdmin(ModelAdmin):
             for place_json in selected:
                 biz = _json.loads(place_json)
 
-                if Contact.objects.filter(google_place_id=biz['place_id'], brand=brand).exists():
+                # Already imported by place_id — reuse existing contact
+                existing_by_place = Contact.objects.filter(google_place_id=biz['place_id'], brand=brand).first()
+                if existing_by_place:
+                    imported_contacts.append(existing_by_place)
                     skipped += 1
                     continue
 
+                # Email already exists for this brand — reuse existing contact
                 biz_email = biz.get('email', '').strip()
                 if biz_email and Contact.objects.filter(email=biz_email, brand=brand).exists():
                     existing = Contact.objects.filter(email=biz_email, brand=brand).first()
@@ -3805,10 +3811,10 @@ class LeadSearchAdmin(ModelAdmin):
             if search_id:
                 LeadSearch.objects.filter(id=search_id).update(imported_count=imported)
 
-            messages.success(
-                request,
-                f"Imported {imported} contact(s) under {brand.name}. Skipped {skipped} duplicate(s).",
-            )
+            if imported:
+                messages.success(request, f"Imported {imported} new contact(s) under {brand.name}.")
+            if skipped:
+                messages.info(request, f"{skipped} contact(s) already existed — reusing for composer.")
 
             open_composer = 'do_import_and_compose' in request.POST
             open_sms_composer = 'do_import_and_sms' in request.POST
