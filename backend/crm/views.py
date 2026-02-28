@@ -1895,11 +1895,14 @@ class MetaWhatsAppWebhookView(View):
         try:
             data = json.loads(request.body)
         except (json.JSONDecodeError, ValueError):
+            logger.warning("WhatsApp webhook: invalid JSON received")
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
         # Meta sends { object: "whatsapp_business_account", entry: [...] }
         if data.get('object') != 'whatsapp_business_account':
             return JsonResponse({'ok': True})
+
+        logger.info(f"WhatsApp webhook POST received: {len(data.get('entry', []))} entries")
 
         for entry in data.get('entry', []):
             for change in entry.get('changes', []):
@@ -1907,100 +1910,121 @@ class MetaWhatsAppWebhookView(View):
 
                 # Process incoming messages
                 for message in value.get('messages', []):
-                    from_number = message.get('from', '')  # e.g. "61424538777"
-                    msg_type = message.get('type', '')
-                    msg_body = ''
-                    if msg_type == 'text':
-                        msg_body = message.get('text', {}).get('body', '').strip()
-
-                    if not from_number:
-                        continue
-
-                    # Normalise to E.164
-                    if not from_number.startswith('+'):
-                        from_number = f'+{from_number}'
-
-                    # Find contact
-                    contact = Contact.objects.filter(phone=from_number).first()
-                    if not contact:
-                        contact = Contact.objects.filter(
-                            phone__endswith=from_number[-10:]
-                        ).first()
-
-                    # Extract sender name from Meta payload
-                    sender_name = ''
-                    for c in value.get('contacts', []):
-                        sender_name = c.get('profile', {}).get('name', '')
-                        break
-
-                    if not contact:
-                        logger.info(
-                            f"WhatsApp inbound from unknown number {from_number} "
-                            f"(name: {sender_name}): {msg_body[:50]}"
-                        )
-
-                    # Handle opt-out (only if contact exists)
-                    opt_out_keywords = {'STOP', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT'}
-                    if contact and msg_body.upper() in opt_out_keywords:
-                        if not contact.sms_opted_out:
-                            contact.sms_opted_out = True
-                            contact.sms_opted_out_at = timezone.now()
-                            contact.save(update_fields=['sms_opted_out', 'sms_opted_out_at'])
-                            logger.info(f"WhatsApp opt-out from {from_number}")
-                        continue
-
-                    # Mark as confirmed WhatsApp user
-                    if contact:
-                        was_new = contact.has_whatsapp is not True
-                        if was_new:
-                            contact.has_whatsapp = True
-                            contact.save(update_fields=['has_whatsapp'])
-                            logger.info(
-                                f"Contact {from_number} ({contact.name}) confirmed on WhatsApp. "
-                                f"Future messages will use WhatsApp."
-                            )
-                    else:
-                        was_new = True
-
-                    # Save inbound message to EmailLog
-                    msg_id = message.get('id', '')
-                    from .models import EmailLog
-                    EmailLog.objects.create(
-                        channel='whatsapp',
-                        subject='Inbound WhatsApp',
-                        body=msg_body or f'[{msg_type} message]',
-                        to_phone=from_number,
-                        message_sid=msg_id,
-                        delivery_status='received',
-                        sent_at=timezone.now(),
-                    )
-
-                    # Dispatch AI auto-responder (async — must not break webhook)
                     try:
-                        from crm.tasks import process_whatsapp_ai_response
-                        process_whatsapp_ai_response.delay(
-                            from_number,
-                            msg_body or f'[{msg_type} message]',
-                            sender_name,
-                        )
+                        self._process_inbound_message(message, value, logger)
                     except Exception as e:
-                        logger.error(f"Failed to dispatch AI task for {from_number}: {e}")
-
-                    # Notify owner of inbound WhatsApp message (fallback — AI service also notifies)
-                    if contact:
-                        self._notify_owner(contact, from_number, msg_body, was_new)
+                        msg_id = message.get('id', 'unknown')
+                        logger.error(
+                            f"WhatsApp webhook: error processing message {msg_id}: {e}",
+                            exc_info=True,
+                        )
 
                 # Process delivery statuses (sent, delivered, read, failed)
                 for status_update in value.get('statuses', []):
-                    msg_id = status_update.get('id', '')
-                    delivery_status = status_update.get('status', '')
-                    if msg_id and delivery_status:
-                        from .models import EmailLog
-                        EmailLog.objects.filter(message_sid=msg_id).update(
-                            delivery_status=delivery_status
-                        )
+                    try:
+                        msg_id = status_update.get('id', '')
+                        delivery_status = status_update.get('status', '')
+                        if msg_id and delivery_status:
+                            EmailLog.objects.filter(message_sid=msg_id).update(
+                                delivery_status=delivery_status
+                            )
+                    except Exception as e:
+                        logger.error(f"WhatsApp webhook: status update error: {e}")
 
         return JsonResponse({'ok': True})
+
+    def _process_inbound_message(self, message, value, logger):
+        """Process a single inbound WhatsApp message. Isolated so one bad message can't crash the webhook."""
+        from_number = message.get('from', '')  # e.g. "61424538777"
+        msg_type = message.get('type', '')
+        msg_body = ''
+        if msg_type == 'text':
+            msg_body = message.get('text', {}).get('body', '').strip()
+
+        if not from_number:
+            return
+
+        # Normalise to E.164
+        if not from_number.startswith('+'):
+            from_number = f'+{from_number}'
+
+        # Dedup: skip if we already processed this message
+        msg_id = message.get('id', '')
+        if msg_id and EmailLog.objects.filter(message_sid=msg_id).exists():
+            logger.info(f"WhatsApp webhook: skipping duplicate message {msg_id}")
+            return
+
+        # Find contact
+        contact = Contact.objects.filter(phone=from_number).first()
+        if not contact:
+            contact = Contact.objects.filter(
+                phone__endswith=from_number[-10:]
+            ).first()
+
+        # Extract sender name from Meta payload
+        sender_name = ''
+        for c in value.get('contacts', []):
+            sender_name = c.get('profile', {}).get('name', '')
+            break
+
+        if not contact:
+            logger.info(
+                f"WhatsApp inbound from unknown number {from_number} "
+                f"(name: {sender_name}): {msg_body[:50]}"
+            )
+
+        # Handle opt-out (only if contact exists)
+        opt_out_keywords = {'STOP', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT'}
+        if contact and msg_body.upper() in opt_out_keywords:
+            if not contact.sms_opted_out:
+                contact.sms_opted_out = True
+                contact.sms_opted_out_at = timezone.now()
+                contact.save(update_fields=['sms_opted_out', 'sms_opted_out_at'])
+                logger.info(f"WhatsApp opt-out from {from_number}")
+            return
+
+        # Mark as confirmed WhatsApp user
+        if contact:
+            was_new = contact.has_whatsapp is not True
+            if was_new:
+                contact.has_whatsapp = True
+                contact.save(update_fields=['has_whatsapp'])
+                logger.info(
+                    f"Contact {from_number} ({contact.name}) confirmed on WhatsApp. "
+                    f"Future messages will use WhatsApp."
+                )
+        else:
+            was_new = True
+
+        # Save inbound message to EmailLog
+        EmailLog.objects.create(
+            channel='whatsapp',
+            subject='Inbound WhatsApp',
+            body=msg_body or f'[{msg_type} message]',
+            to_phone=from_number,
+            message_sid=msg_id,
+            delivery_status='received',
+            sent_at=timezone.now(),
+        )
+        logger.info(f"WhatsApp inbound saved: {from_number} msg_id={msg_id}")
+
+        # Dispatch AI auto-responder (async — must not break webhook)
+        try:
+            from crm.tasks import process_whatsapp_ai_response
+            process_whatsapp_ai_response.delay(
+                from_number,
+                msg_body or f'[{msg_type} message]',
+                sender_name,
+            )
+        except Exception as e:
+            logger.error(f"Failed to dispatch AI task for {from_number}: {e}")
+
+        # Notify owner of inbound WhatsApp message (fallback — AI service also notifies)
+        if contact:
+            try:
+                self._notify_owner(contact, from_number, msg_body, was_new)
+            except Exception as e:
+                logger.error(f"Owner notification failed for {from_number}: {e}")
 
     def _notify_owner(self, contact, from_number, msg_body, is_new_whatsapp):
         """Send WhatsApp + email notification to owner about inbound message."""

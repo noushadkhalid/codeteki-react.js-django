@@ -1775,6 +1775,7 @@ def process_whatsapp_ai_response(self, phone, message, sender_name=''):
     Process an inbound WhatsApp message with AI auto-responder.
     Dispatched from MetaWhatsAppWebhookView on each inbound message.
     """
+    import traceback
     try:
         from crm.services.whatsapp_ai import WhatsAppAIService
         service = WhatsAppAIService()
@@ -1782,5 +1783,10 @@ def process_whatsapp_ai_response(self, phone, message, sender_name=''):
         logger.info(f"WhatsApp AI processed {phone}: {'responded' if response else 'skipped'}")
         return {'success': True, 'responded': bool(response)}
     except Exception as exc:
-        logger.error(f"WhatsApp AI task failed for {phone}: {exc}")
+        logger.error(
+            f"WhatsApp AI task failed for {phone}: {exc}\n{traceback.format_exc()}"
+        )
+        if self.request.retries >= self.max_retries:
+            logger.error(f"WhatsApp AI task permanently failed for {phone} after {self.max_retries} retries")
+            return {'success': False, 'error': str(exc)}
         raise self.retry(exc=exc)
