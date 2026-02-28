@@ -286,9 +286,16 @@ class WhatsAppAIService:
         return text, []
 
     def _is_human_request(self, message):
-        """Check if user explicitly asked for a human."""
-        msg = message.strip().lower()
-        return msg in ('human', 'human please', 'talk to human', 'speak to human')
+        """Check if user asked for a human."""
+        msg = message.strip().lower().rstrip('?!.')
+        # Exact matches
+        if msg in ('human', 'human please', 'talk to human', 'speak to human', 'agent', 'operator'):
+            return True
+        # Partial matches — customer mentions wanting a human/person/someone
+        human_phrases = ['speak to human', 'talk to human', 'speak to a human', 'talk to a person',
+                         'speak to someone', 'talk to someone', 'need a human', 'want a human',
+                         'real person', 'can i speak', 'can i talk', 'connect me']
+        return any(phrase in msg for phrase in human_phrases)
 
     def _team_has_capacity(self):
         """Check if there are fewer than MAX_ACTIVE_HANDOFFS active handoffs."""
