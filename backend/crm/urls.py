@@ -46,6 +46,8 @@ from .views import (
     pipeline_board,
     move_deal_stage,
     reactivate_deal,
+    whatsapp_inbox,
+    whatsapp_send_reply,
 )
 
 app_name = 'crm'
@@ -98,6 +100,10 @@ urlpatterns = [
 
     # Meta WhatsApp Cloud API webhook (inbound messages + delivery status)
     path('webhooks/whatsapp/', MetaWhatsAppWebhookView.as_view(), name='webhook-meta-whatsapp'),
+
+    # WhatsApp Inbox
+    path('whatsapp/', whatsapp_inbox, name='whatsapp_inbox'),
+    path('whatsapp/send/', whatsapp_send_reply, name='whatsapp_send_reply'),
 
     # Public unsubscribe page (clicked from emails)
     path('unsubscribe/', UnsubscribeView.as_view(), name='unsubscribe'),

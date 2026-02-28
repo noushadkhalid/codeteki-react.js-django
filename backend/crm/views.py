@@ -2026,3 +2026,133 @@ class MetaWhatsAppWebhookView(View):
                 )
             except Exception as e:
                 logger.error(f"Owner email notify failed: {e}")
+
+
+# =============================================================================
+# WHATSAPP INBOX (Admin page)
+# =============================================================================
+
+@staff_member_required
+def whatsapp_inbox(request):
+    """
+    Dedicated WhatsApp inbox page in admin.
+    Shows all conversations grouped by contact phone, with chat-style UI.
+    """
+    from django.contrib import admin
+    from django.db.models import Max, Subquery, OuterRef
+
+    # Get all unique phones with WhatsApp messages
+    conversations = (
+        EmailLog.objects.filter(channel='whatsapp')
+        .values('to_phone')
+        .annotate(
+            last_message_at=Max('sent_at'),
+            message_count=Count('id'),
+        )
+        .order_by('-last_message_at')
+    )
+
+    # Build conversation list with contact info and last message
+    conv_list = []
+    for conv in conversations:
+        phone = conv['to_phone']
+        if not phone:
+            continue
+
+        # Find contact
+        contact = Contact.objects.filter(phone=phone).first()
+        if not contact:
+            contact = Contact.objects.filter(phone__endswith=phone[-10:]).first() if len(phone) >= 10 else None
+
+        # Get last message
+        last_msg = EmailLog.objects.filter(
+            channel='whatsapp', to_phone=phone
+        ).order_by('-sent_at').first()
+
+        # Count unread (inbound messages)
+        unread = EmailLog.objects.filter(
+            channel='whatsapp', to_phone=phone, delivery_status='received'
+        ).count()
+
+        conv_list.append({
+            'phone': phone,
+            'contact_name': contact.name if contact else phone,
+            'contact_id': str(contact.pk) if contact else None,
+            'company': contact.company if contact else '',
+            'last_message': (last_msg.body or '')[:100] if last_msg else '',
+            'last_message_at': last_msg.sent_at if last_msg else None,
+            'is_inbound': last_msg.delivery_status == 'received' if last_msg else False,
+            'message_count': conv['message_count'],
+            'unread': unread,
+        })
+
+    # If a phone is selected, load that conversation
+    selected_phone = request.GET.get('phone', '')
+    selected_messages = []
+    selected_contact = None
+    if selected_phone:
+        selected_messages = list(
+            EmailLog.objects.filter(
+                channel='whatsapp', to_phone=selected_phone
+            ).order_by('sent_at').values(
+                'id', 'body', 'sent_at', 'delivery_status', 'subject'
+            )[:200]
+        )
+        selected_contact = Contact.objects.filter(phone=selected_phone).first()
+        if not selected_contact and len(selected_phone) >= 10:
+            selected_contact = Contact.objects.filter(phone__endswith=selected_phone[-10:]).first()
+
+    context = {
+        **admin.site.each_context(request),
+        'title': 'WhatsApp Inbox',
+        'conversations': conv_list,
+        'selected_phone': selected_phone,
+        'selected_messages_json': json.dumps(selected_messages, default=str),
+        'selected_contact_name': selected_contact.name if selected_contact else selected_phone,
+        'selected_contact': selected_contact,
+    }
+    return render(request, 'admin/crm/whatsapp_inbox.html', context)
+
+
+@staff_member_required
+def whatsapp_send_reply(request):
+    """AJAX endpoint to send a WhatsApp reply from the inbox."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    phone = data.get('phone', '').strip()
+    message = data.get('message', '').strip()
+
+    if not phone or not message:
+        return JsonResponse({'error': 'Phone and message required'}, status=400)
+
+    from crm.services.messaging_service import MetaWhatsAppService
+    wa = MetaWhatsAppService()
+    result = wa.send_text(to=phone, body=message)
+
+    if result['success']:
+        # Log to EmailLog
+        EmailLog.objects.create(
+            channel='whatsapp',
+            subject='Outbound WhatsApp',
+            body=message,
+            to_phone=phone,
+            message_sid=result.get('message_id', ''),
+            delivery_status='sent',
+            sent_at=timezone.now(),
+        )
+        return JsonResponse({
+            'success': True,
+            'message_id': result.get('message_id', ''),
+            'sent_at': timezone.now().isoformat(),
+        })
+    else:
+        return JsonResponse({
+            'success': False,
+            'error': result.get('error', 'Failed to send'),
+        }, status=400)

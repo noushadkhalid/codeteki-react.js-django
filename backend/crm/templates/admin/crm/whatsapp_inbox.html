@@ -1,0 +1,452 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block breadcrumbs %}
+<div style="padding: 8px 20px; font-size: 13px; color: #6b7280;">
+    <a href="/admin/" style="color: #6b7280; text-decoration: none;">Home</a> &rsaquo;
+    <span style="color: #111827; font-weight: 500;">WhatsApp Inbox</span>
+</div>
+{% endblock %}
+
+{% block content %}
+<style>
+    .wa-inbox {
+        display: flex;
+        height: calc(100vh - 140px);
+        background: #f0f2f5;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #e5e7eb;
+    }
+    /* Conversation list (left panel) */
+    .wa-conv-list {
+        width: 360px;
+        min-width: 300px;
+        background: white;
+        border-right: 1px solid #e5e7eb;
+        display: flex;
+        flex-direction: column;
+    }
+    .wa-conv-header {
+        padding: 16px;
+        background: #075E54;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .wa-conv-header h2 { margin: 0; font-size: 16px; font-weight: 600; }
+    .wa-conv-search {
+        padding: 8px 12px;
+        background: #f0f2f5;
+    }
+    .wa-conv-search input {
+        width: 100%;
+        padding: 8px 12px;
+        border: none;
+        border-radius: 8px;
+        font-size: 13px;
+        background: white;
+        outline: none;
+    }
+    .wa-conv-items {
+        flex: 1;
+        overflow-y: auto;
+    }
+    .wa-conv-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f2f5;
+        transition: background 0.1s;
+        text-decoration: none;
+        color: inherit;
+    }
+    .wa-conv-item:hover { background: #f0f2f5; }
+    .wa-conv-item.active { background: #e8f5e9; }
+    .wa-conv-avatar {
+        width: 44px; height: 44px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 18px;
+        color: white;
+        flex-shrink: 0;
+    }
+    .wa-conv-info { flex: 1; min-width: 0; }
+    .wa-conv-name {
+        font-weight: 600;
+        font-size: 14px;
+        color: #111827;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .wa-conv-preview {
+        font-size: 12px;
+        color: #6b7280;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-top: 2px;
+    }
+    .wa-conv-meta {
+        text-align: right;
+        flex-shrink: 0;
+    }
+    .wa-conv-time {
+        font-size: 11px;
+        color: #6b7280;
+        white-space: nowrap;
+    }
+    .wa-conv-badge {
+        background: #25D366;
+        color: white;
+        font-size: 11px;
+        font-weight: 700;
+        border-radius: 50%;
+        width: 20px; height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: auto;
+        margin-top: 4px;
+    }
+    /* Chat panel (right) */
+    .wa-chat-panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: #e5ddd5;
+        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4cfc6' fill-opacity='0.3'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    .wa-chat-header {
+        padding: 12px 20px;
+        background: #075E54;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .wa-chat-header-avatar {
+        width: 40px; height: 40px;
+        border-radius: 50%;
+        background: #128C7E;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 16px;
+        color: white;
+    }
+    .wa-chat-header-name { font-weight: 600; font-size: 15px; }
+    .wa-chat-header-sub { font-size: 12px; opacity: 0.8; }
+    .wa-chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px 60px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .wa-msg {
+        max-width: 65%;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        line-height: 1.4;
+        position: relative;
+        word-wrap: break-word;
+    }
+    .wa-msg-in {
+        background: white;
+        align-self: flex-start;
+        border-top-left-radius: 0;
+        box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+    }
+    .wa-msg-out {
+        background: #dcf8c6;
+        align-self: flex-end;
+        border-top-right-radius: 0;
+        box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+    }
+    .wa-msg-time {
+        font-size: 10px;
+        color: #6b7280;
+        text-align: right;
+        margin-top: 4px;
+    }
+    .wa-msg-status {
+        color: #53bdeb;
+        font-size: 12px;
+    }
+    /* Reply bar */
+    .wa-reply-bar {
+        padding: 12px 20px;
+        background: #f0f2f5;
+        display: flex;
+        gap: 10px;
+        align-items: flex-end;
+    }
+    .wa-reply-input {
+        flex: 1;
+        padding: 10px 14px;
+        border: none;
+        border-radius: 20px;
+        font-size: 14px;
+        outline: none;
+        resize: none;
+        max-height: 100px;
+        line-height: 1.4;
+    }
+    .wa-send-btn {
+        width: 44px; height: 44px;
+        border-radius: 50%;
+        background: #075E54;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.15s;
+        flex-shrink: 0;
+    }
+    .wa-send-btn:hover { background: #128C7E; }
+    .wa-send-btn:disabled { background: #ccc; cursor: not-allowed; }
+    .wa-send-btn svg { fill: white; width: 20px; height: 20px; }
+    /* Empty state */
+    .wa-empty {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: #6b7280;
+        background: #f0f2f5;
+    }
+    .wa-empty svg { width: 80px; height: 80px; fill: #d1d5db; margin-bottom: 16px; }
+    .wa-empty p { font-size: 16px; font-weight: 500; }
+    .wa-empty small { font-size: 13px; margin-top: 4px; }
+    /* Date separator */
+    .wa-date-sep {
+        text-align: center;
+        margin: 12px 0;
+    }
+    .wa-date-sep span {
+        background: #e1f2fb;
+        color: #374151;
+        font-size: 11px;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-weight: 500;
+    }
+    @media (max-width: 768px) {
+        .wa-conv-list { width: 100%; }
+        .wa-chat-panel { display: none; }
+        .wa-chat-messages { padding: 12px 16px; }
+    }
+</style>
+
+<div class="wa-inbox">
+    <!-- Left: Conversation list -->
+    <div class="wa-conv-list">
+        <div class="wa-conv-header">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            <h2>WhatsApp Inbox</h2>
+        </div>
+        <div class="wa-conv-search">
+            <input type="text" id="convSearch" placeholder="Search conversations..." oninput="filterConversations(this.value)">
+        </div>
+        <div class="wa-conv-items" id="convList">
+            {% for conv in conversations %}
+            <a href="?phone={{ conv.phone }}" class="wa-conv-item {% if conv.phone == selected_phone %}active{% endif %}" data-name="{{ conv.contact_name|lower }}">
+                <div class="wa-conv-avatar" style="background: {% if conv.unread %}#25D366{% else %}#075E54{% endif %};">
+                    {{ conv.contact_name|make_list|first|upper }}
+                </div>
+                <div class="wa-conv-info">
+                    <div class="wa-conv-name">{{ conv.contact_name }}</div>
+                    <div class="wa-conv-preview">
+                        {% if not conv.is_inbound %}<span style="color: #53bdeb;">&#10003;&#10003;</span> {% endif %}
+                        {{ conv.last_message }}
+                    </div>
+                </div>
+                <div class="wa-conv-meta">
+                    {% if conv.last_message_at %}
+                    <div class="wa-conv-time" style="{% if conv.unread %}color: #25D366; font-weight: 600;{% endif %}">{{ conv.last_message_at|timesince }} ago</div>
+                    {% endif %}
+                    {% if conv.unread %}
+                    <div class="wa-conv-badge">{{ conv.unread }}</div>
+                    {% endif %}
+                </div>
+            </a>
+            {% empty %}
+            <div style="padding: 40px 20px; text-align: center; color: #6b7280;">
+                <p style="font-size: 14px;">No WhatsApp conversations yet.</p>
+                <p style="font-size: 12px; margin-top: 4px;">Messages will appear here when contacts message your business number.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Right: Chat / Empty state -->
+    {% if selected_phone %}
+    <div class="wa-chat-panel">
+        <div class="wa-chat-header">
+            <div class="wa-chat-header-avatar">
+                {{ selected_contact_name|make_list|first|upper }}
+            </div>
+            <div>
+                <div class="wa-chat-header-name">{{ selected_contact_name }}</div>
+                <div class="wa-chat-header-sub">{{ selected_phone }}{% if selected_contact.company %} &middot; {{ selected_contact.company }}{% endif %}</div>
+            </div>
+            {% if selected_contact %}
+            <a href="{% url 'admin:crm_contact_change' selected_contact.pk %}" style="margin-left: auto; color: white; font-size: 12px; opacity: 0.8; text-decoration: none;">View Contact &rarr;</a>
+            {% endif %}
+        </div>
+        <div class="wa-chat-messages" id="chatMessages">
+            <!-- Messages loaded via JS -->
+        </div>
+        <div class="wa-reply-bar">
+            <textarea class="wa-reply-input" id="replyInput" placeholder="Type a message..." rows="1" onkeydown="handleReplyKey(event)"></textarea>
+            <button class="wa-send-btn" id="sendBtn" onclick="sendReply()" title="Send">
+                <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+        </div>
+    </div>
+    {% else %}
+    <div class="wa-empty">
+        <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        <p>Select a conversation</p>
+        <small>Choose a contact from the left to view messages</small>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Load messages into chat
+const messages = {{ selected_messages_json|safe }};
+const chatEl = document.getElementById('chatMessages');
+
+if (chatEl && messages.length) {
+    let lastDate = '';
+    messages.forEach(msg => {
+        const isInbound = msg.delivery_status === 'received';
+        const dt = new Date(msg.sent_at);
+        const dateStr = dt.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+        const timeStr = dt.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+
+        // Date separator
+        if (dateStr !== lastDate) {
+            lastDate = dateStr;
+            const sep = document.createElement('div');
+            sep.className = 'wa-date-sep';
+            sep.innerHTML = `<span>${dateStr}</span>`;
+            chatEl.appendChild(sep);
+        }
+
+        const div = document.createElement('div');
+        div.className = `wa-msg ${isInbound ? 'wa-msg-in' : 'wa-msg-out'}`;
+
+        let statusHtml = '';
+        if (!isInbound) {
+            const st = msg.delivery_status;
+            if (st === 'read') statusHtml = '<span class="wa-msg-status">&#10003;&#10003;</span>';
+            else if (st === 'delivered') statusHtml = '<span class="wa-msg-status">&#10003;&#10003;</span>';
+            else if (st === 'sent') statusHtml = '<span style="color:#6b7280;font-size:12px;">&#10003;</span>';
+            else if (st === 'failed') statusHtml = '<span style="color:#e74c3c;font-size:10px;">Failed</span>';
+        }
+
+        div.innerHTML = `
+            <div>${(msg.body || '[media]').replace(/\n/g, '<br>')}</div>
+            <div class="wa-msg-time">${timeStr} ${statusHtml}</div>
+        `;
+        chatEl.appendChild(div);
+    });
+    // Scroll to bottom
+    chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+// Auto-resize textarea
+const replyInput = document.getElementById('replyInput');
+if (replyInput) {
+    replyInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+    });
+}
+
+// Send reply
+function sendReply() {
+    const input = document.getElementById('replyInput');
+    const btn = document.getElementById('sendBtn');
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    btn.disabled = true;
+    input.disabled = true;
+
+    fetch('/admin/crm/whatsapp/send/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                           document.cookie.split('; ').find(c => c.startsWith('csrftoken='))?.split('=')[1] || '',
+        },
+        body: JSON.stringify({
+            phone: '{{ selected_phone }}',
+            message: msg,
+        }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            // Add message to chat
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+            const div = document.createElement('div');
+            div.className = 'wa-msg wa-msg-out';
+            div.innerHTML = `
+                <div>${msg.replace(/\n/g, '<br>')}</div>
+                <div class="wa-msg-time">${timeStr} <span style="color:#6b7280;font-size:12px;">&#10003;</span></div>
+            `;
+            chatEl.appendChild(div);
+            chatEl.scrollTop = chatEl.scrollHeight;
+            input.value = '';
+            input.style.height = 'auto';
+        } else {
+            alert('Failed to send: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(err => {
+        alert('Error sending message: ' + err.message);
+    })
+    .finally(() => {
+        btn.disabled = false;
+        input.disabled = false;
+        input.focus();
+    });
+}
+
+// Enter to send, Shift+Enter for newline
+function handleReplyKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendReply();
+    }
+}
+
+// Filter conversations
+function filterConversations(query) {
+    const items = document.querySelectorAll('.wa-conv-item');
+    const q = query.toLowerCase();
+    items.forEach(item => {
+        const name = item.getAttribute('data-name') || '';
+        item.style.display = name.includes(q) ? '' : 'none';
+    });
+}
+</script>
+{% endblock %}

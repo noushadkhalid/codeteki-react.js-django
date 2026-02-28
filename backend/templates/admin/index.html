@@ -83,11 +83,11 @@
                     {% endif %}
                 </h2>
             </div>
-            <a href="{% url 'admin:crm_emaillog_changelist' %}?channel=whatsapp" style="font-size: 13px; color: #25D366; text-decoration: none; font-weight: 500;">View All Messages</a>
+            <a href="/admin/crm/whatsapp/" style="font-size: 13px; color: #25D366; text-decoration: none; font-weight: 500;">Open Inbox</a>
         </div>
         <div style="display: flex; flex-direction: column; gap: 8px;">
             {% for chat in wa_chats %}
-            <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: {% if chat.unread %}#f0fdf4{% else %}#f9fafb{% endif %}; border-radius: 8px; cursor: pointer; transition: all 0.15s; border: 2px solid {% if chat.unread %}#bbf7d0{% else %}transparent{% endif %};"
+            <a href="/admin/crm/whatsapp/?phone={{ chat.phone }}" style="display: flex; align-items: center; gap: 12px; padding: 12px; background: {% if chat.unread %}#f0fdf4{% else %}#f9fafb{% endif %}; border-radius: 8px; cursor: pointer; transition: all 0.15s; border: 2px solid {% if chat.unread %}#bbf7d0{% else %}transparent{% endif %}; text-decoration: none; color: inherit;"
                  onmouseover="this.style.borderColor='#25D366';"
                  onmouseout="this.style.borderColor='{% if chat.unread %}#bbf7d0{% else %}transparent{% endif %}';">
                 <div style="background: {% if chat.unread %}#25D366{% else %}#d1d5db{% endif %}; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
@@ -108,7 +108,7 @@
                 {% if chat.unread %}
                 <div style="background: #25D366; border-radius: 50%; width: 10px; height: 10px; flex-shrink: 0;"></div>
                 {% endif %}
-            </div>
+            </a>
             {% endfor %}
         </div>
     </div>
@@ -137,6 +137,12 @@
     <div style="background: white; border-radius: 12px; padding: 24px; margin-bottom: 24px; border: 1px solid #e5e7eb;">
         <h2 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #111827;">Quick Actions</h2>
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+            <a href="/admin/crm/whatsapp/"
+               style="display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 8px; background: #25D366; text-decoration: none; color: white; font-size: 14px; font-weight: 600; transition: all 0.15s; border: 2px solid transparent;"
+               onmouseover="this.style.borderColor='#128C7E'; this.style.transform='translateY(-2px)';"
+               onmouseout="this.style.borderColor='transparent'; this.style.transform='translateY(0)';">
+                💬 WhatsApp Inbox
+            </a>
             <a href="{% url 'admin:crm_emaildraft_changelist' %}"
                style="display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: 8px; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); text-decoration: none; color: #f9cb07; font-size: 14px; font-weight: 600; transition: all 0.15s; border: 2px solid transparent;"
                onmouseover="this.style.borderColor='#f9cb07'; this.style.transform='translateY(-2px)';"
