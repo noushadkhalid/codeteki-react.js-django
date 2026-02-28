@@ -315,7 +315,7 @@
         </div>
         <div class="wa-conv-items" id="convList">
             {% for conv in conversations %}
-            <a href="?phone={{ conv.phone }}" class="wa-conv-item {% if conv.phone == selected_phone %}active{% endif %}" data-name="{{ conv.contact_name|lower }}">
+            <a href="?phone={{ conv.phone|urlencode }}" class="wa-conv-item {% if conv.phone == selected_phone %}active{% endif %}" data-name="{{ conv.contact_name|lower }}">
                 <div class="wa-conv-avatar" style="background: {% if conv.unread %}#25D366{% else %}#075E54{% endif %};">
                     {{ conv.contact_name|make_list|first|upper }}
                 </div>
