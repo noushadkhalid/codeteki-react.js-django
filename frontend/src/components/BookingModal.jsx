@@ -10,20 +10,35 @@ import { useToast } from "../hooks/use-toast";
 import { useSiteSettings } from "../hooks/useSiteSettings";
 import { getSupportMeta } from "../lib/supportMeta";
 
-export default function BookingModal({ open, onOpenChange }) {
+export default function BookingModal({ open, onOpenChange, context }) {
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [step, setStep] = useState('datetime');
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
+    name: context?.name || '',
+    email: context?.email || '',
+    phone: context?.phone || '',
     company: '',
-    message: '',
+    message: context?.message || '',
     preferredDate: '',
     preferredTime: '',
-    service: 'Free Consultation'
+    service: context?.service || 'Free Consultation'
   });
+
+  // Update form when context changes (e.g. from Get Started questionnaire)
+  const [lastContext, setLastContext] = useState(null);
+  if (context && context !== lastContext) {
+    const updated = { ...formData };
+    if (context.name && !formData.name) updated.name = context.name;
+    if (context.email && !formData.email) updated.email = context.email;
+    if (context.phone && !formData.phone) updated.phone = context.phone;
+    if (context.message) updated.message = context.message;
+    if (context.service) updated.service = context.service;
+    if (JSON.stringify(updated) !== JSON.stringify(formData)) {
+      setFormData(updated);
+    }
+    setLastContext(context);
+  }
   const { toast } = useToast();
   const { settings } = useSiteSettings();
   const supportMeta = getSupportMeta(settings);
@@ -91,7 +106,7 @@ export default function BookingModal({ open, onOpenChange }) {
           fullName: data.name,
           email: data.email,
           phone: data.phone,
-          message: `CONSULTATION BOOKING\n\nPreferred Date: ${data.preferredDate}\nPreferred Time: ${data.preferredTime}\n\nCompany: ${data.company}\nService: ${data.service}\n\nMessage: ${data.message}`,
+          message: `CONSULTATION BOOKING\n\nPreferred Date: ${data.preferredDate}\nPreferred Time: ${data.preferredTime}\n\nCompany: ${data.company}\nService: ${data.service}${context?.industry ? `\nIndustry: ${context.industry}` : ''}${context?.challenges?.length ? `\nChallenges: ${context.challenges.join(', ')}` : ''}${context?.summary ? `\nAI Summary: ${context.summary}` : ''}\n\nMessage: ${data.message}`,
           status: 'new'
         }),
       });
@@ -337,6 +352,17 @@ export default function BookingModal({ open, onOpenChange }) {
                         </Button>
                       ))}
                     </div>
+                  </div>
+
+                  {/* Honeypot — hidden from humans, bots auto-fill */}
+                  <div className="absolute -left-[9999px]" aria-hidden="true" tabIndex={-1}>
+                    <input
+                      type="text"
+                      name="website"
+                      autoComplete="off"
+                      value={formData.website || ''}
+                      onChange={(e) => handleInputChange('website', e.target.value)}
+                    />
                   </div>
 
                   <div>

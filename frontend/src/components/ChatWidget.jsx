@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useLocation } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
@@ -94,6 +95,8 @@ const FormattedAIResponse = ({ content }) => {
 };
 
 export default function ChatWidget() {
+  const [location] = useLocation();
+
   const { data: configData } = useQuery({ queryKey: ["/api/chatbot/config/"], staleTime: Infinity });
   const chatbotConfig = configData?.data || defaultConfig;
 
@@ -201,6 +204,8 @@ export default function ChatWidget() {
     }
   };
 
+  const hidePopup = location === "/get-started";
+
   if (!isOpen) {
     return (
       <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[9999]">
@@ -222,7 +227,7 @@ export default function ChatWidget() {
               <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
             </div>
           </div>
-          {showIntroPopup && (
+          {showIntroPopup && !hidePopup && (
             <div className="absolute bottom-full right-0 mb-4 animate-in slide-in-from-bottom-4 fade-in duration-700 zoom-in-95 max-w-[90vw] sm:max-w-sm">
               <div className="bg-gradient-to-br from-white via-white to-[#f9cb07]/5 text-gray-800 p-4 sm:p-5 rounded-2xl shadow-2xl border-2 border-[#f9cb07]/20 w-full relative backdrop-blur-sm">
                 <button

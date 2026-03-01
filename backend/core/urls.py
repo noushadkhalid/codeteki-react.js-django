@@ -16,6 +16,7 @@ from .views import (
     DemosPageAPIView,
     FAQAPIView,
     FooterContentAPIView,
+    GetStartedAPIView,
     HeroContentAPIView,
     HomePageAPIView,
     KnowledgeBaseAPIView,
@@ -44,6 +45,7 @@ urlpatterns = [
     path("services/<slug:slug>/", ServiceDetailAPIView.as_view(), name="service-detail"),
     path("faq/", FAQAPIView.as_view(), name="faq"),
     path("contact/", ContactAPIView.as_view(), name="contact"),
+    path("get-started/", GetStartedAPIView.as_view(), name="get-started"),
     path("impact/", BusinessImpactAPIView.as_view(), name="impact"),
     path("calculate-roi", ROICalculateAPIView.as_view(), name="calculate-roi"),
 

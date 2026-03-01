@@ -201,7 +201,7 @@
 </style>
 
 <div class="msg-confirm-form">
-    <h2>Send SMS/WhatsApp to {{ deal_count }} Deal{{ deal_count|pluralize }}</h2>
+    <h2>Send {% if is_sms_only %}SMS{% else %}SMS/WhatsApp{% endif %} to {{ deal_count }} Deal{{ deal_count|pluralize }}</h2>
 
     <div class="stats-row">
         <div class="stat-box success">
@@ -225,8 +225,12 @@
     <div class="info-box">
         <strong>How smart send works:</strong>
         <ul style="margin: 10px 0 0 20px;">
+            {% if is_sms_only %}
+            <li>Messages are sent via SMS</li>
+            {% else %}
             <li>WhatsApp is tried first (cheaper, richer formatting)</li>
             <li>If recipient isn't on WhatsApp, falls back to SMS automatically</li>
+            {% endif %}
             <li>AI generates a personalized message for each contact</li>
             <li>Deals are moved to the next pipeline stage after sending</li>
         </ul>
@@ -242,6 +246,7 @@
     {% if preview_message %}
     <!-- Message Previews -->
     <div class="preview-columns">
+        {% if not is_sms_only %}
         <div class="preview-col">
             <div class="wa-label">WhatsApp Preview ({{ preview_contact }})</div>
             <div class="phone-mockup">
@@ -253,9 +258,10 @@
             </div>
             <div class="char-info">{{ char_count }} / 1024 characters</div>
         </div>
+        {% endif %}
 
         <div class="preview-col">
-            <div class="sms-label">SMS Fallback Preview</div>
+            <div class="sms-label">{% if is_sms_only %}SMS Preview ({{ preview_contact }}){% else %}SMS Fallback Preview{% endif %}</div>
             <div class="sms-mockup">
                 <div class="sms-header">SMS from {{ brand_name }}</div>
                 {% if sms_fallback %}
@@ -308,7 +314,7 @@
     {% else %}
     <div class="warning-box">
         <strong>This action cannot be undone.</strong>
-        {{ valid_count }} message{{ valid_count|pluralize }} will be sent via WhatsApp (with SMS fallback).
+        {{ valid_count }} message{{ valid_count|pluralize }} will be sent via {% if is_sms_only %}SMS{% else %}WhatsApp (with SMS fallback){% endif %}.
     </div>
     {% endif %}
 
@@ -339,7 +345,7 @@
     <div class="loading-content">
         <div class="loading-spinner"></div>
         <h2 class="loading-title">Sending Messages...</h2>
-        <p class="loading-message">Sending {{ valid_count }} message{{ valid_count|pluralize }} via WhatsApp + SMS fallback. This may take a moment.</p>
+        <p class="loading-message">Sending {{ valid_count }} message{{ valid_count|pluralize }} via {% if is_sms_only %}SMS{% else %}WhatsApp + SMS fallback{% endif %}. This may take a moment.</p>
         <p class="loading-warning">Do not close or navigate away</p>
     </div>
 </div>

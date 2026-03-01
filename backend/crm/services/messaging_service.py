@@ -421,7 +421,9 @@ class MessagingService:
         contact = self._lookup_contact(to)
 
         # Confirmed WhatsApp user -> send via Meta WhatsApp
-        if contact and contact.has_whatsapp is True and self.whatsapp_enabled:
+        # Skip WhatsApp for Codeteki brand (SMS + email only)
+        brand_slug = self.brand.slug if self.brand else ''
+        if brand_slug != 'codeteki' and contact and contact.has_whatsapp is True and self.whatsapp_enabled:
             logger.info(f"Contact {to} confirmed on WhatsApp -> Meta WhatsApp.")
             result = self.send_whatsapp(to, body)
             if result['success']:

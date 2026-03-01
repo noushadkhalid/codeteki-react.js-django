@@ -543,7 +543,7 @@ UNFOLD = {
                     {
                         "title": "AI Blog Builder",
                         "icon": "auto_awesome",
-                        "link": reverse_lazy("admin:core_bloggenerationjob_changelist"),
+                        "link": reverse_lazy("admin:simple-blog-builder"),
                     },
                     {
                         "title": "Blog Posts",

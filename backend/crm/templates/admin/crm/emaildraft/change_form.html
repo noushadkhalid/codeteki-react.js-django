@@ -699,7 +699,7 @@
                     <label>Channel:</label>
                     <select id="channelSelect" style="min-width:100px;">
                         <option value="email">Email</option>
-                        <option value="phone">SMS/WhatsApp</option>
+                        <option value="phone" id="phoneChannelOption">SMS/WhatsApp</option>
                     </select>
                 </div>
                 <div class="header-select">
@@ -952,18 +952,23 @@ document.addEventListener('DOMContentLoaded', function() {
             charLimit.textContent = '160';
         }
 
-        // Update To input placeholder
+        // Update To input placeholder (brand-aware)
+        const brandText = (brandSelect.options[brandSelect.selectedIndex]?.text || '').toLowerCase();
+        const isCTK = brandText.includes('codeteki');
         if (isPhone) {
             toInput.placeholder = 'Type phone + Enter, or search contacts...';
-            bodyInput.placeholder = 'Write your message here (WhatsApp first, SMS fallback)...';
+            bodyInput.placeholder = isCTK
+                ? 'Write your SMS message here...'
+                : 'Write your message here (WhatsApp first, SMS fallback)...';
         } else {
             toInput.placeholder = 'Type email + Enter, or search contacts...';
             bodyInput.placeholder = 'Write your email here...';
         }
 
-        // Update send button text
+        // Update send button text (brand-aware)
         if (sendBtn) {
-            sendBtn.innerHTML = isPhone ? 'Send SMS/WhatsApp & Add to Pipeline' : 'Send & Add to Pipeline';
+            const phoneLabel = isCTK ? 'Send SMS & Add to Pipeline' : 'Send SMS/WhatsApp & Add to Pipeline';
+            sendBtn.innerHTML = isPhone ? phoneLabel : 'Send & Add to Pipeline';
         }
 
         updateCharCount();
@@ -1054,7 +1059,7 @@ document.addEventListener('DOMContentLoaded', function() {
             { value: 'partnership_followup', label: 'Partnership Follow-up' },
             { value: 'custom', label: 'Custom' }
         ],
-        // Phone campaigns (SMS/WhatsApp)
+        // Phone campaigns (SMS)
         'phone_campaign': [
             { value: 'services_intro', label: 'Services Introduction' },
             { value: 'invitation', label: 'Invitation' },
@@ -1106,8 +1111,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
     }
 
+    // Brand-aware channel labels (Codeteki = SMS only, Desi Firms = SMS/WhatsApp)
+    const phoneChannelOption = document.getElementById('phoneChannelOption');
+    function updateChannelForBrand() {
+        const brandText = (brandSelect.options[brandSelect.selectedIndex]?.text || '').toLowerCase();
+        const isCodeteki = brandText.includes('codeteki');
+        if (phoneChannelOption) {
+            phoneChannelOption.textContent = isCodeteki ? 'SMS' : 'SMS/WhatsApp';
+        }
+        // Update placeholders if currently on phone channel
+        if (currentChannel === 'phone') {
+            bodyInput.placeholder = isCodeteki
+                ? 'Write your SMS message here...'
+                : 'Write your message here (WhatsApp first, SMS fallback)...';
+            if (sendBtn) {
+                sendBtn.innerHTML = isCodeteki ? 'Send SMS & Add to Pipeline' : 'Send SMS/WhatsApp & Add to Pipeline';
+            }
+        }
+    }
+
     // Sync custom selects back to Django fields
-    brandSelect.addEventListener('change', () => { if(idBrand) idBrand.value = brandSelect.value; });
+    brandSelect.addEventListener('change', () => { if(idBrand) idBrand.value = brandSelect.value; updateChannelForBrand(); });
     pipelineSelect.addEventListener('change', () => {
         if(idPipeline) idPipeline.value = pipelineSelect.value;
         updateEmailTypes();
@@ -1115,8 +1139,9 @@ document.addEventListener('DOMContentLoaded', function() {
     emailTypeSelect.addEventListener('change', () => { if(idEmailType) idEmailType.value = emailTypeSelect.value; });
     toneSelect.addEventListener('change', () => { if(idTone) idTone.value = toneSelect.value; });
 
-    // Initialize email types based on current pipeline (after DOM is ready)
+    // Initialize email types and brand-aware channel labels (after DOM is ready)
     updateEmailTypes();
+    updateChannelForBrand();
 
     // Load existing values
     if (idSuggestions && idSuggestions.value) suggestionsInput.value = idSuggestions.value;

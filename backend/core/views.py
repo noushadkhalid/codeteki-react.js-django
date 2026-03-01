@@ -689,19 +689,50 @@ class ContactAPIView(JSONAPIView):
         except json.JSONDecodeError:
             return self.render({"error": "Invalid JSON payload"}, status=400)
 
+        # Honeypot — hidden field that bots fill, humans leave empty
+        if data.get("website") or data.get("url"):
+            return self.render({"message": "Thanks! We'll be in touch shortly.", "id": 0}, status=201)
+
         name = data.get("name") or data.get("fullName")
         email = data.get("email")
         if not name or not email:
             return self.render({"error": "Name and email are required"}, status=400)
 
+        email = email.strip().lower()
+
+        # Duplicate check — same email can't submit again within 24 hours
+        from django.utils import timezone as tz
+        from datetime import timedelta
+        recent_cutoff = tz.now() - timedelta(hours=24)
+        recent_count = ContactInquiry.objects.filter(
+            email__iexact=email,
+            created_at__gte=recent_cutoff,
+        ).count()
+        if recent_count >= 2:
+            return self.render({"error": "You've already submitted a request. We'll be in touch soon!"}, status=429)
+
+        # IP rate limit — max 5 submissions per IP per hour
+        ip = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip() or request.META.get('REMOTE_ADDR', '')
+        if ip:
+            hour_ago = tz.now() - timedelta(hours=1)
+            ip_count = ContactInquiry.objects.filter(
+                created_at__gte=hour_ago,
+                metadata__ip=ip,
+            ).count()
+            if ip_count >= 5:
+                return self.render({"error": "Too many requests. Please try again later."}, status=429)
+
         inquiry = ContactInquiry.objects.create(
             name=name.strip(),
-            email=email.strip(),
+            email=email,
             phone=(data.get("phone") or "").strip(),
             service=(data.get("service") or data.get("topic") or "").strip(),
             message=(data.get("message") or "").strip(),
             source=data.get("source", "website"),
-            metadata={k: v for k, v in data.items() if k not in {"name", "fullName", "email", "phone", "service", "topic", "message", "source"}},
+            metadata={
+                **{k: v for k, v in data.items() if k not in {"name", "fullName", "email", "phone", "service", "topic", "message", "source", "website", "url"}},
+                'ip': ip,
+            },
         )
 
         # Auto-add to CRM pipeline for follow-up
@@ -712,6 +743,400 @@ class ContactAPIView(JSONAPIView):
             pass  # Don't fail the form submission if CRM integration fails
 
         return self.render({"message": "Thanks! We'll be in touch shortly.", "id": inquiry.id}, status=201)
+
+
+# Static feature recommendations per industry (instant render, no AI needed)
+GET_STARTED_FEATURES = {
+    'restaurant': [
+        {'key': 'online-ordering', 'title': 'Online Ordering System', 'description': 'Let customers order directly from your menu — no commissions to UberEats.', 'icon': 'ShoppingCart', 'impact': 'High Revenue'},
+        {'key': 'booking', 'title': 'Table Booking Widget', 'description': 'Automated reservations with SMS confirmations and reminders.', 'icon': 'CalendarCheck', 'impact': 'Time Saver'},
+        {'key': 'google-seo', 'title': 'Google Business SEO', 'description': 'Rank higher on "restaurants near me" searches with optimised local SEO.', 'icon': 'Search', 'impact': 'More Customers'},
+        {'key': 'reviews', 'title': 'Review Management', 'description': 'Automatically request Google reviews after each visit.', 'icon': 'Star', 'impact': 'Trust Builder'},
+    ],
+    'trades': [
+        {'key': 'quoting', 'title': 'Instant Quoting Tool', 'description': 'Generate professional quotes in minutes, not hours — from your phone.', 'icon': 'FileText', 'impact': 'Time Saver'},
+        {'key': 'portfolio', 'title': 'Project Portfolio', 'description': 'Showcase before & after photos that convert browsers into clients.', 'icon': 'Image', 'impact': 'Trust Builder'},
+        {'key': 'google-seo', 'title': 'Local SEO & Google Ads', 'description': 'Get found when people search "plumber near me" or "electrician in Melbourne".', 'icon': 'Search', 'impact': 'More Leads'},
+        {'key': 'booking', 'title': 'Job Booking System', 'description': 'Customers book available slots — no more back-and-forth calls.', 'icon': 'CalendarCheck', 'impact': 'Efficiency'},
+    ],
+    'health-beauty': [
+        {'key': 'booking', 'title': 'Online Booking System', 'description': 'Clients book 24/7, auto-reminders reduce no-shows by 40%.', 'icon': 'CalendarCheck', 'impact': 'Fewer No-Shows'},
+        {'key': 'gallery', 'title': 'Treatment Gallery', 'description': 'Showcase transformations with before/after galleries.', 'icon': 'Image', 'impact': 'Trust Builder'},
+        {'key': 'loyalty', 'title': 'Loyalty & Rewards', 'description': 'Keep clients coming back with points, packages, and referral rewards.', 'icon': 'Gift', 'impact': 'Retention'},
+        {'key': 'google-seo', 'title': 'Local SEO', 'description': 'Dominate "beauty salon near me" searches in your area.', 'icon': 'Search', 'impact': 'More Bookings'},
+    ],
+    'retail': [
+        {'key': 'ecommerce', 'title': 'Online Store', 'description': 'Sell 24/7 with a mobile-friendly store — payments, shipping, inventory.', 'icon': 'ShoppingCart', 'impact': 'New Revenue'},
+        {'key': 'inventory', 'title': 'Inventory Management', 'description': 'Track stock across online and in-store in one place.', 'icon': 'Package', 'impact': 'Efficiency'},
+        {'key': 'google-seo', 'title': 'Google Shopping & SEO', 'description': 'Get your products in front of shoppers searching online.', 'icon': 'Search', 'impact': 'More Sales'},
+        {'key': 'loyalty', 'title': 'Customer Loyalty Program', 'description': 'Reward repeat customers and drive referrals automatically.', 'icon': 'Gift', 'impact': 'Retention'},
+    ],
+    'fitness': [
+        {'key': 'booking', 'title': 'Class & Session Booking', 'description': 'Members book classes online — auto-waitlists and reminders.', 'icon': 'CalendarCheck', 'impact': 'Fewer No-Shows'},
+        {'key': 'membership', 'title': 'Membership Management', 'description': 'Recurring payments, freeze/cancel, and member portal.', 'icon': 'Users', 'impact': 'Steady Revenue'},
+        {'key': 'app', 'title': 'Member App / Portal', 'description': 'Workout tracking, class schedules, and progress photos in one place.', 'icon': 'Smartphone', 'impact': 'Engagement'},
+        {'key': 'google-seo', 'title': 'Local SEO', 'description': 'Rank for "gym near me" and "personal trainer" in your suburb.', 'icon': 'Search', 'impact': 'More Members'},
+    ],
+    'professional-services': [
+        {'key': 'website', 'title': 'Professional Website', 'description': 'Establish credibility with a polished site that showcases expertise.', 'icon': 'Globe', 'impact': 'Trust Builder'},
+        {'key': 'booking', 'title': 'Consultation Booking', 'description': 'Clients book discovery calls — integrates with your calendar.', 'icon': 'CalendarCheck', 'impact': 'More Leads'},
+        {'key': 'invoicing', 'title': 'Online Invoicing', 'description': 'Send invoices, accept payments, auto-chase overdue bills.', 'icon': 'FileText', 'impact': 'Cash Flow'},
+        {'key': 'ai-assistant', 'title': 'AI Client Assistant', 'description': 'Answer FAQs 24/7, qualify leads, and book meetings automatically.', 'icon': 'Bot', 'impact': 'Automation'},
+    ],
+    'real-estate': [
+        {'key': 'listings', 'title': 'Property Listings Site', 'description': 'Showcase listings with virtual tours, floor plans, and lead capture.', 'icon': 'Home', 'impact': 'More Enquiries'},
+        {'key': 'crm', 'title': 'Lead Management CRM', 'description': 'Track buyers and sellers with automated follow-up sequences.', 'icon': 'Users', 'impact': 'Never Lose a Lead'},
+        {'key': 'ai-assistant', 'title': 'AI Property Assistant', 'description': 'Answer property questions 24/7 and book inspections automatically.', 'icon': 'Bot', 'impact': 'Automation'},
+        {'key': 'google-seo', 'title': 'Local SEO & Ads', 'description': 'Rank for suburb-level property searches and Google Ads campaigns.', 'icon': 'Search', 'impact': 'More Leads'},
+    ],
+    'medical': [
+        {'key': 'booking', 'title': 'Patient Booking System', 'description': 'Online appointments with SMS reminders — reduce no-shows.', 'icon': 'CalendarCheck', 'impact': 'Fewer No-Shows'},
+        {'key': 'portal', 'title': 'Patient Portal', 'description': 'Secure forms, results access, and repeat prescription requests.', 'icon': 'Shield', 'impact': 'Patient Experience'},
+        {'key': 'website', 'title': 'Medical Website', 'description': 'AHPRA-compliant site with practitioner profiles and service info.', 'icon': 'Globe', 'impact': 'Trust Builder'},
+        {'key': 'google-seo', 'title': 'Healthcare SEO', 'description': 'Rank for "GP near me", "dentist in [suburb]" and similar searches.', 'icon': 'Search', 'impact': 'More Patients'},
+    ],
+    'automotive': [
+        {'key': 'booking', 'title': 'Service Booking System', 'description': 'Customers book service slots online — no phone tag.', 'icon': 'CalendarCheck', 'impact': 'Efficiency'},
+        {'key': 'quoting', 'title': 'Instant Service Quotes', 'description': 'Provide upfront pricing for common services to win more bookings.', 'icon': 'FileText', 'impact': 'More Bookings'},
+        {'key': 'reviews', 'title': 'Review & Reputation', 'description': 'Build trust with automated Google review requests after each service.', 'icon': 'Star', 'impact': 'Trust Builder'},
+        {'key': 'google-seo', 'title': 'Local SEO', 'description': 'Dominate "mechanic near me" and car service searches in your area.', 'icon': 'Search', 'impact': 'More Customers'},
+    ],
+    'accommodation': [
+        {'key': 'direct-booking', 'title': 'Direct Booking Engine', 'description': 'Accept bookings on your own site — skip OTA commissions.', 'icon': 'CalendarCheck', 'impact': 'Higher Margins'},
+        {'key': 'website', 'title': 'Stunning Property Website', 'description': 'Photo galleries, virtual tours, and area guides that convert.', 'icon': 'Globe', 'impact': 'More Direct Bookings'},
+        {'key': 'reviews', 'title': 'Guest Review Management', 'description': 'Automatically collect and respond to guest reviews.', 'icon': 'Star', 'impact': 'Trust Builder'},
+        {'key': 'google-seo', 'title': 'Travel SEO', 'description': 'Rank for location-based accommodation searches on Google.', 'icon': 'Search', 'impact': 'More Bookings'},
+    ],
+}
+
+# Default features for "other" or unknown industries
+GET_STARTED_DEFAULT_FEATURES = [
+    {'key': 'website', 'title': 'Professional Website', 'description': 'Fast, mobile-friendly site that turns visitors into customers.', 'icon': 'Globe', 'impact': 'Foundation'},
+    {'key': 'google-seo', 'title': 'Google SEO & Ads', 'description': 'Get found by customers searching for your services online.', 'icon': 'Search', 'impact': 'More Leads'},
+    {'key': 'booking', 'title': 'Online Booking / Quoting', 'description': 'Let customers book or request quotes 24/7 — no phone tag.', 'icon': 'CalendarCheck', 'impact': 'Time Saver'},
+    {'key': 'ai-assistant', 'title': 'AI Chat Assistant', 'description': 'Answer questions, qualify leads, and book meetings automatically.', 'icon': 'Bot', 'impact': 'Automation'},
+]
+
+# Pain points per industry for Step 2
+GET_STARTED_PAIN_POINTS = {
+    'restaurant': [
+        "I don't have a website at all",
+        "Taking orders is chaotic during rush hours",
+        "Managing bookings manually (phone, notepad)",
+        "Not showing up on Google when people search",
+    ],
+    'trades': [
+        "I don't have a website at all",
+        "Spending evenings writing quotes",
+        "No way to show my work to new customers",
+        "Customers can't find me on Google",
+    ],
+    'health-beauty': [
+        "I don't have a website at all",
+        "Clients no-show without reminders",
+        "Can't take bookings outside hours",
+        "Hard to showcase my work online",
+    ],
+    'retail': [
+        "I don't have a website at all",
+        "Missing out on online sales",
+        "Stock management is a headache",
+        "Hard to compete with big retailers online",
+    ],
+    'fitness': [
+        "I don't have a website at all",
+        "Class bookings are chaotic",
+        "Members cancel or no-show too often",
+        "Hard to attract new members online",
+    ],
+    'professional-services': [
+        "I don't have a website at all",
+        "Website doesn't reflect my expertise",
+        "Chasing invoices and late payments",
+        "Not enough leads coming in",
+    ],
+    'real-estate': [
+        "I don't have a website at all",
+        "Leads fall through the cracks",
+        "Listings site looks outdated",
+        "Can't compete with big agencies online",
+    ],
+    'medical': [
+        "I don't have a website at all",
+        "Patients no-show without reminders",
+        "Reception overwhelmed with phone bookings",
+        "Not ranking on Google for local searches",
+    ],
+    'automotive': [
+        "I don't have a website at all",
+        "Phone keeps ringing for simple bookings",
+        "Hard to build trust with new customers",
+        "No online presence beyond Yellow Pages",
+    ],
+    'accommodation': [
+        "I don't have a website at all",
+        "Paying too much in OTA commissions",
+        "Website doesn't convert visitors",
+        "Not showing up on Google for local stays",
+    ],
+}
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class GetStartedAPIView(JSONAPIView):
+    """
+    Smart questionnaire landing page for SMS leads.
+
+    GET  ?ref=abc123  → Lookup contact by ref hash for pre-fill
+    POST              → Submit questionnaire, create CRM lead, generate recommendations
+    """
+
+    def get(self, request):
+        # AI-generated pain points for custom business types
+        suggest_for = (request.GET.get('suggest_for') or '').strip()
+        if suggest_for:
+            pain_points = self._generate_pain_points(suggest_for)
+            return self.render({'pain_points': pain_points, 'business_type': suggest_for})
+
+        ref = (request.GET.get('ref') or '').strip()
+        if not ref or len(ref) != 8:
+            return self.render({'found': False})
+
+        # Search Codeteki contacts with phone numbers to find matching ref
+        try:
+            from crm.models import Contact, Brand
+            from crm.services.ai_agent import generate_contact_ref
+
+            brand = Brand.objects.filter(slug='codeteki').first()
+            if not brand:
+                return self.render({'found': False})
+
+            # Iterate contacts that have phone numbers (bounded set from SMS campaigns)
+            contacts = Contact.objects.filter(brand=brand, phone__gt='').only('id', 'name', 'phone')
+            for contact in contacts.iterator(chunk_size=200):
+                if generate_contact_ref(str(contact.id)) == ref:
+                    phone_last4 = contact.phone[-4:] if contact.phone else ''
+                    return self.render({
+                        'found': True,
+                        'name': contact.name or '',
+                        'phone_last4': phone_last4,
+                    })
+        except Exception:
+            pass
+
+        return self.render({'found': False})
+
+    def _generate_pain_points(self, business_type):
+        """Generate AI-tailored pain points for a custom business type."""
+        fallback = [
+            "I don't have a website at all",
+            "Customers can't find me online",
+            "Too much manual admin work",
+            "Not sure what technology I need",
+        ]
+        try:
+            from core.services.ai_client import AIContentEngine
+            ai = AIContentEngine()
+            if not ai.enabled:
+                return fallback
+
+            result = ai.generate(
+                prompt=(
+                    f"A small {business_type} business owner is answering a questionnaire about their challenges. "
+                    f"Generate exactly 4 common pain points specific to a {business_type} business. "
+                    f"Each one should be a short, relatable statement (under 12 words) written in first person. "
+                    f"The first one MUST be: \"I don't have a website at all\". "
+                    f"The other 3 should be specific to {business_type} businesses — think about bookings, "
+                    f"customer management, marketing, payments, or operations unique to this industry. "
+                    f"Return ONLY a JSON array of 4 strings, no explanation."
+                ),
+                system_prompt="You are a business advisor. Return valid JSON only — an array of 4 strings.",
+            )
+            import json as json_mod
+            output = result.get('output', '').strip()
+            # Extract JSON array from response
+            start = output.find('[')
+            end = output.rfind(']')
+            if start != -1 and end != -1:
+                points = json_mod.loads(output[start:end + 1])
+                if isinstance(points, list) and len(points) >= 3:
+                    # Ensure first item is always the "no website" option
+                    points = [p for p in points if isinstance(p, str)]
+                    if points[0] != "I don't have a website at all":
+                        points = ["I don't have a website at all"] + [p for p in points if p != "I don't have a website at all"]
+                    return points[:5]
+        except Exception:
+            pass
+        return fallback
+
+    def post(self, request):
+        try:
+            data = json.loads(request.body or '{}')
+        except json.JSONDecodeError:
+            return self.render({'error': 'Invalid JSON'}, status=400)
+
+        # Honeypot
+        if data.get("website") or data.get("url"):
+            return self.render({'success': True, 'contact_name': '', 'recommendations': [], 'summary': ''}, status=201)
+
+        industry = (data.get('industry') or '').strip()
+        challenges = data.get('challenges') or []
+        name = (data.get('name') or '').strip()
+        email = (data.get('email') or '').strip().lower()
+        phone = (data.get('phone') or '').strip()
+
+        # Rate limit — same email max 3 submissions per day
+        from django.utils import timezone as tz
+        from datetime import timedelta
+        recent = tz.now() - timedelta(hours=24)
+        from crm.models import Deal
+        recent_deals = Deal.objects.filter(
+            contact__email__iexact=email,
+            created_at__gte=recent,
+        ).count()
+        if recent_deals >= 3:
+            return self.render({'error': 'You\'ve already submitted. We\'ll be in touch soon!'}, status=429)
+        ref = (data.get('ref') or '').strip()
+
+        if not name or not email:
+            return self.render({'error': 'Name and email are required'}, status=400)
+
+        try:
+            from crm.models import Contact, Brand, Deal, Pipeline, PipelineStage
+            from crm.services.ai_agent import generate_contact_ref
+            from crm.services.lead_integration import LeadIntegrationService
+
+            brand = LeadIntegrationService.get_codeteki_brand()
+            if not brand:
+                return self.render({'error': 'Brand not configured'}, status=500)
+
+            # Resolve contact: ref → phone → email → create new
+            contact = None
+
+            # Try ref lookup first
+            if ref and len(ref) == 8:
+                contacts = Contact.objects.filter(brand=brand, phone__gt='').only('id', 'name', 'phone', 'email')
+                for c in contacts.iterator(chunk_size=200):
+                    if generate_contact_ref(str(c.id)) == ref:
+                        contact = c
+                        break
+
+            # Try phone lookup
+            if not contact and phone:
+                contact = Contact.objects.filter(brand=brand, phone=phone).first()
+
+            # Try email lookup
+            if not contact:
+                normalized = Contact.normalize_email(email)
+                contact = Contact.objects.filter(brand=brand, email=normalized).first()
+
+            # Create new contact
+            if not contact:
+                contact = Contact.objects.create(
+                    name=name,
+                    email=Contact.normalize_email(email),
+                    phone=phone,
+                    brand=brand,
+                    industry=industry,
+                    source='get_started',
+                    contact_type='lead',
+                    tags=['get_started', industry] if industry else ['get_started'],
+                )
+            else:
+                # Update existing contact
+                if not contact.email and email:
+                    contact.email = Contact.normalize_email(email)
+                if not contact.industry and industry:
+                    contact.industry = industry
+                if name and (not contact.name or contact.name == contact.email):
+                    contact.name = name
+                if phone and not contact.phone:
+                    contact.phone = phone
+                tags = list(contact.tags or [])
+                if 'get_started' not in tags:
+                    tags.append('get_started')
+                contact.tags = tags
+                contact.notes = f"{contact.notes or ''}\n\n---\nGet Started ({name}): {industry}, challenges: {', '.join(challenges)}"
+                contact.save()
+
+            # Create/update deal
+            pipeline = LeadIntegrationService.get_sales_pipeline(brand)
+            deal = None
+            if pipeline:
+                first_stage = LeadIntegrationService.get_first_stage(pipeline)
+                existing_deal = Deal.objects.filter(
+                    contact=contact,
+                    pipeline=pipeline,
+                    status='active'
+                ).first()
+
+                if existing_deal:
+                    deal = existing_deal
+                    deal.ai_notes = f"{deal.ai_notes or ''}\nGet Started: {industry}, {', '.join(challenges)}"
+                    deal.save(update_fields=['ai_notes'])
+                elif first_stage:
+                    from django.utils import timezone as tz
+                    deal = Deal.objects.create(
+                        contact=contact,
+                        pipeline=pipeline,
+                        current_stage=first_stage,
+                        stage_entered_at=tz.now(),
+                        status='active',
+                        ai_notes=f"Get Started - {name}\nIndustry: {industry}\nChallenges: {', '.join(challenges)}",
+                    )
+
+            # Get static feature recommendations
+            industry_key = industry.lower().replace(' & ', '-').replace(' ', '-')
+            features = GET_STARTED_FEATURES.get(industry_key, GET_STARTED_DEFAULT_FEATURES)
+
+            # Filter features based on challenges (show most relevant first)
+            # But always return all features for the industry
+
+            # Generate AI summary
+            summary = ''
+            try:
+                from core.services.ai_client import AIContentEngine
+                ai = AIContentEngine()
+                if ai.enabled:
+                    challenge_text = ', '.join(challenges) if challenges else 'general business growth'
+                    result = ai.generate(
+                        prompt=(
+                            f"Write a 2-3 sentence personalized recommendation summary for {name}, "
+                            f"who runs a {industry} business. Their main challenges are: {challenge_text}. "
+                            f"Be specific about how technology can solve their problems. "
+                            f"Address them by first name. Keep it warm and confident."
+                        ),
+                        system_prompt=(
+                            "You are a friendly business technology advisor at Codeteki, an Australian web agency. "
+                            "Write short, punchy recommendations. No fluff. Use 'we' not 'I'."
+                        ),
+                    )
+                    summary = result.get('output', '')
+            except Exception:
+                pass  # AI failure shouldn't block the response
+
+            # Trigger WhatsApp/SMS follow-up if contact has a phone
+            whatsapp_sent = False
+            if contact.phone:
+                try:
+                    from crm.tasks import send_get_started_followup
+                    send_get_started_followup.delay(str(contact.id))
+                    whatsapp_sent = True
+                except Exception:
+                    pass
+
+            return self.render({
+                'success': True,
+                'contact_name': contact.name or name,
+                'recommendations': features,
+                'summary': summary,
+                'whatsapp_sent': whatsapp_sent,
+            }, status=201)
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return self.render({'error': 'Something went wrong. Please try again.'}, status=500)
 
 
 @method_decorator(cache_page(getattr(settings, 'CACHE_TIMEOUT_MEDIUM', 300)), name='dispatch')

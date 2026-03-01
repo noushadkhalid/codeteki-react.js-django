@@ -8,6 +8,7 @@ Handles all AI-powered decision making for the CRM:
 - Lead scoring
 """
 
+import hashlib
 import json
 import logging
 from typing import Optional
@@ -16,6 +17,13 @@ from django.utils import timezone
 from core.services.ai_client import AIContentEngine
 
 logger = logging.getLogger(__name__)
+
+
+def generate_contact_ref(contact_id: str) -> str:
+    """Generate a short ref hash from a contact UUID for SMS tracking links."""
+    if not contact_id:
+        return ''
+    return hashlib.sha256(f"codeteki-{contact_id}".encode()).hexdigest()[:8]
 
 
 class CRMAIAgent:
@@ -1804,11 +1812,13 @@ EMAIL RULES:
 2. Lead with what they're MISSING OUT ON (customers searching online and not finding them)
 3. Keep it under 120 words — busy business owners
 4. Tone: like a helpful local, not a corporate sales pitch
-5. CTA: "Happy to mock up a quick homepage for you — no cost, no obligation"
+5. CTA: "Want to see what a site for your business could look like?" or "Happy to chat about getting you online"
 6. ZERO jargon. Say "website" not "web presence". Say "booking page" not "scheduling solution"
 7. If they have a good Google rating, mention it: "You've got great reviews — imagine if people could find you online too"
+8. Position Codeteki as professionals who build websites for local businesses — NOT as a free service
 
-CRITICAL: These businesses may not be tech-savvy. Keep it dead simple.''',
+CRITICAL: These businesses may not be tech-savvy. Keep it dead simple.
+CRITICAL: Do NOT offer anything for free. No "free mockup", "no cost", "no obligation". We are a professional web agency.''',
 
             # Generic
             'invitation': 'a professional invitation email',
@@ -2131,79 +2141,98 @@ Respond in JSON format:
         Returns {'body': str, 'subject': str (email only), 'success': bool}
         """
         channel = context.get('channel', 'email')
-        if channel == 'phone':
-            # Generate WhatsApp-length message (up to 1024 chars)
-            # SMS fallback is handled by send_smart() at send time
+        if channel == 'sms':
+            return self.compose_sms(context)
+        if channel in ('phone', 'whatsapp'):
             return self.compose_whatsapp(context)
         return self.compose_email_from_context(context)
 
     def compose_sms(self, context: dict) -> dict:
         """
-        Compose a concise SMS message. Always includes the website link.
+        Compose a concise SMS message — MUST fit in 1 SMS segment (≤160 chars).
+        Always directs to the brand's landing page.
 
         Returns:
             {'body': str, 'subject': '', 'success': bool}
         """
         brand_name = context.get('brand_name', 'Our Company')
-        brand_website = context.get('brand_website', '')
-
-        # Desi Firms: pre-built SMS with listings page link
-        if 'desi' in brand_name.lower():
-            body = "We've built Desi Firms for the South Asian community. You're invited! Check it out & list your business FREE: desifirms.com.au/all-listings"
-            return {'body': body, 'subject': '', 'success': True}
-
-        # Other brands: short message + link
-        brand_description = context.get('brand_description', '')
         suggestions = context.get('suggestions', '')
         recipient_name = context.get('recipient_name', '')
-        recipient_company = context.get('recipient_company', '')
-        tone = context.get('tone', 'friendly')
+        pipeline_name = context.get('pipeline_name', '')
 
-        # Extract short domain for the link (e.g. "https://www.example.com" -> "example.com")
-        short_link = brand_website.replace('https://www.', '').replace('https://', '').replace('http://www.', '').replace('http://', '').rstrip('/')
+        # Desi Firms: pre-built SMS
+        if 'desi' in brand_name.lower():
+            body = "We've built Desi Firms for the South Asian community. List your business FREE: desifirms.com.au/all-listings"
+            return {'body': body, 'subject': '', 'success': True}
 
-        prompt = f"""Write a SHORT SMS message for business outreach.
+        # --- Codeteki & other brands: AI-generated short SMS ---
+        landing_url = 'codeteki.au/get-started'
+        if 'codeteki' not in brand_name.lower():
+            brand_website = context.get('brand_website', '')
+            landing_url = brand_website.replace('https://www.', '').replace('https://', '').replace('http://www.', '').replace('http://', '').rstrip('/') or landing_url
 
-STRICT RULES:
-- Maximum 100 characters for the text part (the link is appended separately)
-- Plain text only — no HTML, no markdown, no emojis
-- One punchy sentence that makes the reader want to click the link
-- Do NOT include any URL or link — it will be appended automatically
+        # First name only
+        first_name = ''
+        if recipient_name:
+            first_name = recipient_name.split()[0]
+            if first_name.lower() in ('there', 'hi', 'hey'):
+                first_name = ''
+
+        # The URL takes ~25 chars, greeting ~12 chars, leaving ~120 chars for the message body
+        max_body_chars = 160 - len(landing_url) - 2  # -2 for space + safety
+        if first_name:
+            max_body_chars -= len(f"Hi {first_name}, ")
+
+        prompt = f"""Write a SHORT SMS text for business outreach.
+
+ABSOLUTE LIMIT: The text you write must be under {max_body_chars} characters. Count carefully.
+
+RULES:
+- Plain text only — NO emojis, NO markdown, NO asterisks, NO bullet points
+- One or two punchy sentences maximum
+- Do NOT include any URL/link — it is appended automatically
+- Do NOT include a signature or sign-off
+- Do NOT start with "Hi" or a greeting — that is prepended automatically
 
 CONTEXT:
 - Brand: {brand_name}
-- Description: {brand_description}
-- Tone: {tone}
-- Recipient: {recipient_name or 'Business owner'} at {recipient_company or 'their business'}
-- Suggestions: {suggestions or 'None'}
+- Pipeline: {pipeline_name or 'General outreach'}
+- User instructions: {suggestions or 'None'}
 
 Respond with ONLY the SMS text, nothing else."""
 
         try:
             result = self.ai_engine.generate(
                 prompt=prompt,
-                system_prompt="You are an SMS copywriter. Extremely concise, under 100 characters.",
+                system_prompt="You write SMS messages. Maximum 1 SMS segment. Extremely short and direct.",
             )
 
-            body = result.get('output', '').strip()
+            body = result.get('output', '').strip().strip('"')
             if not body:
-                body = f"Check out {brand_name}"
-
-            # Always append the link
-            if short_link and short_link not in body.lower():
-                body = f"{body} {short_link}"
-
-            # Trim if too long
-            if len(body) > 140:
-                body = body[:137] + '...'
-
-            return {'body': body, 'subject': '', 'success': True}
-
+                body = "Need a website for your business? We can help"
         except Exception as e:
             logger.error(f"SMS compose failed: {e}")
-            # Fallback: at minimum always include the link
-            fallback = f"{brand_name}: {short_link}" if short_link else brand_name
-            return {'body': fallback, 'subject': '', 'success': True}
+            body = "Need a website for your business? We can help"
+
+        # Assemble: greeting + body + URL
+        if first_name:
+            sms = f"Hi {first_name}, {body} {landing_url}"
+        else:
+            sms = f"{body} {landing_url}"
+
+        # Hard trim to 160 chars if AI went over
+        if len(sms) > 160:
+            # Truncate body to fit
+            available = 160 - len(landing_url) - 2
+            if first_name:
+                available -= len(f"Hi {first_name}, ")
+                body = body[:available - 3].rsplit(' ', 1)[0] + '...'
+                sms = f"Hi {first_name}, {body} {landing_url}"
+            else:
+                body = body[:available - 3].rsplit(' ', 1)[0] + '...'
+                sms = f"{body} {landing_url}"
+
+        return {'body': sms, 'subject': '', 'success': True}
 
     def compose_whatsapp(self, context: dict) -> dict:
         """

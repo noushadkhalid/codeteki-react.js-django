@@ -673,12 +673,12 @@ class SequenceStep(models.Model):
 
 CHANNEL_CHOICES = [
     ('email', 'Email'),
-    ('phone', 'SMS/WhatsApp'),
+    ('phone', 'SMS'),
 ]
 
 
 class EmailLog(models.Model):
-    """Track all sent emails, SMS, and WhatsApp messages."""
+    """Track all sent emails and SMS messages (WhatsApp for Desi Firms only)."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     deal = models.ForeignKey(Deal, on_delete=models.CASCADE, related_name='email_logs', null=True, blank=True)

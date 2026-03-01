@@ -54,21 +54,23 @@ def create_contact_from_inquiry(sender, instance, created, **kwargs):
     When a ContactInquiry is created, create a CRM Contact and Deal.
     """
     if created and instance.email:
-        contact, was_created = Contact.objects.get_or_create(
-            email=instance.email,
-            defaults={
-                'name': instance.name or 'Unknown',
-                'contact_type': 'lead',
-                'source': 'contact_form',
-                'contact_inquiry': instance,
-                'notes': instance.message or '',
-            }
-        )
-
-        # If contact exists, link the inquiry
-        if not was_created and not contact.contact_inquiry:
-            contact.contact_inquiry = instance
-            contact.save()
+        # Use filter().first() to handle duplicate emails across brands
+        contact = Contact.objects.filter(email=instance.email).first()
+        if contact:
+            was_created = False
+            if not contact.contact_inquiry:
+                contact.contact_inquiry = instance
+                contact.save()
+        else:
+            was_created = True
+            contact = Contact.objects.create(
+                email=instance.email,
+                name=instance.name or 'Unknown',
+                contact_type='lead',
+                source='contact_form',
+                contact_inquiry=instance,
+                notes=instance.message or '',
+            )
 
         # Auto-create deal in sales pipeline
         try:

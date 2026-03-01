@@ -1724,6 +1724,7 @@ def send_phone_campaign_async(self, draft_id: str):
             continue
 
         # send_smart handles the WhatsApp filter layer internally
+        # (Codeteki brand skips WhatsApp automatically in send_smart)
         result = messaging_service.send_smart(to=to_phone, body=body_text, sms_body=sms_fallback)
         channel_used = result.get('channel_used', 'sms')
 
@@ -1767,6 +1768,65 @@ def send_phone_campaign_async(self, draft_id: str):
         'sms': sms_count,
         'failed': failed_count,
     }
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=30)
+def send_get_started_followup(self, contact_id):
+    """
+    Send WhatsApp/SMS follow-up after Get Started questionnaire submission.
+    """
+    try:
+        from crm.models import Contact
+        from crm.services.messaging_service import get_messaging_service
+        from crm.services.lead_integration import LeadIntegrationService
+
+        contact = Contact.objects.filter(id=contact_id).first()
+        if not contact or not contact.phone:
+            logger.info(f"get_started_followup: no phone for contact {contact_id}")
+            return {'success': False, 'error': 'no_phone'}
+
+        if contact.sms_opted_out:
+            logger.info(f"get_started_followup: contact {contact_id} opted out")
+            return {'success': False, 'error': 'opted_out'}
+
+        name = (contact.name or '').split()[0] if contact.name else ''
+        greeting = f"Hey {name}! " if name else "Hey! "
+
+        body = (
+            f"{greeting}Thanks for checking out what we can do for your business. "
+            f"Got any questions? Just reply here and I'll get back to you. — Noushad, Codeteki"
+        )
+
+        brand = LeadIntegrationService.get_codeteki_brand()
+        messaging_service = get_messaging_service(brand=brand)
+        result = messaging_service.send_smart(contact.phone, body, sms_body=body)
+
+        if result.get('success'):
+            from crm.models import EmailLog
+            channel_used = result.get('channel_used', 'sms')
+            EmailLog.objects.create(
+                subject='',
+                body=body,
+                to_email='',
+                to_phone=contact.phone,
+                from_email='',
+                channel=channel_used,
+                message_sid=result.get('message_sid', ''),
+                ai_generated=False,
+                sent_at=timezone.now(),
+            )
+            contact.last_sms_at = timezone.now()
+            contact.sms_count = (contact.sms_count or 0) + 1
+            contact.save(update_fields=['last_sms_at', 'sms_count'])
+            logger.info(f"get_started_followup: sent {channel_used} to {contact.phone}")
+
+        return result
+
+    except Exception as exc:
+        logger.error(f"get_started_followup failed for {contact_id}: {exc}")
+        if self.request.retries < self.max_retries:
+            raise self.retry(exc=exc)
+        return {'success': False, 'error': str(exc)}
 
 
 @shared_task(bind=True, max_retries=2, default_retry_delay=10)

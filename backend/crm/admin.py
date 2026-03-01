@@ -1745,9 +1745,9 @@ class DealAdmin(ModelAdmin):
             context
         )
 
-    @action(description="📱 Send SMS/WhatsApp (with preview)")
+    @action(description="📱 Send SMS (with preview)")
     def send_sms_now(self, request, queryset):
-        """Send SMS/WhatsApp message to selected deals - shows preview first."""
+        """Send SMS message to selected deals - shows preview first."""
         from crm.services.messaging_service import get_messaging_service
         from crm.services.ai_agent import CRMAIAgent
         from crm.services.email_templates import get_email_type_for_stage
@@ -1793,26 +1793,24 @@ class DealAdmin(ModelAdmin):
                 email_type = get_email_type_for_stage(stage_name, pipeline_type, pipeline_name) or 'followup'
 
                 ai_agent = CRMAIAgent()
-                msg_result = ai_agent.compose_message({
+                sms_result = ai_agent.compose_sms({
                     'brand_name': brand.name if brand else 'Codeteki',
                     'brand_website': brand.website if brand else 'codeteki.au',
                     'recipient_name': contact.name or 'there',
                     'recipient_company': contact.company or '',
                     'recipient_industry': contact.industry or '',
-                    'email_type': email_type,
-                    'channel': 'phone',
+                    'contact_id': str(contact.id),
                     'tone': 'friendly',
                 })
 
-                body = msg_result.get('body', '') if msg_result.get('success') else ''
+                body = sms_result.get('body', '') if sms_result.get('success') else ''
                 if not body:
                     failed_count += 1
                     continue
 
-                # Send via smart routing (WhatsApp first, SMS fallback)
+                # Send via smart routing (Codeteki = SMS only, others = WhatsApp first)
                 messaging_service = get_messaging_service(brand=brand)
-                sms_body = body[:140] + '...' if len(body) > 140 else body
-                result = messaging_service.send_smart(contact.phone, body, sms_body=sms_body)
+                result = messaging_service.send_smart(contact.phone, body, sms_body=body)
 
                 if result.get('success'):
                     channel_used = result.get('channel_used', 'sms')
@@ -1850,7 +1848,7 @@ class DealAdmin(ModelAdmin):
                     DealActivity.objects.create(
                         deal=deal,
                         activity_type='email_sent',
-                        description=f"SMS/WhatsApp sent via {channel_used}: {body[:80]}...",
+                        description=f"{'SMS' if (brand and brand.slug == 'codeteki') else 'SMS/WhatsApp'} sent via {channel_used}: {body[:80]}...",
                         metadata={'channel': channel_used, 'message_sid': result.get('message_sid')}
                     )
 
@@ -1900,22 +1898,19 @@ class DealAdmin(ModelAdmin):
                 email_type = get_email_type_for_stage(stage_name, pipeline_type, pipeline_name) or 'followup'
 
                 ai_agent = CRMAIAgent()
-                msg_result = ai_agent.compose_message({
+                sms_result = ai_agent.compose_sms({
                     'brand_name': brand_name,
                     'brand_website': brand.website if brand else 'codeteki.au',
                     'recipient_name': preview_deal.contact.name or 'there',
                     'recipient_company': preview_deal.contact.company or '',
                     'recipient_industry': preview_deal.contact.industry or '',
-                    'email_type': email_type,
-                    'channel': 'phone',
+                    'contact_id': str(preview_deal.contact.id),
                     'tone': 'friendly',
                 })
 
-                if msg_result.get('success'):
-                    preview_message = msg_result.get('body', '')
+                if sms_result.get('success'):
+                    preview_message = sms_result.get('body', '')
                     char_count = len(preview_message)
-                    if char_count > 140:
-                        sms_fallback = preview_message[:137] + '...'
                 else:
                     preview_error = msg_result.get('error', 'AI generation failed')
             except Exception as e:
@@ -1971,9 +1966,15 @@ class DealAdmin(ModelAdmin):
             sn = deal.current_stage.name if deal.current_stage else 'No Stage'
             stages[sn] = stages.get(sn, 0) + 1
 
+        # Determine brand slug for template (Codeteki = SMS only)
+        brand_slug = ''
+        if preview_deal and preview_deal.pipeline and preview_deal.pipeline.brand:
+            brand_slug = preview_deal.pipeline.brand.slug
+        is_sms_only = brand_slug == 'codeteki'
+
         context = {
             **self.admin_site.each_context(request),
-            'title': 'Send SMS/WhatsApp to Deals',
+            'title': 'Send SMS to Deals' if is_sms_only else 'Send SMS/WhatsApp to Deals',
             'queryset': queryset,
             'opts': self.model._meta,
             'action_checkbox_name': ACTION_CHECKBOX_NAME,
@@ -1988,6 +1989,8 @@ class DealAdmin(ModelAdmin):
             'char_count': char_count,
             'brand_name': brand_name,
             'brand_initial': brand_initial,
+            'brand_slug': brand_slug,
+            'is_sms_only': is_sms_only,
             'stages': stages,
             'recipients_preview': recipients_preview,
         }
@@ -2672,11 +2675,11 @@ class EmailDraftAdmin(ModelAdmin):
     fieldsets = (
         ('1. Channel, Brand & Pipeline', {
             'fields': ('channel', 'brand', 'pipeline'),
-            'description': 'Select channel (Email or SMS/WhatsApp), brand, and pipeline.'
+            'description': 'Select channel (Email or SMS), brand, and pipeline.'
         }),
         ('2. Add Recipients', {
             'fields': ('contacts', 'manual_emails', 'manual_phones', 'send_to_pipeline_contacts'),
-            'description': 'For Email: add emails. For SMS/WhatsApp: add phone numbers. Contacts already in a pipeline are skipped by default.'
+            'description': 'For Email: add emails. For SMS: add phone numbers. Contacts already in a pipeline are skipped by default.'
         }),
         ('3. Message Settings', {
             'fields': ('email_type', 'tone', 'your_suggestions'),
@@ -2684,11 +2687,11 @@ class EmailDraftAdmin(ModelAdmin):
         }),
         ('4. AI Generated Content', {
             'fields': ('generated_subject', 'generated_body'),
-            'description': 'Click "Generate AI" action to fill these. SMS/WhatsApp skip subject.'
+            'description': 'Click "Generate AI" action to fill these. SMS skips subject.'
         }),
         ('5. Final Message', {
             'fields': ('final_subject', 'final_body'),
-            'description': 'Final content to send. For SMS/WhatsApp, only body is used.'
+            'description': 'Final content to send. For SMS, only body is used.'
         }),
         ('Scheduling', {
             'fields': ('scheduled_for', 'schedule_status', 'schedule_error'),
@@ -2741,7 +2744,7 @@ class EmailDraftAdmin(ModelAdmin):
     @display(description="Channel")
     def channel_icon(self, obj):
         if obj.channel == 'phone':
-            return format_html('<span style="color:#8b5cf6; font-weight:600;" title="SMS/WhatsApp">📱 SMS</span>')
+            return format_html('<span style="color:#8b5cf6; font-weight:600;" title="SMS">📱 SMS</span>')
         return format_html('<span style="color:#3b82f6; font-weight:600;" title="Email">✉️ Email</span>')
 
     @display(description="Recipients")
@@ -3082,7 +3085,7 @@ class EmailDraftAdmin(ModelAdmin):
         return TemplateResponse(request, 'admin/crm/emaildraft/send_preview.html', context)
 
     def _execute_send(self, request, draft, valid_recipients, subject, body_text):
-        """Send emails/SMS/WhatsApp after confirmation. Auto-schedules if outside business hours."""
+        """Send emails/SMS after confirmation. Auto-schedules if outside business hours."""
         from crm.tasks import is_office_hours, get_next_send_time
         from django.contrib import messages
 
@@ -3134,22 +3137,27 @@ class EmailDraftAdmin(ModelAdmin):
         from crm.tasks import send_phone_campaign_async
         send_phone_campaign_async.delay(str(draft.id))
 
-        # Count WhatsApp-known vs unknown for the status message
-        from crm.models import Contact
-        phones = [r['phone'] for r in valid_recipients if r.get('phone')]
-        wa_known = Contact.objects.filter(phone__in=phones, has_whatsapp=True).count()
-        wa_unknown = Contact.objects.filter(phone__in=phones, has_whatsapp=None).count()
-        sms_direct = Contact.objects.filter(phone__in=phones, has_whatsapp=False).count()
-
+        # Count recipients for the status message
+        is_sms_only = draft.brand and draft.brand.slug == 'codeteki'
         parts = [f"{recipient_count} recipient(s)"]
-        if wa_known > 0:
-            parts.append(f"{wa_known} confirmed WhatsApp")
-        if sms_direct > 0:
-            parts.append(f"{sms_direct} SMS-only")
-        if wa_unknown > 0:
-            parts.append(f"{wa_unknown} will be checked for WhatsApp")
 
-        msg = f"Phone campaign queued: {', '.join(parts)}. Sending in background..."
+        if not is_sms_only:
+            # Show WhatsApp breakdown only for brands that use WhatsApp
+            from crm.models import Contact
+            phones = [r['phone'] for r in valid_recipients if r.get('phone')]
+            wa_known = Contact.objects.filter(phone__in=phones, has_whatsapp=True).count()
+            wa_unknown = Contact.objects.filter(phone__in=phones, has_whatsapp=None).count()
+            sms_direct = Contact.objects.filter(phone__in=phones, has_whatsapp=False).count()
+
+            if wa_known > 0:
+                parts.append(f"{wa_known} confirmed WhatsApp")
+            if sms_direct > 0:
+                parts.append(f"{sms_direct} SMS-only")
+            if wa_unknown > 0:
+                parts.append(f"{wa_unknown} will be checked for WhatsApp")
+
+        channel_label = "SMS" if is_sms_only else "Phone"
+        msg = f"{channel_label} campaign queued: {', '.join(parts)}. Sending in background..."
         self.message_user(request, msg, messages.SUCCESS)
         return HttpResponseRedirect(reverse('admin:crm_emaildraft_changelist'))
 

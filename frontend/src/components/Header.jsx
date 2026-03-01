@@ -17,8 +17,8 @@ export default function Header() {
     { name: 'Services', href: '/services' },
     { name: 'AI Tools', href: '/ai-tools' },
     { name: 'Blog', href: '/blog' },
-    { name: 'Demos', href: '/demos' },
     { name: 'FAQ', href: '/faq' },
+    { name: 'Get Started', href: '/get-started' },
     { name: 'Contact', href: '/contact' },
   ];
 

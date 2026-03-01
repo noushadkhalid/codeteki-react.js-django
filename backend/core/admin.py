@@ -7,6 +7,7 @@ Using Django Unfold for modern Tailwind-based UI
 import json
 from django import forms
 from django.contrib import admin, messages
+from django.urls import path
 from django.utils.html import format_html
 from django.db.models import Count
 
@@ -1940,6 +1941,13 @@ class BlogPostAdmin(ModelAdmin):
             'description': 'Engagement statistics'
         }),
     )
+
+    def get_urls(self):
+        from .admin_views import simple_blog_builder_view
+        custom_urls = [
+            path('simple-builder/', simple_blog_builder_view, name='simple-blog-builder'),
+        ]
+        return custom_urls + super().get_urls()
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('blog_category', 'source_cluster')

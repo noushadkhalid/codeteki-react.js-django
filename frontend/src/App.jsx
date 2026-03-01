@@ -26,6 +26,7 @@ const FAQPage = lazy(() => import("./pages/FAQ"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const Demos = lazy(() => import("./pages/Demos"));
+const GetStarted = lazy(() => import("./pages/GetStarted"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Lazy load ChatWidget as it's not critical for initial render
@@ -71,6 +72,7 @@ function Router() {
             <Route path="/faq" component={FAQPage} />
             <Route path="/privacy-policy" component={PrivacyPolicy} />
             <Route path="/terms-of-service" component={TermsOfService} />
+            <Route path="/get-started" component={GetStarted} />
             <Route component={NotFound} />
           </Switch>
         </Suspense>
