@@ -2244,8 +2244,9 @@ class SequenceStepAdmin(ModelAdmin):
 @admin.register(EmailLog)
 class EmailLogAdmin(ModelAdmin):
     list_display = [
+        'channel_icon',
         'subject_truncated',
-        'to_email',
+        'recipient_display',
         'source_display',
         'sent_at',
         'opened_badge',
@@ -2253,8 +2254,8 @@ class EmailLogAdmin(ModelAdmin):
         'ab_variant_display',
         'ai_generated',
     ]
-    list_filter = ['opened', 'replied', 'ai_generated', 'ab_variant', 'sent_at']
-    search_fields = ['subject', 'to_email', 'deal__contact__name']
+    list_filter = ['channel', 'opened', 'replied', 'ai_generated', 'ab_variant', 'sent_at']
+    search_fields = ['subject', 'to_email', 'to_phone', 'deal__contact__name']
     readonly_fields = [
         'id', 'deal', 'sequence_step', 'ab_variant',
         'subject', 'body', 'from_email', 'to_email',
@@ -2270,11 +2271,26 @@ class EmailLogAdmin(ModelAdmin):
     def has_change_permission(self, request, obj=None):
         return False
 
+    @display(description="Channel")
+    def channel_icon(self, obj):
+        ch = obj.channel or 'email'
+        if ch == 'whatsapp':
+            return format_html('<span style="color:#25d366; font-weight:600;">📱 WhatsApp</span>')
+        elif ch == 'sms':
+            return format_html('<span style="color:#8b5cf6; font-weight:600;">📱 SMS</span>')
+        return format_html('<span style="color:#3b82f6; font-weight:600;">✉️ Email</span>')
+
     @display(description="Subject")
     def subject_truncated(self, obj):
-        if len(obj.subject) > 50:
+        if obj.subject and len(obj.subject) > 50:
             return obj.subject[:50] + "..."
-        return obj.subject
+        return obj.subject or '-'
+
+    @display(description="To")
+    def recipient_display(self, obj):
+        if obj.to_phone:
+            return obj.to_phone
+        return obj.to_email or '-'
 
     @display(description="Source", label=True)
     def source_display(self, obj):
@@ -2638,6 +2654,7 @@ class EmailDraftAdmin(ModelAdmin):
 
     list_display = [
         'draft_title',
+        'channel_icon',
         'brand',
         'pipeline_display',
         'recipient_count_display',
@@ -2646,7 +2663,7 @@ class EmailDraftAdmin(ModelAdmin):
         'schedule_status_display',
         'updated_at',
     ]
-    list_filter = ['brand', 'pipeline', 'is_sent', 'schedule_status', 'email_type', 'created_at']
+    list_filter = ['channel', 'brand', 'pipeline', 'is_sent', 'schedule_status', 'email_type', 'created_at']
     search_fields = ['contacts__name', 'contacts__email', 'manual_emails', 'template_name', 'generated_subject']
     ordering = ['-updated_at']
     filter_horizontal = ['contacts']  # Nice dual-list selector for multiple contacts
@@ -2720,6 +2737,12 @@ class EmailDraftAdmin(ModelAdmin):
         if obj.is_sent:
             return f"✅ Sent ({obj.sent_count})"
         return f"📝 Draft"
+
+    @display(description="Channel")
+    def channel_icon(self, obj):
+        if obj.channel == 'phone':
+            return format_html('<span style="color:#8b5cf6; font-weight:600;" title="SMS/WhatsApp">📱 SMS</span>')
+        return format_html('<span style="color:#3b82f6; font-weight:600;" title="Email">✉️ Email</span>')
 
     @display(description="Recipients")
     def recipient_count_display(self, obj):
