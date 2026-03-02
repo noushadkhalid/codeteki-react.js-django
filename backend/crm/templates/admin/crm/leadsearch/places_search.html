@@ -600,15 +600,33 @@ document.getElementById('importForm').addEventListener('submit', function(e) {
         else noPhone++;
     });
 
-    if (channel === 'email' && hasEmail === 0) {
+    if (channel === 'email' && hasEmail === 0 && hasPhone > 0) {
         e.preventDefault();
-        alert('None of the selected contacts have email addresses.\n\nSwitch channel to "SMS / WhatsApp" or use "Select With Email".');
+        if (confirm('None of the selected contacts have email.\n\nSwitch to SMS / WhatsApp and continue?')) {
+            document.getElementById('channelSelect').value = 'sms';
+            btn.click();
+        }
         return;
     }
 
-    if (channel === 'sms' && hasPhone === 0) {
+    if (channel === 'email' && hasEmail === 0 && hasPhone === 0) {
         e.preventDefault();
-        alert('None of the selected contacts have phone numbers.\n\nSwitch channel to "Email" or use "Select With Phone".');
+        alert('Selected contacts have no email or phone numbers.');
+        return;
+    }
+
+    if (channel === 'sms' && hasPhone === 0 && hasEmail > 0) {
+        e.preventDefault();
+        if (confirm('None of the selected contacts have phone numbers.\n\nSwitch to Email and continue?')) {
+            document.getElementById('channelSelect').value = 'email';
+            btn.click();
+        }
+        return;
+    }
+
+    if (channel === 'sms' && hasPhone === 0 && hasEmail === 0) {
+        e.preventDefault();
+        alert('Selected contacts have no email or phone numbers.');
         return;
     }
 
