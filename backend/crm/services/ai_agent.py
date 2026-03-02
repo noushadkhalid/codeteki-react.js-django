@@ -2100,8 +2100,13 @@ Respond in JSON format:
                 status.append("replied")
             email_info.append(f"- {email.subject}: {', '.join(status) or 'draft'}")
 
+        # Determine contact identifier and channel
+        contact_identifier = contact.email or contact.phone or 'unknown'
+        contact_channel = 'email' if contact.email else ('phone' if contact.phone else 'none')
+
         context_parts = [
-            f"Contact: {contact.name} ({contact.email})",
+            f"Contact: {contact.name} ({contact_identifier})",
+            f"Contact Channel: {contact_channel}",
             f"Company: {contact.company or 'Unknown'}",
             f"Website: {contact.website or 'Not provided'}",
             f"Contact Type: {contact.get_contact_type_display()}",
@@ -2113,12 +2118,12 @@ Respond in JSON format:
             f"Deal Status: {deal.status}",
             f"Deal Value: ${deal.value or 0}",
             "",
-            f"Emails Sent: {deal.emails_sent}",
+            f"Messages Sent: {deal.emails_sent}",
             f"Last Contact: {deal.last_contact_date.strftime('%Y-%m-%d') if deal.last_contact_date else 'Never'}",
             f"Next Action Due: {deal.next_action_date.strftime('%Y-%m-%d') if deal.next_action_date else 'Not set'}",
             "",
-            "Recent Email Activity:",
-            *(email_info if email_info else ["- No emails sent yet"]),
+            "Recent Activity:",
+            *(email_info if email_info else ["- No messages sent yet"]),
             "",
             f"AI Notes: {deal.ai_notes or 'None'}",
         ]

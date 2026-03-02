@@ -297,7 +297,7 @@ class ContactAdmin(ModelAdmin):
         'bounce_badge',
         'created_at',
     ]
-    list_filter = ['status', 'is_unsubscribed', 'email_bounced', 'spam_reported', 'brand', 'contact_type', 'source', 'created_at']
+    list_filter = ['status', 'is_unsubscribed', 'email_bounced', 'sms_opted_out', 'spam_reported', 'brand', 'contact_type', 'source', 'created_at']
     search_fields = ['name', 'email', 'company', 'website']
     readonly_fields = ['created_at', 'updated_at', 'id', 'last_emailed_at', 'email_count', 'preferred_send_hour', 'unsubscribed_at', 'bounced_at', 'soft_bounce_count', 'spam_reported_at']
     ordering = ['-created_at']
@@ -583,7 +583,7 @@ class CodetekiContactAdmin(ContactAdmin):
         'bounce_badge',
         'created_at',
     ]
-    list_filter = ['status', 'industry', 'is_unsubscribed', 'email_bounced', 'contact_type', 'source', 'created_at']
+    list_filter = ['status', 'industry', 'is_unsubscribed', 'email_bounced', 'sms_opted_out', 'contact_type', 'source', 'created_at']
     search_fields = ['name', 'email', 'company', 'website', 'phone']
     readonly_fields = ['created_at', 'updated_at', 'id', 'last_emailed_at', 'email_count', 'preferred_send_hour',
                        'unsubscribed_at', 'bounced_at', 'soft_bounce_count', 'spam_reported_at',

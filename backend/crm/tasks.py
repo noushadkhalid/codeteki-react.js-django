@@ -57,6 +57,15 @@ def get_next_send_time():
     return target.replace(hour=OFFICE_HOUR_START, minute=0, second=0, microsecond=0)
 
 
+def _get_deal_channel(contact) -> str:
+    """Determine the best channel for reaching a contact: 'email', 'sms', or 'none'."""
+    if contact.email:
+        return 'email'
+    if contact.phone:
+        return 'sms'
+    return 'none'
+
+
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def process_pending_deals(self):
     """
@@ -88,9 +97,20 @@ def process_pending_deals(self):
     for deal in pending_deals:
         try:
             with transaction.atomic():
-                # SAFETY: Skip bounced contacts
                 contact = deal.contact
-                if contact.email_bounced:
+                channel = _get_deal_channel(contact)
+
+                # SAFETY: Skip deals with no contact channel at all
+                if channel == 'none':
+                    deal.autopilot_paused = True
+                    deal.ai_notes = (deal.ai_notes or '') + f"\n[{timezone.now().strftime('%Y-%m-%d')}] [Autopilot] No contact channel (no email or phone). Paused."
+                    deal.save(update_fields=['autopilot_paused', 'ai_notes'])
+                    processed += 1
+                    logger.info(f"Deal {deal.id}: No contact channel, paused")
+                    continue
+
+                # SAFETY: Skip bounced contacts (email channel only)
+                if channel == 'email' and contact.email_bounced:
                     deal.status = 'lost'
                     deal.lost_reason = 'invalid_email'
                     deal.save(update_fields=['status', 'lost_reason'])
@@ -103,9 +123,9 @@ def process_pending_deals(self):
                     logger.info(f"Deal {deal.id}: Contact email bounced, auto-closed")
                     continue
 
-                # SAFETY: Skip unsubscribed contacts (belt-and-suspenders)
+                # SAFETY: Skip unsubscribed contacts (email) or SMS opted-out (sms)
                 brand_slug = deal.pipeline.brand.slug if deal.pipeline and deal.pipeline.brand else None
-                if contact.is_unsubscribed or (brand_slug and contact.is_unsubscribed_from_brand(brand_slug)):
+                if channel == 'email' and (contact.is_unsubscribed or (brand_slug and contact.is_unsubscribed_from_brand(brand_slug))):
                     deal.status = 'lost'
                     deal.lost_reason = 'unsubscribed'
                     deal.save(update_fields=['status', 'lost_reason'])
@@ -117,9 +137,21 @@ def process_pending_deals(self):
                     processed += 1
                     logger.info(f"Deal {deal.id}: Contact unsubscribed, auto-closed")
                     continue
+                if channel == 'sms' and contact.sms_opted_out:
+                    deal.status = 'lost'
+                    deal.lost_reason = 'unsubscribed'
+                    deal.save(update_fields=['status', 'lost_reason'])
+                    DealActivity.objects.create(
+                        deal=deal,
+                        activity_type='status_change',
+                        description=f"[Autopilot] Contact SMS opted out - deal auto-closed"
+                    )
+                    processed += 1
+                    logger.info(f"Deal {deal.id}: Contact SMS opted out, auto-closed")
+                    continue
 
-                # SAFETY: Domain-level reputation check
-                if '@' in contact.email:
+                # SAFETY: Domain-level reputation check (email only)
+                if channel == 'email' and '@' in contact.email:
                     domain = contact.email.split('@')[1].lower()
                     from django.db.models import Q
                     bad_contacts_at_domain = Contact.objects.filter(
@@ -202,31 +234,35 @@ def process_pending_deals(self):
                 logger.info(f"Deal {deal.id}: AI recommends '{action}' (tier: {profile.tier})")
 
                 if action == 'send_email':
-                    # Send time optimization: defer to preferred hour if known
-                    preferred_hour = contact.preferred_send_hour
-                    if preferred_hour is not None:
-                        now_local = timezone.localtime()
-                        current_hour = now_local.hour
-                        # If outside ±2hr window of preferred hour, defer
-                        hour_diff = abs(current_hour - preferred_hour)
-                        if hour_diff > 2 and hour_diff < 22:  # handle wrap-around
-                            # Defer to preferred hour today or tomorrow
-                            target = now_local.replace(hour=preferred_hour, minute=0, second=0, microsecond=0)
-                            if target <= now_local:
-                                target += timedelta(days=1)
-                            deal.next_action_date = target
-                            deal.save(update_fields=['next_action_date'])
-                            logger.info(f"Deal {deal.id}: Deferred to preferred send hour {preferred_hour}:00")
-                            processed += 1
-                            continue
+                    if channel == 'sms':
+                        # Phone-only contact → route to SMS task
+                        queue_deal_sms.delay(str(deal.id))
+                    elif channel == 'email':
+                        # Send time optimization: defer to preferred hour if known
+                        preferred_hour = contact.preferred_send_hour
+                        if preferred_hour is not None:
+                            now_local = timezone.localtime()
+                            current_hour = now_local.hour
+                            # If outside ±2hr window of preferred hour, defer
+                            hour_diff = abs(current_hour - preferred_hour)
+                            if hour_diff > 2 and hour_diff < 22:  # handle wrap-around
+                                # Defer to preferred hour today or tomorrow
+                                target = now_local.replace(hour=preferred_hour, minute=0, second=0, microsecond=0)
+                                if target <= now_local:
+                                    target += timedelta(days=1)
+                                deal.next_action_date = target
+                                deal.save(update_fields=['next_action_date'])
+                                logger.info(f"Deal {deal.id}: Deferred to preferred send hour {preferred_hour}:00")
+                                processed += 1
+                                continue
 
-                    email_type = metadata.get('email_type', 'followup')
-                    # A/B testing: check if stage has variant B subject
-                    ab_variant = ''
-                    if deal.current_stage and deal.current_stage.subject_variant_b:
-                        import random
-                        ab_variant = 'A' if random.random() > 0.5 else 'B'
-                    queue_deal_email.delay(str(deal.id), email_type, ab_variant=ab_variant)
+                        email_type = metadata.get('email_type', 'followup')
+                        # A/B testing: check if stage has variant B subject
+                        ab_variant = ''
+                        if deal.current_stage and deal.current_stage.subject_variant_b:
+                            import random
+                            ab_variant = 'A' if random.random() > 0.5 else 'B'
+                        queue_deal_email.delay(str(deal.id), email_type, ab_variant=ab_variant)
 
                 elif action == 'move_stage':
                     suggested_stage_name = metadata.get('suggested_stage', '')
@@ -551,6 +587,151 @@ def queue_deal_email(self, deal_id: str, email_type: str = 'followup', ab_varian
 
             return {'success': False, 'error': error_msg, 'hard_bounce': True}
 
+        return {'success': False, 'error': error_msg}
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def queue_deal_sms(self, deal_id: str):
+    """
+    Queue an SMS to be sent for a deal (phone-only contacts).
+    Called by process_pending_deals when channel is 'sms'.
+    Mirrors queue_deal_email structure but sends via messaging service.
+    """
+    if not is_office_hours():
+        logger.info(f"queue_deal_sms skipped for deal {deal_id}: outside office hours")
+        return {'success': False, 'error': 'Outside office hours'}
+
+    from crm.models import Deal, EmailLog, DealActivity, PipelineStage
+    from crm.services.messaging_service import get_messaging_service
+    from crm.services.ai_agent import CRMAIAgent
+    from crm.services.email_templates import get_email_type_for_stage
+
+    logger.info(f"Queuing SMS for deal {deal_id}")
+
+    try:
+        deal = Deal.objects.select_related(
+            'contact', 'pipeline', 'pipeline__brand', 'current_stage'
+        ).get(id=deal_id)
+    except Deal.DoesNotExist:
+        logger.error(f"Deal {deal_id} not found")
+        return {'success': False, 'error': 'Deal not found'}
+
+    contact = deal.contact
+    brand = deal.pipeline.brand if deal.pipeline else None
+
+    # SAFETY: No phone number
+    if not contact.phone:
+        logger.warning(f"Deal {deal_id}: contact has no phone number")
+        return {'success': False, 'error': 'No phone number'}
+
+    # SAFETY: SMS opted out
+    if contact.sms_opted_out:
+        logger.warning(f"Deal {deal_id}: contact {contact.phone} SMS opted out")
+        return {'success': False, 'error': 'Contact SMS opted out'}
+
+    # SAFETY: 24h cooldown - don't double-message
+    recent = EmailLog.objects.filter(
+        deal=deal,
+        channel__in=['sms', 'whatsapp'],
+        sent_at__gte=timezone.now() - timedelta(hours=24),
+    ).exists()
+    if recent:
+        deal.next_action_date = timezone.now() + timedelta(hours=24)
+        deal.save(update_fields=['next_action_date'])
+        logger.info(f"Deal {deal_id}: SMS cooldown, deferred 24h")
+        return {'success': False, 'error': 'SMS cooldown - deferred'}
+
+    # Compose SMS via AI
+    pipeline_type = deal.pipeline.pipeline_type if deal.pipeline else 'sales'
+    pipeline_name = deal.pipeline.name if deal.pipeline else ''
+
+    ai_agent = CRMAIAgent()
+    sms_result = ai_agent.compose_sms({
+        'brand_name': brand.name if brand else 'Codeteki',
+        'brand_website': brand.website if brand else 'codeteki.au',
+        'recipient_name': contact.name or 'there',
+        'recipient_company': contact.company or '',
+        'recipient_industry': contact.industry or '',
+        'contact_id': str(contact.id),
+        'tone': 'friendly',
+    })
+
+    body = sms_result.get('body', '') if sms_result.get('success') else ''
+    if not body:
+        logger.error(f"Deal {deal_id}: SMS composition failed")
+        return {'success': False, 'error': 'SMS composition failed'}
+
+    # Send via smart routing
+    messaging_service = get_messaging_service(brand=brand)
+    result = messaging_service.send_smart(contact.phone, body, sms_body=body)
+
+    if result.get('success'):
+        channel_used = result.get('channel_used', 'sms')
+
+        # Log the message
+        EmailLog.objects.create(
+            deal=deal,
+            subject='',
+            body=body[:5000],
+            to_email='',
+            to_phone=contact.phone,
+            from_email='',
+            channel=channel_used,
+            message_sid=result.get('message_sid', ''),
+            ai_generated=True,
+            sent_at=timezone.now(),
+        )
+
+        # Update deal with engagement-aware follow-up interval
+        tier_intervals = {
+            'engaged': 2, 'hot': 2, 'warm': 3, 'lurker': 5, 'cold': 7, 'ghost': 7,
+        }
+        default_days = deal.current_stage.days_until_followup if deal.current_stage else 5
+        followup_days = tier_intervals.get(deal.engagement_tier, default_days)
+
+        deal.emails_sent = (deal.emails_sent or 0) + 1
+        deal.last_contact_date = timezone.now()
+        deal.next_action_date = timezone.now() + timedelta(days=followup_days)
+        deal.save(update_fields=['emails_sent', 'last_contact_date', 'next_action_date'])
+
+        # Log activity
+        DealActivity.objects.create(
+            deal=deal,
+            activity_type='email_sent',
+            description=f"[Autopilot] SMS sent via {channel_used}: {body[:80]}...",
+            metadata={'channel': channel_used, 'message_sid': result.get('message_sid', '')}
+        )
+
+        # Update contact
+        contact.last_sms_at = timezone.now()
+        contact.sms_count = (contact.sms_count or 0) + 1
+        if contact.status == 'new':
+            contact.status = 'contacted'
+        contact.save(update_fields=['last_sms_at', 'sms_count', 'status'])
+
+        # Auto-advance to next stage (same logic as email path)
+        if deal.current_stage and not deal.current_stage.is_terminal:
+            next_stage = PipelineStage.objects.filter(
+                pipeline=deal.pipeline,
+                order__gt=deal.current_stage.order,
+            ).order_by('order').first()
+
+            if next_stage and not next_stage.is_terminal:
+                next_name = next_stage.name.lower()
+                if 'follow up' in next_name or 'nudge' in next_name:
+                    deal.move_to_stage(next_stage)
+                    DealActivity.objects.create(
+                        deal=deal,
+                        activity_type='stage_change',
+                        description=f"Auto-advanced to {next_stage.name} after SMS sent",
+                    )
+                    logger.info(f"Deal {deal.id}: Auto-advanced to {next_stage.name}")
+
+        logger.info(f"SMS sent successfully to {contact.phone} for deal {deal_id}")
+        return {'success': True, 'channel': channel_used}
+    else:
+        error_msg = result.get('error', '')
+        logger.error(f"Failed to send SMS for deal {deal_id}: {error_msg}")
         return {'success': False, 'error': error_msg}
 
 

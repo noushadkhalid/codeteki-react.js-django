@@ -46,6 +46,9 @@ class EngagementProfile:
     # Burnout detection
     is_burnout_risk: bool = False
 
+    # Channel info
+    is_sms_only: bool = False
+
     # Recommendations
     recommended_action: str = 'send_now'
     recommended_wait_days: int = 0
@@ -81,6 +84,11 @@ def get_engagement_profile(deal) -> EngagementProfile:
     profile.total_opened = emails.filter(opened=True).count()
     profile.total_clicked = emails.filter(clicked=True).count()
     profile.total_replied = emails.filter(replied=True).count()
+
+    # Detect SMS-only deals (no email-channel logs at all)
+    has_email_logs = emails.filter(channel='email').exists()
+    if not has_email_logs and emails.filter(channel__in=['sms', 'whatsapp']).exists():
+        profile.is_sms_only = True
 
     # Rates
     if profile.total_sent > 0:
@@ -132,17 +140,33 @@ def _classify_tier(profile: EngagementProfile) -> str:
     """
     Classify engagement tier based on profile metrics.
 
-    Tiers (from most to least engaged):
+    For email deals:
     - engaged: Has replied positively
     - hot: Opened/clicked in last 7 days, open_rate > 50%
     - warm: Opened at least once, last open within 14 days
     - lurker: Opened 1-2 emails ever, but not recently (>14 days)
     - cold: Sent 2+ emails, zero opens
     - ghost: Sent 3+ emails, zero opens, 3+ consecutive unopened
+
+    For SMS-only deals (no open/click tracking):
+    - engaged: Has replied
+    - ghost: 5+ sent, no reply
+    - cold: 3+ sent, no reply
+    - warm: <3 sent (still early)
     """
-    # Engaged: has replied
+    # Engaged: has replied (same for both channels)
     if profile.total_replied > 0:
         return 'engaged'
+
+    # SMS-only: no open/click tracking, classify on send count + replies only
+    if profile.is_sms_only:
+        if profile.total_sent >= 5:
+            return 'ghost'
+        if profile.total_sent >= 3:
+            return 'cold'
+        return 'warm'
+
+    # --- Email-based classification (unchanged) ---
 
     # Ghost: 3+ sent, zero opens, 3+ consecutive unopened
     if (profile.total_sent >= 3
@@ -250,21 +274,31 @@ def get_engagement_summary_for_ai(deal) -> str:
     """
     profile = get_engagement_profile(deal)
 
-    lines = [
-        "ENGAGEMENT PROFILE:",
-        f"  Engagement Tier: {profile.tier.upper()}",
-        f"  Emails Sent: {profile.total_sent}",
-        f"  Open Rate: {profile.open_rate:.0%} ({profile.total_opened}/{profile.total_sent})" if profile.total_sent > 0 else "  Open Rate: N/A (no emails sent)",
-        f"  Click Rate: {profile.click_rate:.0%}" if profile.total_sent > 0 else "  Click Rate: N/A",
-        f"  Replies: {profile.total_replied}",
-        f"  Last Open: {profile.last_open_days_ago} days ago" if profile.last_open_days_ago is not None else "  Last Open: never",
-        f"  Last Click: {profile.last_click_days_ago} days ago" if profile.last_click_days_ago is not None else "  Last Click: never",
-        f"  Last Reply: {profile.last_reply_days_ago} days ago" if profile.last_reply_days_ago is not None else "  Last Reply: never",
-        f"  Opens Last 7 Days: {profile.opens_last_7_days}",
-        f"  Consecutive Unopened: {profile.consecutive_unopened}",
-        f"  Burnout Risk: {'YES' if profile.is_burnout_risk else 'No'}",
-        f"  Recommended Action: {profile.recommended_action}",
-    ]
+    if profile.is_sms_only:
+        lines = [
+            "ENGAGEMENT PROFILE (SMS-only — no open/click tracking):",
+            f"  Engagement Tier: {profile.tier.upper()}",
+            f"  Messages Sent: {profile.total_sent}",
+            f"  Replies: {profile.total_replied}",
+            f"  Last Reply: {profile.last_reply_days_ago} days ago" if profile.last_reply_days_ago is not None else "  Last Reply: never",
+            f"  Recommended Action: {profile.recommended_action}",
+        ]
+    else:
+        lines = [
+            "ENGAGEMENT PROFILE:",
+            f"  Engagement Tier: {profile.tier.upper()}",
+            f"  Emails Sent: {profile.total_sent}",
+            f"  Open Rate: {profile.open_rate:.0%} ({profile.total_opened}/{profile.total_sent})" if profile.total_sent > 0 else "  Open Rate: N/A (no emails sent)",
+            f"  Click Rate: {profile.click_rate:.0%}" if profile.total_sent > 0 else "  Click Rate: N/A",
+            f"  Replies: {profile.total_replied}",
+            f"  Last Open: {profile.last_open_days_ago} days ago" if profile.last_open_days_ago is not None else "  Last Open: never",
+            f"  Last Click: {profile.last_click_days_ago} days ago" if profile.last_click_days_ago is not None else "  Last Click: never",
+            f"  Last Reply: {profile.last_reply_days_ago} days ago" if profile.last_reply_days_ago is not None else "  Last Reply: never",
+            f"  Opens Last 7 Days: {profile.opens_last_7_days}",
+            f"  Consecutive Unopened: {profile.consecutive_unopened}",
+            f"  Burnout Risk: {'YES' if profile.is_burnout_risk else 'No'}",
+            f"  Recommended Action: {profile.recommended_action}",
+        ]
 
     if profile.recommended_wait_days > 0:
         lines.append(f"  Recommended Wait: {profile.recommended_wait_days} days")
