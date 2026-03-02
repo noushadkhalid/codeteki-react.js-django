@@ -1799,6 +1799,7 @@ class DealAdmin(ModelAdmin):
                     'recipient_name': contact.name or 'there',
                     'recipient_company': contact.company or '',
                     'recipient_industry': contact.industry or '',
+                    'pipeline_name': pipeline_name,
                     'contact_id': str(contact.id),
                     'tone': 'friendly',
                 })
@@ -1904,6 +1905,7 @@ class DealAdmin(ModelAdmin):
                     'recipient_name': preview_deal.contact.name or 'there',
                     'recipient_company': preview_deal.contact.company or '',
                     'recipient_industry': preview_deal.contact.industry or '',
+                    'pipeline_name': pipeline_name,
                     'contact_id': str(preview_deal.contact.id),
                     'tone': 'friendly',
                 })

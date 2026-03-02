@@ -652,6 +652,7 @@ def queue_deal_sms(self, deal_id: str):
         'recipient_name': contact.name or 'there',
         'recipient_company': contact.company or '',
         'recipient_industry': contact.industry or '',
+        'pipeline_name': pipeline_name,
         'contact_id': str(contact.id),
         'tone': 'friendly',
     })
