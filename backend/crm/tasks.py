@@ -1929,6 +1929,8 @@ def send_phone_campaign_async(self, draft_id: str):
         logger.error(f"Phone campaign task: draft {draft_id} not found")
         return {'success': False, 'error': 'Draft not found'}
 
+    logger.info(f"Phone campaign task v2 (with deal creation): draft {draft_id}")
+
     body_text = draft.generated_body or draft.body or ''
     if not body_text.strip():
         logger.error(f"Phone campaign task: draft {draft_id} has no message body")
@@ -1966,6 +1968,11 @@ def send_phone_campaign_async(self, draft_id: str):
             pipeline=draft.pipeline
         ).order_by('order').first()
 
+    logger.info(
+        f"Phone campaign {draft_id}: pipeline={draft.pipeline}, "
+        f"invited_stage={invited_stage}, recipients={len(recipients)}"
+    )
+
     sent_count = 0
     failed_count = 0
     wa_count = 0
@@ -2000,6 +2007,14 @@ def send_phone_campaign_async(self, draft_id: str):
             # Find or create contact
             if not contact:
                 contact = Contact.objects.filter(phone=to_phone, brand=draft.brand).first()
+                if not contact:
+                    # Try without brand filter as fallback
+                    contact = Contact.objects.filter(phone=to_phone).first()
+
+            logger.info(
+                f"Phone campaign: sent to {to_phone}, contact={contact}, "
+                f"pipeline={draft.pipeline}, stage={invited_stage}"
+            )
 
             # Find or create deal in pipeline
             linked_deal = None
@@ -2008,6 +2023,7 @@ def send_phone_campaign_async(self, draft_id: str):
                     contact=contact, pipeline=draft.pipeline, status='active'
                 ).first()
                 if linked_deal:
+                    logger.info(f"Phone campaign: found existing deal {linked_deal.id} for {to_phone}")
                     linked_deal.emails_sent = (linked_deal.emails_sent or 0) + 1
                     linked_deal.last_contact_date = timezone.now()
                     followup_days = linked_deal.current_stage.days_until_followup if linked_deal.current_stage else 5
@@ -2027,6 +2043,12 @@ def send_phone_campaign_async(self, draft_id: str):
                         ai_notes=f"First contact via Phone Campaign ({channel_used})"
                     )
                     total_deals += 1
+                    logger.info(f"Phone campaign: created deal {linked_deal.id} for {to_phone} in {draft.pipeline.name}")
+            else:
+                logger.warning(
+                    f"Phone campaign: SKIPPED deal creation for {to_phone} — "
+                    f"contact={contact}, pipeline={draft.pipeline}, stage={invited_stage}"
+                )
 
             EmailLog.objects.create(
                 deal=linked_deal,
