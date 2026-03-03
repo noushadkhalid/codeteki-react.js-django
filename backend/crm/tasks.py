@@ -1342,6 +1342,9 @@ def send_scheduled_draft(self, draft_id: str):
             for recipient in valid_recipients:
                 try:
                     to_phone = recipient['phone']
+                    if not _is_valid_au_mobile(to_phone):
+                        failed_count += 1
+                        continue
                     result = messaging_service.send_smart(to=to_phone, body=body_text, sms_body=sms_fallback)
                     channel_used = result.get('channel_used', 'sms')
 
@@ -1934,6 +1937,12 @@ def send_phone_campaign_async(self, draft_id: str):
         to_phone = recipient.get('phone', '')
 
         if not to_phone:
+            continue
+
+        # Skip landlines — only send to Australian mobiles (04xx / +614xx)
+        if not _is_valid_au_mobile(to_phone):
+            failed_count += 1
+            logger.info(f"Phone campaign: skipped non-mobile {to_phone}")
             continue
 
         # send_smart handles the WhatsApp filter layer internally
