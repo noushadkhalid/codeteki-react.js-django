@@ -1946,6 +1946,21 @@ class MetaWhatsAppWebhookView(View):
                             EmailLog.objects.filter(message_sid=msg_id).update(
                                 delivery_status=delivery_status
                             )
+                            # If delivery failed, mark contact as not on WhatsApp
+                            # so future sends route to SMS instead
+                            if delivery_status == 'failed':
+                                log_entry = EmailLog.objects.filter(
+                                    message_sid=msg_id, channel='whatsapp'
+                                ).first()
+                                if log_entry and log_entry.to_phone:
+                                    from crm.models import Contact
+                                    Contact.objects.filter(
+                                        phone=log_entry.to_phone, has_whatsapp=True
+                                    ).update(has_whatsapp=False)
+                                    logger.info(
+                                        f"WhatsApp delivery failed for {log_entry.to_phone} — "
+                                        f"marked has_whatsapp=False, future sends will use SMS"
+                                    )
                     except Exception as e:
                         logger.error(f"WhatsApp webhook: status update error: {e}")
 
