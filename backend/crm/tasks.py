@@ -1997,6 +1997,13 @@ def send_phone_campaign_async(self, draft_id: str):
             failed_count += 1
             logger.warning(f"Phone campaign: failed to send to {to_phone}: {result.get('error')}")
 
+    # Update draft tracking (same as email campaign)
+    draft.sent_count = (draft.sent_count or 0) + sent_count
+    draft.is_sent = True
+    draft.sent_at = timezone.now()
+    draft.schedule_status = 'completed'
+    draft.save(update_fields=['sent_count', 'is_sent', 'sent_at', 'schedule_status'])
+
     summary = f"Phone campaign complete: {sent_count} sent ({wa_count} WhatsApp, {sms_count} SMS), {failed_count} failed"
     logger.info(summary)
 
