@@ -624,21 +624,41 @@ Reply with ONLY the classification word (business_owner, regular_user, or existi
 
         if owner_phone:
             try:
-                from crm.services.messaging_service import MetaWhatsAppService
+                from crm.services.messaging_service import MetaWhatsAppService, get_messaging_service
                 wa = MetaWhatsAppService()
+                wa_msg = (
+                    f"[{prefix}] {name} ({conversation.phone})\n"
+                    f"Type: {user_type_label} | Phase: {phase_label}\n\n"
+                    f"Customer: {message[:300]}\n"
+                )
+                if ai_response and not is_handoff:
+                    wa_msg += f"\nAI replied: {ai_response[:200]}"
+                if conversation.conversation_summary:
+                    wa_msg += f"\n\nSummary: {conversation.conversation_summary[:200]}"
+
+                sent = False
+                # Try WhatsApp first (only works within 24h window)
                 if wa.enabled:
-                    wa_msg = (
-                        f"[{prefix}] {name} ({conversation.phone})\n"
-                        f"Type: {user_type_label} | Phase: {phase_label}\n\n"
-                        f"Customer: {message[:300]}\n"
-                    )
-                    if ai_response and not is_handoff:
-                        wa_msg += f"\nAI replied: {ai_response[:200]}"
-                    if conversation.conversation_summary:
-                        wa_msg += f"\n\nSummary: {conversation.conversation_summary[:200]}"
-                    wa.send_text(to=owner_phone, body=wa_msg)
+                    result = wa.send_text(to=owner_phone, body=wa_msg)
+                    if result.get('success'):
+                        sent = True
+                        logger.info(f"Owner notified via WhatsApp: {owner_phone}")
+                    else:
+                        logger.warning(f"Owner WhatsApp failed (24h window?): {result.get('error')}")
+
+                # Fall back to SMS if WhatsApp failed or not enabled
+                if not sent:
+                    sms_service = get_messaging_service()
+                    if sms_service.enabled:
+                        sms_result = sms_service.send_sms(to=owner_phone, body=wa_msg)
+                        if sms_result.get('success'):
+                            logger.info(f"Owner notified via SMS fallback: {owner_phone}")
+                        else:
+                            logger.error(f"Owner SMS fallback also failed: {sms_result.get('error')}")
+                    else:
+                        logger.error("No messaging channel available for owner notification")
             except Exception as e:
-                logger.error(f"Owner WhatsApp notify failed: {e}")
+                logger.error(f"Owner notify failed: {e}")
 
         if owner_email:
             try:
@@ -668,7 +688,8 @@ Reply with ONLY the classification word (business_owner, regular_user, or existi
                     message=body,
                     from_email=None,
                     recipient_list=[owner_email],
-                    fail_silently=True,
+                    fail_silently=not is_handoff,
                 )
+                logger.info(f"Owner notified via email: {owner_email}")
             except Exception as e:
                 logger.error(f"Owner email notify failed: {e}")
