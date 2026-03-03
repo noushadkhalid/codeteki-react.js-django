@@ -1836,14 +1836,14 @@ class TwilioInboundWebhookView(View):
         # Handle opt-out keywords
         opt_out_keywords = {'STOP', 'UNSUBSCRIBE', 'CANCEL', 'END', 'QUIT'}
         if body in opt_out_keywords:
-            from .models import Contact
+            from .models import Contact, Deal, DealActivity
             # Clean number format (Twilio sends with + prefix)
             clean_number = from_number.replace('whatsapp:', '')
-
             contacts = Contact.objects.filter(
                 Q(phone=clean_number) | Q(phone__endswith=clean_number[-10:])
             )
             updated = 0
+            deals_closed = 0
             for contact in contacts:
                 if not contact.sms_opted_out:
                     contact.sms_opted_out = True
@@ -1851,9 +1851,27 @@ class TwilioInboundWebhookView(View):
                     contact.save(update_fields=['sms_opted_out', 'sms_opted_out_at'])
                     updated += 1
 
+                # Close all active deals for this phone-only contact
+                active_deals = Deal.objects.filter(
+                    contact=contact,
+                    status='active',
+                ).select_related('contact')
+                for deal in active_deals:
+                    # Only close deals where SMS is the channel (no email)
+                    if not contact.email:
+                        deal.status = 'lost'
+                        deal.lost_reason = 'unsubscribed'
+                        deal.save(update_fields=['status', 'lost_reason'])
+                        DealActivity.objects.create(
+                            deal=deal,
+                            activity_type='status_change',
+                            description=f"[SMS Opt-Out] Contact replied STOP — deal auto-closed"
+                        )
+                        deals_closed += 1
+
             import logging
             logging.getLogger(__name__).info(
-                f"SMS opt-out from {from_number}: {updated} contact(s) updated"
+                f"SMS opt-out from {from_number}: {updated} contact(s) updated, {deals_closed} deal(s) closed"
             )
 
         return HttpResponse('', status=200)
@@ -1981,6 +1999,19 @@ class MetaWhatsAppWebhookView(View):
                 contact.sms_opted_out_at = timezone.now()
                 contact.save(update_fields=['sms_opted_out', 'sms_opted_out_at'])
                 logger.info(f"WhatsApp opt-out from {from_number}")
+
+            # Close active deals for phone-only contacts
+            if not contact.email:
+                from .models import Deal, DealActivity
+                for deal in Deal.objects.filter(contact=contact, status='active'):
+                    deal.status = 'lost'
+                    deal.lost_reason = 'unsubscribed'
+                    deal.save(update_fields=['status', 'lost_reason'])
+                    DealActivity.objects.create(
+                        deal=deal,
+                        activity_type='status_change',
+                        description=f"[WhatsApp Opt-Out] Contact replied STOP — deal auto-closed"
+                    )
             return
 
         # Mark as confirmed WhatsApp user

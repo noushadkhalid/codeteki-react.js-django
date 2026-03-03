@@ -1948,8 +1948,19 @@ def send_phone_campaign_async(self, draft_id: str):
             else:
                 sms_count += 1
 
+            # Find active deal for this contact+pipeline to link the SMS
+            if not contact:
+                contact = Contact.objects.filter(phone=to_phone, brand=draft.brand).first()
+
+            from crm.models import Deal, DealActivity
+            linked_deal = None
+            if contact and draft.pipeline:
+                linked_deal = Deal.objects.filter(
+                    contact=contact, pipeline=draft.pipeline, status='active'
+                ).first()
+
             EmailLog.objects.create(
-                deal=None,
+                deal=linked_deal,
                 channel=channel_used,
                 subject='',
                 body=body_text if channel_used == 'whatsapp' else sms_fallback,
@@ -1960,13 +1971,27 @@ def send_phone_campaign_async(self, draft_id: str):
                 ai_generated=bool(draft.generated_body),
             )
 
+            # Update deal tracking
+            if linked_deal:
+                linked_deal.emails_sent = (linked_deal.emails_sent or 0) + 1
+                linked_deal.last_contact_date = timezone.now()
+                followup_days = linked_deal.current_stage.days_until_followup if linked_deal.current_stage else 5
+                linked_deal.next_action_date = timezone.now() + timedelta(days=followup_days)
+                linked_deal.save(update_fields=['emails_sent', 'last_contact_date', 'next_action_date'])
+                DealActivity.objects.create(
+                    deal=linked_deal,
+                    activity_type='email_sent',
+                    description=f"SMS sent via {channel_used} (composer): {(sms_fallback if channel_used == 'sms' else body_text)[:80]}...",
+                    metadata={'channel': channel_used, 'message_sid': result.get('message_sid', '')}
+                )
+
             # Update contact stats
-            if not contact:
-                contact = Contact.objects.filter(phone=to_phone, brand=draft.brand).first()
             if contact:
                 contact.last_sms_at = timezone.now()
                 contact.sms_count = (contact.sms_count or 0) + 1
-                contact.save(update_fields=['last_sms_at', 'sms_count'])
+                if contact.status == 'new':
+                    contact.status = 'contacted'
+                contact.save(update_fields=['last_sms_at', 'sms_count', 'status'])
         else:
             failed_count += 1
             logger.warning(f"Phone campaign: failed to send to {to_phone}: {result.get('error')}")
