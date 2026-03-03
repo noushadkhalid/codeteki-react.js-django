@@ -1179,7 +1179,7 @@ class DealAdmin(ModelAdmin):
         'engagement_tier_badge',
         'lost_reason_display',
         'next_action_date',
-        'emails_sent',
+        'messages_sent_display',
         'value_display',
         'created_at',
     ]
@@ -1225,6 +1225,20 @@ class DealAdmin(ModelAdmin):
         elif has_phone:
             return format_html('<span style="color:#8b5cf6" title="{}">&#128241; Phone</span>', contact.phone)
         return format_html('<span style="color:#dc2626">&#10060; None</span>')
+
+    @display(description="Msgs sent")
+    def messages_sent_display(self, obj):
+        contact = obj.contact
+        email_count = obj.emails_sent or 0
+        sms_count = contact.sms_count or 0
+        parts = []
+        if contact.email:
+            parts.append(f'{email_count} email')
+        if contact.phone:
+            parts.append(f'{sms_count} sms')
+        if not parts:
+            return '0'
+        return format_html('<span title="{}">{}</span>', ' / '.join(parts), ' / '.join(parts))
 
     @display(description="Stage")
     def current_stage_display(self, obj):
