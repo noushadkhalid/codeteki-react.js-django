@@ -1342,9 +1342,44 @@ def send_scheduled_draft(self, draft_id: str):
 
                     if result.get('success'):
                         sent_count += 1
+
+                        # Find or create contact
+                        contact = recipient.get('contact')
+                        if not contact:
+                            contact = Contact.objects.filter(
+                                phone=to_phone, brand=draft.brand
+                            ).first()
+
+                        # Find or create deal in pipeline (same as email path)
+                        linked_deal = None
+                        if contact and draft.pipeline:
+                            linked_deal = Deal.objects.filter(
+                                contact=contact, pipeline=draft.pipeline, status='active'
+                            ).first()
+                            if linked_deal:
+                                linked_deal.emails_sent = (linked_deal.emails_sent or 0) + 1
+                                linked_deal.last_contact_date = timezone.now()
+                                followup_days = linked_deal.current_stage.days_until_followup if linked_deal.current_stage else 3
+                                linked_deal.next_action_date = timezone.now() + timedelta(days=followup_days)
+                                linked_deal.save(update_fields=['emails_sent', 'last_contact_date', 'next_action_date'])
+                            else:
+                                linked_deal = Deal.objects.create(
+                                    contact=contact,
+                                    pipeline=draft.pipeline,
+                                    current_stage=invited_stage,
+                                    status='active',
+                                    emails_sent=1,
+                                    last_contact_date=timezone.now(),
+                                    next_action_date=timezone.now() + timedelta(
+                                        days=invited_stage.days_until_followup or 3
+                                    ),
+                                    ai_notes=f"First contact via SMS Composer ({channel_used})"
+                                )
+                                total_deals += 1
+
                         from crm.models import EmailLog
                         EmailLog.objects.create(
-                            deal=None,
+                            deal=linked_deal,
                             channel=channel_used,
                             subject='',
                             body=body_text if channel_used == 'whatsapp' else sms_fallback,
@@ -1354,11 +1389,13 @@ def send_scheduled_draft(self, draft_id: str):
                             sent_at=timezone.now(),
                             ai_generated=bool(draft.generated_body),
                         )
-                        contact = recipient.get('contact')
+
                         if contact:
                             contact.last_sms_at = timezone.now()
                             contact.sms_count = (contact.sms_count or 0) + 1
-                            contact.save(update_fields=['last_sms_at', 'sms_count'])
+                            if contact.status == 'new':
+                                contact.status = 'contacted'
+                            contact.save(update_fields=['last_sms_at', 'sms_count', 'status'])
                     else:
                         failed_count += 1
                 except Exception as e:
@@ -1919,10 +1956,21 @@ def send_phone_campaign_async(self, draft_id: str):
     else:
         sms_fallback = body_text
 
+    # Get pipeline stage for deal creation
+    from crm.models import Deal, DealActivity, PipelineStage
+    invited_stage = None
+    if draft.pipeline:
+        invited_stage = PipelineStage.objects.filter(
+            pipeline=draft.pipeline, name__icontains='invited'
+        ).first() or PipelineStage.objects.filter(
+            pipeline=draft.pipeline
+        ).order_by('order').first()
+
     sent_count = 0
     failed_count = 0
     wa_count = 0
     sms_count = 0
+    total_deals = 0
 
     for recipient in recipients:
         contact = recipient.get('contact')
@@ -1949,16 +1997,36 @@ def send_phone_campaign_async(self, draft_id: str):
             else:
                 sms_count += 1
 
-            # Find active deal for this contact+pipeline to link the SMS
+            # Find or create contact
             if not contact:
                 contact = Contact.objects.filter(phone=to_phone, brand=draft.brand).first()
 
-            from crm.models import Deal, DealActivity
+            # Find or create deal in pipeline
             linked_deal = None
-            if contact and draft.pipeline:
+            if contact and draft.pipeline and invited_stage:
                 linked_deal = Deal.objects.filter(
                     contact=contact, pipeline=draft.pipeline, status='active'
                 ).first()
+                if linked_deal:
+                    linked_deal.emails_sent = (linked_deal.emails_sent or 0) + 1
+                    linked_deal.last_contact_date = timezone.now()
+                    followup_days = linked_deal.current_stage.days_until_followup if linked_deal.current_stage else 5
+                    linked_deal.next_action_date = timezone.now() + timedelta(days=followup_days)
+                    linked_deal.save(update_fields=['emails_sent', 'last_contact_date', 'next_action_date'])
+                else:
+                    linked_deal = Deal.objects.create(
+                        contact=contact,
+                        pipeline=draft.pipeline,
+                        current_stage=invited_stage,
+                        status='active',
+                        emails_sent=1,
+                        last_contact_date=timezone.now(),
+                        next_action_date=timezone.now() + timedelta(
+                            days=invited_stage.days_until_followup or 3
+                        ),
+                        ai_notes=f"First contact via Phone Campaign ({channel_used})"
+                    )
+                    total_deals += 1
 
             EmailLog.objects.create(
                 deal=linked_deal,
@@ -1972,13 +2040,7 @@ def send_phone_campaign_async(self, draft_id: str):
                 ai_generated=bool(draft.generated_body),
             )
 
-            # Update deal tracking
             if linked_deal:
-                linked_deal.emails_sent = (linked_deal.emails_sent or 0) + 1
-                linked_deal.last_contact_date = timezone.now()
-                followup_days = linked_deal.current_stage.days_until_followup if linked_deal.current_stage else 5
-                linked_deal.next_action_date = timezone.now() + timedelta(days=followup_days)
-                linked_deal.save(update_fields=['emails_sent', 'last_contact_date', 'next_action_date'])
                 DealActivity.objects.create(
                     deal=linked_deal,
                     activity_type='email_sent',
@@ -1999,12 +2061,13 @@ def send_phone_campaign_async(self, draft_id: str):
 
     # Update draft tracking (same as email campaign)
     draft.sent_count = (draft.sent_count or 0) + sent_count
+    draft.deals_created = (draft.deals_created or 0) + total_deals
     draft.is_sent = True
     draft.sent_at = timezone.now()
     draft.schedule_status = 'completed'
-    draft.save(update_fields=['sent_count', 'is_sent', 'sent_at', 'schedule_status'])
+    draft.save(update_fields=['sent_count', 'deals_created', 'is_sent', 'sent_at', 'schedule_status'])
 
-    summary = f"Phone campaign complete: {sent_count} sent ({wa_count} WhatsApp, {sms_count} SMS), {failed_count} failed"
+    summary = f"Phone campaign complete: {sent_count} sent ({wa_count} WhatsApp, {sms_count} SMS), {total_deals} deals created, {failed_count} failed"
     logger.info(summary)
 
     return {
