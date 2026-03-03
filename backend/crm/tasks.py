@@ -58,20 +58,12 @@ def get_next_send_time():
 
 
 def _is_valid_au_mobile(phone: str) -> bool:
-    """Check if a phone number is a valid Australian mobile (04xx or +614xx)."""
+    """Check if phone is an Australian mobile. AU mobiles always start with 04/+614/00614."""
     import re
     if not phone:
         return False
     digits = re.sub(r'[\s\-\(\)]', '', phone)
-    # +614XXXXXXXX (12 digits) or 04XXXXXXXX (10 digits)
-    if re.match(r'^\+614\d{8}$', digits):
-        return True
-    if re.match(r'^04\d{8}$', digits):
-        return True
-    # 614XXXXXXXX without + (11 digits)
-    if re.match(r'^614\d{8}$', digits):
-        return True
-    return False
+    return bool(re.match(r'^(\+614|00614|614|04)\d{8}$', digits))
 
 
 def _get_deal_channel(contact) -> str:

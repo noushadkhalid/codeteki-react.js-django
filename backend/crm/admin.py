@@ -1786,11 +1786,10 @@ class DealAdmin(ModelAdmin):
                     skipped += 1
                     continue
 
-                # Skip landlines — only AU mobiles (04xx / +614xx)
+                # Skip landlines — only AU mobiles (04xx / +614xx / 00614xx)
                 import re
                 digits = re.sub(r'[\s\-\(\)]', '', contact.phone)
-                is_mobile = bool(re.match(r'^(\+614|04|614)\d{8}$', digits))
-                if not is_mobile:
+                if not re.match(r'^(\+614|00614|614|04)\d{8}$', digits):
                     skipped += 1
                     continue
 
