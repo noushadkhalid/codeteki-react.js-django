@@ -57,11 +57,28 @@ def get_next_send_time():
     return target.replace(hour=OFFICE_HOUR_START, minute=0, second=0, microsecond=0)
 
 
+def _is_valid_au_mobile(phone: str) -> bool:
+    """Check if a phone number is a valid Australian mobile (04xx or +614xx)."""
+    import re
+    if not phone:
+        return False
+    digits = re.sub(r'[\s\-\(\)]', '', phone)
+    # +614XXXXXXXX (12 digits) or 04XXXXXXXX (10 digits)
+    if re.match(r'^\+614\d{8}$', digits):
+        return True
+    if re.match(r'^04\d{8}$', digits):
+        return True
+    # 614XXXXXXXX without + (11 digits)
+    if re.match(r'^614\d{8}$', digits):
+        return True
+    return False
+
+
 def _get_deal_channel(contact) -> str:
     """Determine the best channel for reaching a contact: 'email', 'sms', or 'none'."""
     if contact.email:
         return 'email'
-    if contact.phone:
+    if contact.phone and _is_valid_au_mobile(contact.phone):
         return 'sms'
     return 'none'
 
@@ -624,6 +641,14 @@ def queue_deal_sms(self, deal_id: str):
         logger.warning(f"Deal {deal_id}: contact has no phone number")
         return {'success': False, 'error': 'No phone number'}
 
+    # SAFETY: Must be valid Australian mobile
+    if not _is_valid_au_mobile(contact.phone):
+        logger.warning(f"Deal {deal_id}: invalid AU mobile {contact.phone}, pausing deal")
+        deal.autopilot_paused = True
+        deal.ai_notes = (deal.ai_notes or '') + f"\n[{timezone.now().strftime('%Y-%m-%d')}] [Autopilot] Invalid phone number (not AU mobile): {contact.phone}. Paused."
+        deal.save(update_fields=['autopilot_paused', 'ai_notes'])
+        return {'success': False, 'error': 'Invalid AU mobile number'}
+
     # SAFETY: SMS opted out
     if contact.sms_opted_out:
         logger.warning(f"Deal {deal_id}: contact {contact.phone} SMS opted out")
@@ -733,6 +758,12 @@ def queue_deal_sms(self, deal_id: str):
     else:
         error_msg = result.get('error', '')
         logger.error(f"Failed to send SMS for deal {deal_id}: {error_msg}")
+
+        # Defer to prevent infinite hourly retries
+        deal.next_action_date = timezone.now() + timedelta(days=3)
+        deal.ai_notes = (deal.ai_notes or '') + f"\n[{timezone.now().strftime('%Y-%m-%d')}] [Autopilot] SMS send failed: {error_msg[:200]}. Deferred 3 days."
+        deal.save(update_fields=['next_action_date', 'ai_notes'])
+
         return {'success': False, 'error': error_msg}
 
 
