@@ -106,6 +106,9 @@ import {
   Terminal,
   GitBranch,
   GitCommit,
+  UserCheck,
+  ArrowRightLeft,
+  BarChart3,
   Github,
   Linkedin,
   Twitter,
@@ -164,6 +167,7 @@ const iconMap = {
   eye: Eye,
   target: Target,
   barchart: BarChart,
+  barchart3: BarChart3,
   piechart: PieChart,
   activity: Activity,
   trendingup: TrendingUp,
@@ -196,6 +200,7 @@ const iconMap = {
 
   // People & Social
   users: Users,
+  usercheck: UserCheck,
   handshake: Handshake,
   thumbsup: ThumbsUp,
   heart: Heart,
@@ -254,6 +259,7 @@ const iconMap = {
 
   // Arrows
   arrowright: ArrowRight,
+  arrowrightleft: ArrowRightLeft,
   chevronright: ChevronRight,
 
   // Social Media
