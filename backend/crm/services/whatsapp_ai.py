@@ -626,30 +626,48 @@ Reply with ONLY the classification word (business_owner, regular_user, or existi
             try:
                 from crm.services.messaging_service import MetaWhatsAppService
                 wa = MetaWhatsAppService()
+                wa_msg = (
+                    f"[{prefix}] {name} ({conversation.phone})\n"
+                    f"Type: {user_type_label} | Phase: {phase_label}\n\n"
+                    f"Customer: {message[:300]}\n"
+                )
+                if ai_response and not is_handoff:
+                    wa_msg += f"\nAI replied: {ai_response[:200]}"
+                if conversation.conversation_summary:
+                    wa_msg += f"\n\nSummary: {conversation.conversation_summary[:200]}"
+
+                # Try WhatsApp first, fall back to SMS
+                sent = False
                 if wa.enabled:
-                    wa_msg = (
-                        f"[{prefix}] {name} ({conversation.phone})\n"
-                        f"Type: {user_type_label} | Phase: {phase_label}\n\n"
-                        f"Customer: {message[:300]}\n"
-                    )
-                    if ai_response and not is_handoff:
-                        wa_msg += f"\nAI replied: {ai_response[:200]}"
-                    if conversation.conversation_summary:
-                        wa_msg += f"\n\nSummary: {conversation.conversation_summary[:200]}"
                     result = wa.send_text(to=owner_phone, body=wa_msg)
                     if result.get('success'):
+                        sent = True
                         logger.info(f"Owner notified via WhatsApp: {owner_phone}")
                     else:
-                        logger.error(
-                            f"Owner WhatsApp notification FAILED for {owner_phone}: "
-                            f"{result.get('error')}. "
-                            f"Likely cause: 24h conversation window expired. "
-                            f"Owner must message the WABA number to reopen the window."
-                        )
-                else:
-                    logger.error("MetaWhatsAppService not enabled — cannot notify owner")
+                        logger.warning(f"Owner WhatsApp failed: {result.get('error')}")
+
+                # SMS fallback — send directly via Twilio (no opt-out check for owner)
+                if not sent:
+                    try:
+                        from twilio.rest import Client
+                        import os
+                        sid = os.environ.get('TWILIO_ACCOUNT_SID', '')
+                        token = os.environ.get('TWILIO_AUTH_TOKEN', '')
+                        from_num = os.environ.get('TWILIO_PHONE_NUMBER', '')
+                        if sid and token and from_num:
+                            client = Client(sid, token)
+                            sms = client.messages.create(
+                                body=wa_msg,
+                                from_=from_num,
+                                to=owner_phone,
+                            )
+                            logger.info(f"Owner notified via SMS: {owner_phone} SID={sms.sid}")
+                        else:
+                            logger.error("Twilio not configured for owner SMS fallback")
+                    except Exception as sms_err:
+                        logger.error(f"Owner SMS fallback failed: {sms_err}")
             except Exception as e:
-                logger.error(f"Owner WhatsApp notify failed: {e}")
+                logger.error(f"Owner notify failed: {e}")
 
         if owner_email:
             try:
