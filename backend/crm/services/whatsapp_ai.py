@@ -8,6 +8,7 @@ user classification, conversation tracking, and human handoff.
 import json
 import logging
 import re
+from datetime import timedelta
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -198,8 +199,8 @@ class WhatsAppAIService:
         conversation.message_count += 1
         conversation.last_inbound_at = timezone.now()
 
-        # Check if user explicitly typed "human" and team has capacity
-        if self._is_human_request(message) and self._team_has_capacity():
+        # Check if user explicitly asked for a human — always honour this
+        if self._is_human_request(message):
             self.trigger_handoff(conversation, reason='User requested human')
             return None
 
@@ -287,17 +288,32 @@ class WhatsAppAIService:
         """Check if user asked for a human."""
         msg = message.strip().lower().rstrip('?!.')
         # Exact matches
-        if msg in ('human', 'human please', 'talk to human', 'speak to human', 'agent', 'operator'):
+        if msg in ('human', 'human pls', 'human please', 'talk to human', 'speak to human',
+                   'agent', 'operator', 'representative', 'rep', 'manager', 'help me',
+                   'real person', 'actual person', 'someone real'):
             return True
         # Partial matches — customer mentions wanting a human/person/someone
         human_phrases = ['speak to human', 'talk to human', 'speak to a human', 'talk to a person',
                          'speak to someone', 'talk to someone', 'need a human', 'want a human',
-                         'real person', 'can i speak', 'can i talk', 'connect me']
+                         'need human', 'want human', 'human pls', 'human plz', 'human please',
+                         'real person', 'actual person', 'can i speak', 'can i talk',
+                         'connect me', 'transfer me', 'let me talk', 'i want to speak']
         return any(phrase in msg for phrase in human_phrases)
 
     def _team_has_capacity(self):
         """Check if there are fewer than MAX_ACTIVE_HANDOFFS active handoffs."""
         from crm.models import WhatsAppConversation
+        # Auto-resolve stale handoffs (older than 24h with no activity)
+        stale_cutoff = timezone.now() - timedelta(hours=24)
+        stale = WhatsAppConversation.objects.filter(
+            ai_active=False,
+            phase='handoff',
+            handoff_at__lt=stale_cutoff,
+        )
+        stale_count = stale.update(phase='resolved')
+        if stale_count:
+            logger.info(f"Auto-resolved {stale_count} stale handoffs (>24h)")
+
         active_handoffs = WhatsAppConversation.objects.filter(
             ai_active=False,
             phase='handoff',
