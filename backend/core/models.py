@@ -150,6 +150,8 @@ class Service(TimestampedModel):
     icon = models.CharField(max_length=40, default="Sparkles", help_text="Lucide icon name")
     is_featured = models.BooleanField(default=False)
     order = models.PositiveIntegerField(default=0)
+    relevance_tags = models.JSONField(default=list, blank=True,
+        help_text="Keywords for recommendation matching, e.g. ['restaurant', 'booking', 'leads']")
 
     # Detail page content
     tagline = models.CharField(max_length=160, blank=True, help_text="Short tagline shown in hero badge")

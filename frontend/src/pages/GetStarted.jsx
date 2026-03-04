@@ -13,12 +13,12 @@ import SEOHead from "../components/SEOHead";
 import BookingModal from "../components/BookingModal";
 import { apiRequest } from "../lib/queryClient";
 import { useToast } from "../hooks/use-toast";
+import { getIcon } from "../lib/iconMap";
 import {
   UtensilsCrossed, Wrench, Scissors, ShoppingBag, Dumbbell, Briefcase,
   Home, Stethoscope, Car, Hotel, MoreHorizontal,
   ArrowLeft, ArrowRight, Check, MessageCircle, CalendarCheck,
-  ShoppingCart, FileText, Image, Search, Star, Gift, Package,
-  Users, Smartphone, Globe, Bot, Shield, Sparkles, Loader2,
+  Globe, Sparkles, Loader2,
 } from "lucide-react";
 
 // ─── Static data ────────────────────────────────────────────
@@ -104,12 +104,6 @@ const PAIN_POINTS = {
     "Too much manual admin work",
     "Not sure what technology I need",
   ],
-};
-
-const FEATURE_ICONS = {
-  ShoppingCart, FileText, Image, Search, Star, Gift, Package,
-  Users, Smartphone, Globe, Bot, Shield, CalendarCheck,
-  Home,
 };
 
 const contactSchema = z.object({
@@ -536,11 +530,10 @@ export default function GetStarted() {
             {/* Feature cards */}
             <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
               {(results.recommendations || []).map((feat) => {
-                const IconComp = FEATURE_ICONS[feat.icon] || Globe;
-                return (
+                const IconComp = getIcon(feat.icon, Globe);
+                const cardContent = (
                   <Card
-                    key={feat.key}
-                    className="rounded-xl sm:rounded-2xl border border-white/10 bg-white/5 overflow-hidden hover:border-[#f9cb07]/30 transition-colors"
+                    className="rounded-xl sm:rounded-2xl border border-white/10 bg-white/5 overflow-hidden hover:border-[#f9cb07]/30 transition-colors group"
                   >
                     <CardContent className="p-4 sm:p-5">
                       <div className="flex items-start gap-4">
@@ -559,10 +552,22 @@ export default function GetStarted() {
                           <p className="text-xs text-white/60 leading-relaxed">
                             {feat.description}
                           </p>
+                          {feat.link && (
+                            <span className="text-[10px] text-[#f9cb07]/0 group-hover:text-[#f9cb07]/70 transition-colors mt-1 inline-block">
+                              Learn more →
+                            </span>
+                          )}
                         </div>
                       </div>
                     </CardContent>
                   </Card>
+                );
+                return feat.link ? (
+                  <a key={feat.slug || feat.title} href={feat.link} target="_blank" rel="noopener noreferrer">
+                    {cardContent}
+                  </a>
+                ) : (
+                  <div key={feat.slug || feat.title}>{cardContent}</div>
                 );
               })}
             </div>

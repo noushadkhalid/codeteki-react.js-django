@@ -300,7 +300,7 @@ class ServiceAdmin(ModelAdmin):
 
     fieldsets = (
         ('⚙️ Basic Info (for service cards)', {
-            'fields': ('title', 'slug', 'badge', 'description', 'icon', 'order', 'is_featured'),
+            'fields': ('title', 'slug', 'badge', 'description', 'icon', 'order', 'is_featured', 'relevance_tags'),
             'description': 'This information appears on service cards in listings and home page.'
         }),
         ('📄 Detail Page Content', {

@@ -745,77 +745,35 @@ class ContactAPIView(JSONAPIView):
         return self.render({"message": "Thanks! We'll be in touch shortly.", "id": inquiry.id}, status=201)
 
 
-# Static feature recommendations per industry (instant render, no AI needed)
-GET_STARTED_FEATURES = {
-    'restaurant': [
-        {'key': 'online-ordering', 'title': 'Online Ordering System', 'description': 'Let customers order directly from your menu — no commissions to UberEats.', 'icon': 'ShoppingCart', 'impact': 'High Revenue'},
-        {'key': 'booking', 'title': 'Table Booking Widget', 'description': 'Automated reservations with SMS confirmations and reminders.', 'icon': 'CalendarCheck', 'impact': 'Time Saver'},
-        {'key': 'google-seo', 'title': 'Google Business SEO', 'description': 'Rank higher on "restaurants near me" searches with optimised local SEO.', 'icon': 'Search', 'impact': 'More Customers'},
-        {'key': 'reviews', 'title': 'Review Management', 'description': 'Automatically request Google reviews after each visit.', 'icon': 'Star', 'impact': 'Trust Builder'},
-    ],
-    'trades': [
-        {'key': 'quoting', 'title': 'Instant Quoting Tool', 'description': 'Generate professional quotes in minutes, not hours — from your phone.', 'icon': 'FileText', 'impact': 'Time Saver'},
-        {'key': 'portfolio', 'title': 'Project Portfolio', 'description': 'Showcase before & after photos that convert browsers into clients.', 'icon': 'Image', 'impact': 'Trust Builder'},
-        {'key': 'google-seo', 'title': 'Local SEO & Google Ads', 'description': 'Get found when people search "plumber near me" or "electrician in Melbourne".', 'icon': 'Search', 'impact': 'More Leads'},
-        {'key': 'booking', 'title': 'Job Booking System', 'description': 'Customers book available slots — no more back-and-forth calls.', 'icon': 'CalendarCheck', 'impact': 'Efficiency'},
-    ],
-    'health-beauty': [
-        {'key': 'booking', 'title': 'Online Booking System', 'description': 'Clients book 24/7, auto-reminders reduce no-shows by 40%.', 'icon': 'CalendarCheck', 'impact': 'Fewer No-Shows'},
-        {'key': 'gallery', 'title': 'Treatment Gallery', 'description': 'Showcase transformations with before/after galleries.', 'icon': 'Image', 'impact': 'Trust Builder'},
-        {'key': 'loyalty', 'title': 'Loyalty & Rewards', 'description': 'Keep clients coming back with points, packages, and referral rewards.', 'icon': 'Gift', 'impact': 'Retention'},
-        {'key': 'google-seo', 'title': 'Local SEO', 'description': 'Dominate "beauty salon near me" searches in your area.', 'icon': 'Search', 'impact': 'More Bookings'},
-    ],
-    'retail': [
-        {'key': 'ecommerce', 'title': 'Online Store', 'description': 'Sell 24/7 with a mobile-friendly store — payments, shipping, inventory.', 'icon': 'ShoppingCart', 'impact': 'New Revenue'},
-        {'key': 'inventory', 'title': 'Inventory Management', 'description': 'Track stock across online and in-store in one place.', 'icon': 'Package', 'impact': 'Efficiency'},
-        {'key': 'google-seo', 'title': 'Google Shopping & SEO', 'description': 'Get your products in front of shoppers searching online.', 'icon': 'Search', 'impact': 'More Sales'},
-        {'key': 'loyalty', 'title': 'Customer Loyalty Program', 'description': 'Reward repeat customers and drive referrals automatically.', 'icon': 'Gift', 'impact': 'Retention'},
-    ],
-    'fitness': [
-        {'key': 'booking', 'title': 'Class & Session Booking', 'description': 'Members book classes online — auto-waitlists and reminders.', 'icon': 'CalendarCheck', 'impact': 'Fewer No-Shows'},
-        {'key': 'membership', 'title': 'Membership Management', 'description': 'Recurring payments, freeze/cancel, and member portal.', 'icon': 'Users', 'impact': 'Steady Revenue'},
-        {'key': 'app', 'title': 'Member App / Portal', 'description': 'Workout tracking, class schedules, and progress photos in one place.', 'icon': 'Smartphone', 'impact': 'Engagement'},
-        {'key': 'google-seo', 'title': 'Local SEO', 'description': 'Rank for "gym near me" and "personal trainer" in your suburb.', 'icon': 'Search', 'impact': 'More Members'},
-    ],
-    'professional-services': [
-        {'key': 'website', 'title': 'Professional Website', 'description': 'Establish credibility with a polished site that showcases expertise.', 'icon': 'Globe', 'impact': 'Trust Builder'},
-        {'key': 'booking', 'title': 'Consultation Booking', 'description': 'Clients book discovery calls — integrates with your calendar.', 'icon': 'CalendarCheck', 'impact': 'More Leads'},
-        {'key': 'invoicing', 'title': 'Online Invoicing', 'description': 'Send invoices, accept payments, auto-chase overdue bills.', 'icon': 'FileText', 'impact': 'Cash Flow'},
-        {'key': 'ai-assistant', 'title': 'AI Client Assistant', 'description': 'Answer FAQs 24/7, qualify leads, and book meetings automatically.', 'icon': 'Bot', 'impact': 'Automation'},
-    ],
-    'real-estate': [
-        {'key': 'listings', 'title': 'Property Listings Site', 'description': 'Showcase listings with virtual tours, floor plans, and lead capture.', 'icon': 'Home', 'impact': 'More Enquiries'},
-        {'key': 'crm', 'title': 'Lead Management CRM', 'description': 'Track buyers and sellers with automated follow-up sequences.', 'icon': 'Users', 'impact': 'Never Lose a Lead'},
-        {'key': 'ai-assistant', 'title': 'AI Property Assistant', 'description': 'Answer property questions 24/7 and book inspections automatically.', 'icon': 'Bot', 'impact': 'Automation'},
-        {'key': 'google-seo', 'title': 'Local SEO & Ads', 'description': 'Rank for suburb-level property searches and Google Ads campaigns.', 'icon': 'Search', 'impact': 'More Leads'},
-    ],
-    'medical': [
-        {'key': 'booking', 'title': 'Patient Booking System', 'description': 'Online appointments with SMS reminders — reduce no-shows.', 'icon': 'CalendarCheck', 'impact': 'Fewer No-Shows'},
-        {'key': 'portal', 'title': 'Patient Portal', 'description': 'Secure forms, results access, and repeat prescription requests.', 'icon': 'Shield', 'impact': 'Patient Experience'},
-        {'key': 'website', 'title': 'Medical Website', 'description': 'AHPRA-compliant site with practitioner profiles and service info.', 'icon': 'Globe', 'impact': 'Trust Builder'},
-        {'key': 'google-seo', 'title': 'Healthcare SEO', 'description': 'Rank for "GP near me", "dentist in [suburb]" and similar searches.', 'icon': 'Search', 'impact': 'More Patients'},
-    ],
-    'automotive': [
-        {'key': 'booking', 'title': 'Service Booking System', 'description': 'Customers book service slots online — no phone tag.', 'icon': 'CalendarCheck', 'impact': 'Efficiency'},
-        {'key': 'quoting', 'title': 'Instant Service Quotes', 'description': 'Provide upfront pricing for common services to win more bookings.', 'icon': 'FileText', 'impact': 'More Bookings'},
-        {'key': 'reviews', 'title': 'Review & Reputation', 'description': 'Build trust with automated Google review requests after each service.', 'icon': 'Star', 'impact': 'Trust Builder'},
-        {'key': 'google-seo', 'title': 'Local SEO', 'description': 'Dominate "mechanic near me" and car service searches in your area.', 'icon': 'Search', 'impact': 'More Customers'},
-    ],
-    'accommodation': [
-        {'key': 'direct-booking', 'title': 'Direct Booking Engine', 'description': 'Accept bookings on your own site — skip OTA commissions.', 'icon': 'CalendarCheck', 'impact': 'Higher Margins'},
-        {'key': 'website', 'title': 'Stunning Property Website', 'description': 'Photo galleries, virtual tours, and area guides that convert.', 'icon': 'Globe', 'impact': 'More Direct Bookings'},
-        {'key': 'reviews', 'title': 'Guest Review Management', 'description': 'Automatically collect and respond to guest reviews.', 'icon': 'Star', 'impact': 'Trust Builder'},
-        {'key': 'google-seo', 'title': 'Travel SEO', 'description': 'Rank for location-based accommodation searches on Google.', 'icon': 'Search', 'impact': 'More Bookings'},
-    ],
-}
+def _build_services_knowledge_base():
+    """Query all services and build a compact text for AI prompts.
 
-# Default features for "other" or unknown industries
-GET_STARTED_DEFAULT_FEATURES = [
-    {'key': 'website', 'title': 'Professional Website', 'description': 'Fast, mobile-friendly site that turns visitors into customers.', 'icon': 'Globe', 'impact': 'Foundation'},
-    {'key': 'google-seo', 'title': 'Google SEO & Ads', 'description': 'Get found by customers searching for your services online.', 'icon': 'Search', 'impact': 'More Leads'},
-    {'key': 'booking', 'title': 'Online Booking / Quoting', 'description': 'Let customers book or request quotes 24/7 — no phone tag.', 'icon': 'CalendarCheck', 'impact': 'Time Saver'},
-    {'key': 'ai-assistant', 'title': 'AI Chat Assistant', 'description': 'Answer questions, qualify leads, and book meetings automatically.', 'icon': 'Bot', 'impact': 'Automation'},
-]
+    Returns (services_by_slug, knowledge_text).
+    """
+    from .models import Service
+    services = list(
+        Service.objects.prefetch_related('outcomes', 'capabilities')
+        .order_by('order')
+    )
+    if not services:
+        return {}, ''
+
+    services_by_slug = {s.slug: s for s in services}
+    lines = []
+    for s in services:
+        outcomes = ', '.join(o.text for o in s.outcomes.all()[:4])
+        caps = ', '.join(c.title for c in s.capabilities.all()[:4])
+        parts = [f"- {s.title} (slug: {s.slug}): {s.description}"]
+        if outcomes:
+            parts.append(f"  Key outcomes: {outcomes}")
+        if caps:
+            parts.append(f"  Capabilities: {caps}")
+        if s.relevance_tags:
+            parts.append(f"  Tags: {', '.join(s.relevance_tags)}")
+        lines.append('\n'.join(parts))
+
+    return services_by_slug, '\n'.join(lines)
+
 
 # Pain points per industry for Step 2
 GET_STARTED_PAIN_POINTS = {
@@ -1085,35 +1043,73 @@ class GetStartedAPIView(JSONAPIView):
                         ai_notes=f"Get Started - {name}\nIndustry: {industry}\nChallenges: {', '.join(challenges)}",
                     )
 
-            # Get static feature recommendations
-            industry_key = industry.lower().replace(' & ', '-').replace(' ', '-')
-            features = GET_STARTED_FEATURES.get(industry_key, GET_STARTED_DEFAULT_FEATURES)
-
-            # Filter features based on challenges (show most relevant first)
-            # But always return all features for the industry
-
-            # Generate AI summary
+            # Build service catalog for AI recommendations
+            services_by_slug, knowledge_text = _build_services_knowledge_base()
+            features = []
             summary = ''
+
             try:
                 from core.services.ai_client import AIContentEngine
                 ai = AIContentEngine()
-                if ai.enabled:
+                if ai.enabled and knowledge_text:
                     challenge_text = ', '.join(challenges) if challenges else 'general business growth'
+                    first_name = name.split()[0] if name else 'there'
                     result = ai.generate(
                         prompt=(
-                            f"Write a 2-3 sentence personalized recommendation summary for {name}, "
-                            f"who runs a {industry} business. Their main challenges are: {challenge_text}. "
-                            f"Be specific about how technology can solve their problems. "
-                            f"Address them by first name. Keep it warm and confident."
+                            f"Customer: {first_name}, runs a {industry} business.\n"
+                            f"Their challenges: {challenge_text}\n\n"
+                            f"CODETEKI SERVICES:\n{knowledge_text}\n\n"
+                            f"INSTRUCTIONS:\n"
+                            f"1. Read each challenge carefully. For EVERY challenge the customer mentioned, "
+                            f"pick the service that best solves it. Map challenges to services 1-to-1 first, "
+                            f"then fill remaining slots.\n"
+                            f"2. In the 'reason' field, explain specifically HOW that service solves their "
+                            f"stated challenge — mention the challenge by name. E.g. if they said 'no CRM', "
+                            f"explain how Custom Tool Development can build them a CRM.\n"
+                            f"3. Select 3-4 services total. Impact label should be 2-3 words.\n"
+                            f"4. Write a 2-3 sentence summary addressing {first_name} by name. "
+                            f"Reference their specific challenges and how Codeteki will solve them.\n\n"
+                            f"Return ONLY valid JSON:\n"
+                            f'{{"services": [{{"slug": "...", "reason": "...", "impact": "..."}}], "summary": "..."}}'
                         ),
                         system_prompt=(
                             "You are a friendly business technology advisor at Codeteki, an Australian web agency. "
-                            "Write short, punchy recommendations. No fluff. Use 'we' not 'I'."
+                            "Return valid JSON only. Be specific to the customer's challenges. Use 'we' not 'I'."
                         ),
                     )
-                    summary = result.get('output', '')
+                    output = result.get('output', '').strip()
+                    # Extract JSON from response
+                    start = output.find('{')
+                    end = output.rfind('}')
+                    if start != -1 and end != -1:
+                        parsed = json.loads(output[start:end + 1])
+                        summary = parsed.get('summary', '')
+                        for item in parsed.get('services', [])[:4]:
+                            slug = item.get('slug', '')
+                            svc = services_by_slug.get(slug)
+                            if svc:
+                                features.append({
+                                    'slug': svc.slug,
+                                    'title': svc.title,
+                                    'description': item.get('reason', svc.description),
+                                    'icon': svc.icon,
+                                    'impact': item.get('impact', ''),
+                                    'link': f'/services/{svc.slug}',
+                                })
             except Exception:
                 pass  # AI failure shouldn't block the response
+
+            # Fallback: if AI returned nothing, use first 4 services from DB
+            if not features and services_by_slug:
+                for svc in list(services_by_slug.values())[:4]:
+                    features.append({
+                        'slug': svc.slug,
+                        'title': svc.title,
+                        'description': svc.description,
+                        'icon': svc.icon,
+                        'impact': '',
+                        'link': f'/services/{svc.slug}',
+                    })
 
             # Trigger WhatsApp/SMS follow-up if contact has a phone
             whatsapp_sent = False
