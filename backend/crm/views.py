@@ -2202,6 +2202,7 @@ def whatsapp_inbox(request):
     return render(request, 'admin/crm/whatsapp_inbox.html', context)
 
 
+@csrf_exempt
 @staff_member_required
 def whatsapp_send_reply(request):
     """AJAX endpoint to send a WhatsApp reply from the inbox."""
@@ -2210,62 +2211,69 @@ def whatsapp_send_reply(request):
 
     try:
         data = json.loads(request.body)
+        phone = data.get('phone', '').strip()
+        message = data.get('message', '').strip()
+
+        if not phone or not message:
+            return JsonResponse({'error': 'Phone and message required'}, status=400)
+
+        from crm.services.messaging_service import MetaWhatsAppService
+        wa = MetaWhatsAppService()
+
+        if not wa.enabled:
+            logger.error("WhatsApp inbox send: not configured (token=%s, phone_id=%s)",
+                         bool(wa.token), bool(wa.phone_id))
+            return JsonResponse({
+                'success': False,
+                'error': 'WhatsApp not configured — check META_WHATSAPP_TOKEN and META_WHATSAPP_PHONE_ID env vars.',
+            }, status=400)
+
+        result = wa.send_text(to=phone, body=message)
+        logger.info(f"WhatsApp inbox send to {phone}: {result}")
+
+        if result['success']:
+            # Log to EmailLog
+            EmailLog.objects.create(
+                channel='whatsapp',
+                subject='Outbound WhatsApp',
+                body=message,
+                to_phone=phone,
+                message_sid=result.get('message_id', ''),
+                delivery_status='sent',
+                sent_at=timezone.now(),
+            )
+
+            # Auto-handoff: owner manually replied, so deactivate AI
+            from crm.models import WhatsAppConversation
+            conv = WhatsAppConversation.objects.filter(phone=phone).first()
+            if conv and conv.ai_active:
+                conv.ai_active = False
+                conv.phase = 'handoff'
+                conv.handoff_at = timezone.now()
+                conv.handoff_reason = 'Owner replied manually from inbox'
+                conv.save(update_fields=['ai_active', 'phase', 'handoff_at', 'handoff_reason'])
+
+            return JsonResponse({
+                'success': True,
+                'message_id': result.get('message_id', ''),
+                'sent_at': timezone.now().isoformat(),
+            })
+        else:
+            error_msg = result.get('error', 'Failed to send')
+            logger.warning(f"WhatsApp inbox send failed to {phone}: {error_msg}")
+            return JsonResponse({
+                'success': False,
+                'error': error_msg,
+            }, status=400)
+
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
-
-    phone = data.get('phone', '').strip()
-    message = data.get('message', '').strip()
-
-    if not phone or not message:
-        return JsonResponse({'error': 'Phone and message required'}, status=400)
-
-    from crm.services.messaging_service import MetaWhatsAppService
-    wa = MetaWhatsAppService()
-
-    if not wa.enabled:
-        logger.error("WhatsApp inbox send failed: Meta WhatsApp not configured (token or phone_id missing)")
+    except Exception as e:
+        logger.exception(f"WhatsApp inbox send crashed: {e}")
         return JsonResponse({
             'success': False,
-            'error': 'WhatsApp not configured — check META_WHATSAPP_TOKEN and META_WHATSAPP_PHONE_ID env vars.',
-        }, status=400)
-
-    result = wa.send_text(to=phone, body=message)
-    logger.info(f"WhatsApp inbox send to {phone}: {result}")
-
-    if result['success']:
-        # Log to EmailLog
-        EmailLog.objects.create(
-            channel='whatsapp',
-            subject='Outbound WhatsApp',
-            body=message,
-            to_phone=phone,
-            message_sid=result.get('message_id', ''),
-            delivery_status='sent',
-            sent_at=timezone.now(),
-        )
-
-        # Auto-handoff: owner manually replied, so deactivate AI
-        from crm.models import WhatsAppConversation
-        conv = WhatsAppConversation.objects.filter(phone=phone).first()
-        if conv and conv.ai_active:
-            conv.ai_active = False
-            conv.phase = 'handoff'
-            conv.handoff_at = timezone.now()
-            conv.handoff_reason = 'Owner replied manually from inbox'
-            conv.save(update_fields=['ai_active', 'phase', 'handoff_at', 'handoff_reason'])
-
-        return JsonResponse({
-            'success': True,
-            'message_id': result.get('message_id', ''),
-            'sent_at': timezone.now().isoformat(),
-        })
-    else:
-        error_msg = result.get('error', 'Failed to send')
-        logger.warning(f"WhatsApp inbox send failed to {phone}: {error_msg}")
-        return JsonResponse({
-            'success': False,
-            'error': error_msg,
-        }, status=400)
+            'error': f'Server error: {str(e)}',
+        }, status=500)
 
 
 @staff_member_required
