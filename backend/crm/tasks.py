@@ -2124,8 +2124,8 @@ def send_get_started_followup(self, contact_id):
         greeting = f"Hey {name}! " if name else "Hey! "
 
         body = (
-            f"{greeting}Thanks for checking out what we can do for your business. "
-            f"Got any questions? Just reply here and I'll get back to you. — Noushad, Codeteki"
+            f"{greeting}Thanks for your interest! "
+            f"Reply here if you have any questions. — Codeteki Support"
         )
 
         brand = LeadIntegrationService.get_codeteki_brand()
