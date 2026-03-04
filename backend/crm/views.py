@@ -2221,7 +2221,16 @@ def whatsapp_send_reply(request):
 
     from crm.services.messaging_service import MetaWhatsAppService
     wa = MetaWhatsAppService()
+
+    if not wa.enabled:
+        logger.error("WhatsApp inbox send failed: Meta WhatsApp not configured (token or phone_id missing)")
+        return JsonResponse({
+            'success': False,
+            'error': 'WhatsApp not configured — check META_WHATSAPP_TOKEN and META_WHATSAPP_PHONE_ID env vars.',
+        }, status=400)
+
     result = wa.send_text(to=phone, body=message)
+    logger.info(f"WhatsApp inbox send to {phone}: {result}")
 
     if result['success']:
         # Log to EmailLog
@@ -2251,9 +2260,11 @@ def whatsapp_send_reply(request):
             'sent_at': timezone.now().isoformat(),
         })
     else:
+        error_msg = result.get('error', 'Failed to send')
+        logger.warning(f"WhatsApp inbox send failed to {phone}: {error_msg}")
         return JsonResponse({
             'success': False,
-            'error': result.get('error', 'Failed to send'),
+            'error': error_msg,
         }, status=400)
 
 
