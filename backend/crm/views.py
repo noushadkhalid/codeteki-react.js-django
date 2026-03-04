@@ -11,8 +11,11 @@ API endpoints for CRM management:
 """
 
 import json
+import logging
 from datetime import timedelta
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 from django.http import JsonResponse, HttpResponse
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
