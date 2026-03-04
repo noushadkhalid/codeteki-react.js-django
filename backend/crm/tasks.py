@@ -2004,12 +2004,30 @@ def send_phone_campaign_async(self, draft_id: str):
             else:
                 sms_count += 1
 
-            # Find or create contact
+            # Find or create contact (try exact, then last 9 digits)
             if not contact:
                 contact = Contact.objects.filter(phone=to_phone, brand=draft.brand).first()
                 if not contact:
-                    # Try without brand filter as fallback
                     contact = Contact.objects.filter(phone=to_phone).first()
+                if not contact and len(to_phone) >= 9:
+                    contact = Contact.objects.filter(
+                        phone__endswith=to_phone[-9:], brand=draft.brand
+                    ).first()
+                    if not contact:
+                        contact = Contact.objects.filter(
+                            phone__endswith=to_phone[-9:]
+                        ).first()
+
+            # Create contact if not found (phone-only)
+            if not contact and draft.brand:
+                contact = Contact.objects.create(
+                    phone=to_phone,
+                    name=recipient.get('name', ''),
+                    brand=draft.brand,
+                    source='phone_campaign',
+                    status='contacted',
+                )
+                logger.info(f"Phone campaign: created contact {contact.id} for {to_phone}")
 
             logger.info(
                 f"Phone campaign: sent to {to_phone}, contact={contact}, "
