@@ -126,30 +126,30 @@ print(f"  Added {len(benefits)} benefits")
 # Process steps
 process_steps = [
     {
-        "step": 1,
+        "step_number": 1,
         "title": "Discovery & Setup",
         "description": "We learn your business, services, and customer journey. Set up your WhatsApp Business account and configure the AI with your brand knowledge.",
     },
     {
-        "step": 2,
+        "step_number": 2,
         "title": "AI Training",
         "description": "Train your AI agent on your FAQs, pricing, services, and conversation style. Fine-tune responses until they match your brand voice perfectly.",
     },
     {
-        "step": 3,
+        "step_number": 3,
         "title": "CRM Integration",
         "description": "Connect to your CRM pipeline. Configure lead scoring, deal creation, owner notifications, and human handoff workflows.",
     },
     {
-        "step": 4,
+        "step_number": 4,
         "title": "Launch & Optimise",
         "description": "Go live with your AI agent. Monitor conversations, refine responses, and continuously improve lead qualification based on real data.",
     },
 ]
 for ps in process_steps:
     ServiceProcess.objects.create(
-        service=service, step=ps["step"], title=ps["title"],
-        description=ps["description"],
+        service=service, step_number=ps["step_number"], title=ps["title"],
+        description=ps["description"], order=ps["step_number"],
     )
 print(f"  Added {len(process_steps)} process steps")
 
