@@ -1688,9 +1688,9 @@ def get_unsubscribe_url(email: str, brand_slug: str = 'desifirms', brand=None) -
 VALID_INTENTS = {'business', 'realestate', 'regular'}
 
 INTENT_REDIRECTS = {
-    'business': 'https://www.desifirms.com.au/dashboard/add-business',
-    'realestate': 'https://www.desifirms.com.au/dashboard',
-    'regular': 'https://www.desifirms.com.au/dashboard',
+    'business': 'https://www.desifirms.com.au/dashboard/add-business/',
+    'realestate': 'https://www.desifirms.com.au/dashboard/',
+    'regular': 'https://www.desifirms.com.au/dashboard/',
 }
 
 
@@ -1727,7 +1727,7 @@ class RegistrationIntentView(View):
         from crm.models import Brand, DealActivity
         from django.shortcuts import redirect
 
-        fallback_url = 'https://www.desifirms.com.au/dashboard'
+        fallback_url = 'https://www.desifirms.com.au/dashboard/'
 
         email = request.GET.get('email', '').lower().strip()
         token = request.GET.get('token', '')
