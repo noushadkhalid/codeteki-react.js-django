@@ -38,6 +38,7 @@ from .views import (
     ZeptoMailBounceWebhookView,
     DesiFirmsWebhookView,
     UnsubscribeView,
+    RegistrationIntentView,
     TwilioStatusWebhookView,
     TwilioInboundWebhookView,
     MetaWhatsAppWebhookView,
@@ -109,4 +110,7 @@ urlpatterns = [
 
     # Public unsubscribe page (clicked from emails)
     path('unsubscribe/', UnsubscribeView.as_view(), name='unsubscribe'),
+
+    # Registration intent (welcome email button clicks)
+    path('intent/', RegistrationIntentView.as_view(), name='registration-intent'),
 ]

@@ -1166,15 +1166,19 @@ class DesiFirmsWebhookView(View):
             pipeline=pipeline,
             current_stage=first_stage,
             status='active',
-            next_action_date=timezone.now(),
+            autopilot_paused=True,  # Paused until we know their intent
             ai_notes=notes,
         )
 
         DealActivity.objects.create(
             deal=deal,
             activity_type='status_change',
-            description=f"[Webhook] User registered on Desi Firms: {email} → {pipeline.name}",
+            description=f"[Webhook] User registered on Desi Firms: {email} → {pipeline.name} (autopilot paused, welcome email queued)",
         )
+
+        # Send welcome classification email (asks user to pick their intent)
+        from crm.tasks import send_registration_welcome_email
+        send_registration_welcome_email.delay(str(deal.id))
 
         logger.info(f"Desi Firms webhook: created deal {deal.id} for {email} in {pipeline.name}")
         return JsonResponse({
@@ -1260,9 +1264,21 @@ class DesiFirmsWebhookView(View):
                         description=f"[Webhook] {event_type}: {old_stage} → {target_stage.name}. {detail}",
                     )
 
+        # Infer intent from event if not already recorded
+        intent_map = {
+            'business_created': 'business', 'business_approved': 'business',
+            'event_created': 'business', 'event_approved': 'business',
+            'agency_created': 'realestate', 'agent_created': 'realestate',
+            'agent_verified': 'realestate', 'property_submitted': 'realestate',
+            'property_approved': 'realestate',
+        }
+        inferred_intent = intent_map.get(event_type)
+        if inferred_intent and deal.ai_notes and '[Intent]' not in deal.ai_notes:
+            deal.ai_notes = (deal.ai_notes or '') + f"\n[Intent] Inferred from {event_type}: {inferred_intent}"
+
         if mark_won:
             deal.status = 'won'
-            deal.save(update_fields=['status'])
+            deal.save(update_fields=['status', 'ai_notes'])
             DealActivity.objects.create(
                 deal=deal,
                 activity_type='status_change',
@@ -1272,7 +1288,9 @@ class DesiFirmsWebhookView(View):
             # Pause autopilot — user is actively progressing on their own
             if not deal.autopilot_paused:
                 deal.autopilot_paused = True
-                deal.save(update_fields=['autopilot_paused'])
+                deal.save(update_fields=['autopilot_paused', 'ai_notes'])
+            else:
+                deal.save(update_fields=['ai_notes'])
 
         logger.info(f"Desi Firms webhook: {event_type} for {email}, deal {deal.id}")
         return JsonResponse({
@@ -1661,6 +1679,118 @@ def get_unsubscribe_url(email: str, brand_slug: str = 'desifirms', brand=None) -
     base_url = 'https://codeteki.au'
 
     return f"{base_url}/api/crm/unsubscribe/?email={email}&token={token}&brand={brand_slug}"
+
+
+# =============================================================================
+# REGISTRATION INTENT (Welcome email button clicks)
+# =============================================================================
+
+VALID_INTENTS = {'business', 'realestate', 'regular'}
+
+INTENT_REDIRECTS = {
+    'business': 'https://www.desifirms.com.au/dashboard/add-business',
+    'realestate': 'https://www.desifirms.com.au/dashboard',
+    'regular': 'https://www.desifirms.com.au/dashboard',
+}
+
+
+def generate_intent_token(email: str) -> str:
+    """Generate a secure token for registration intent links."""
+    secret = getattr(settings, 'SECRET_KEY', 'fallback-secret')
+    return hmac.new(
+        secret.encode(),
+        f"intent:{email.lower()}".encode(),
+        hashlib.sha256
+    ).hexdigest()[:32]
+
+
+def verify_intent_token(email: str, token: str) -> bool:
+    """Verify a registration intent token."""
+    expected = generate_intent_token(email)
+    return hmac.compare_digest(expected, token)
+
+
+def get_intent_url(email: str, intent: str) -> str:
+    """Generate a full intent URL for the welcome email buttons."""
+    token = generate_intent_token(email)
+    base_url = 'https://codeteki.au'
+    return f"{base_url}/api/crm/intent/?email={email}&token={token}&intent={intent}"
+
+
+class RegistrationIntentView(View):
+    """
+    Handle registration intent button clicks from welcome email.
+    GET: Records user intent, updates deal, redirects to Desi Firms dashboard.
+    """
+
+    def get(self, request):
+        from crm.models import Brand, DealActivity
+
+        email = request.GET.get('email', '').lower().strip()
+        token = request.GET.get('token', '')
+        intent = request.GET.get('intent', '')
+
+        if not email or not token or not verify_intent_token(email, token):
+            return render(request, 'crm/intent_thanks.html', {
+                'error': 'Invalid or expired link.',
+            })
+
+        if intent not in VALID_INTENTS:
+            return render(request, 'crm/intent_thanks.html', {
+                'error': 'Invalid intent.',
+            })
+
+        brand = Brand.objects.filter(slug='desifirms').first()
+        if not brand:
+            return render(request, 'crm/intent_thanks.html', {
+                'error': 'Configuration error.',
+            })
+
+        contact = Contact.objects.filter(email__iexact=email, brand=brand).first()
+        if not contact:
+            return render(request, 'crm/intent_thanks.html', {
+                'error': 'Contact not found.',
+            })
+
+        # Find active deal in user_registration pipeline
+        deal = Deal.objects.filter(
+            contact=contact,
+            pipeline__brand=brand,
+            pipeline__pipeline_type='user_registration',
+            status='active',
+        ).select_related('pipeline', 'current_stage').first()
+
+        if not deal:
+            # No active deal — just redirect
+            from django.shortcuts import redirect
+            return redirect(INTENT_REDIRECTS.get(intent, 'https://www.desifirms.com.au/dashboard'))
+
+        # Record intent on deal
+        deal.ai_notes = (deal.ai_notes or '') + f"\n[Intent] User selected: {intent}"
+
+        if intent == 'regular':
+            # Regular user — close deal as won (they're just using the platform)
+            deal.status = 'won'
+            deal.autopilot_paused = True
+            deal.save(update_fields=['status', 'autopilot_paused', 'ai_notes'])
+            DealActivity.objects.create(
+                deal=deal,
+                activity_type='status_change',
+                description=f"[Intent] User identified as regular user — deal closed (won, no follow-up needed)",
+            )
+        else:
+            # Business or real estate — unpause autopilot with correct context
+            deal.autopilot_paused = False
+            deal.next_action_date = timezone.now() + timedelta(days=2)
+            deal.save(update_fields=['autopilot_paused', 'next_action_date', 'ai_notes'])
+            DealActivity.objects.create(
+                deal=deal,
+                activity_type='note',
+                description=f"[Intent] User identified as: {intent} — autopilot activated for targeted follow-up",
+            )
+
+        from django.shortcuts import redirect
+        return redirect(INTENT_REDIRECTS.get(intent, 'https://www.desifirms.com.au/dashboard'))
 
 
 @method_decorator(csrf_exempt, name='dispatch')

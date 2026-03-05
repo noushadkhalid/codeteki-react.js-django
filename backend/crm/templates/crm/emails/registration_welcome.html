@@ -1,0 +1,92 @@
+{% extends "crm/emails/base_desifirms.html" %}
+
+{% block title %}Welcome to Desi Firms!{% endblock %}
+{% block preheader %}{{ recipient_name }}, welcome! Tell us how you'd like to use Desi Firms{% endblock %}
+{% block subtitle %}Welcome{% endblock %}
+
+{% block content %}
+<tr>
+    <td style="padding: 40px 30px;">
+        <!-- Welcome Banner -->
+        <div style="text-align: center; margin-bottom: 25px;">
+            <div style="width: 100px; height: 100px; background: linear-gradient(135deg, #0093E9, #80D0C7); border-radius: 50%; margin: 0 auto; display: inline-block; line-height: 100px;">
+                <span style="font-size: 50px;">&#x1f44b;</span>
+            </div>
+        </div>
+
+        <!-- Heading -->
+        <h1 style="color: #1f2937; font-size: 28px; font-weight: 700; text-align: center; margin: 0 0 10px 0;">
+            Welcome to Desi Firms!
+        </h1>
+        <p style="color: #0093E9; font-size: 16px; font-weight: 600; text-align: center; margin: 0 0 30px 0;">
+            Thanks for joining, {{ recipient_name }}!
+        </p>
+
+        <!-- Message -->
+        <div style="color: #4b5563; font-size: 16px; line-height: 1.7; margin: 0 0 30px 0; text-align: center;">
+            <p style="margin: 0 0 15px 0;">
+                We'd love to know what brings you here so we can help you get the most out of the platform.
+            </p>
+            <p style="margin: 0; font-weight: 600; color: #1f2937;">
+                Which best describes you?
+            </p>
+        </div>
+
+        <!-- 3 Intent Buttons -->
+        <div style="margin: 0 0 15px 0;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <!-- Business Owner Button -->
+                <tr>
+                    <td align="center" style="padding: 8px 0;">
+                        <a href="{{ intent_url_business }}"
+                           style="display: inline-block; width: 80%; max-width: 400px; background: linear-gradient(135deg, #0093E9 0%, #80D0C7 100%); color: #ffffff; text-decoration: none; padding: 18px 30px; border-radius: 12px; font-weight: 600; font-size: 16px; text-align: center; box-shadow: 0 4px 15px rgba(0, 147, 233, 0.25);">
+                            &#x1f3e2; I'm a Business Owner
+                        </a>
+                    </td>
+                </tr>
+                <!-- Real Estate Agent Button -->
+                <tr>
+                    <td align="center" style="padding: 8px 0;">
+                        <a href="{{ intent_url_realestate }}"
+                           style="display: inline-block; width: 80%; max-width: 400px; background: linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%); color: #ffffff; text-decoration: none; padding: 18px 30px; border-radius: 12px; font-weight: 600; font-size: 16px; text-align: center; box-shadow: 0 4px 15px rgba(139, 92, 246, 0.25);">
+                            &#x1f3e0; I'm a Real Estate Agent
+                        </a>
+                    </td>
+                </tr>
+                <!-- Regular User Button -->
+                <tr>
+                    <td align="center" style="padding: 8px 0;">
+                        <a href="{{ intent_url_regular }}"
+                           style="display: inline-block; width: 80%; max-width: 400px; background: #ffffff; color: #374151; border: 2px solid #d1d5db; text-decoration: none; padding: 18px 30px; border-radius: 12px; font-weight: 600; font-size: 16px; text-align: center;">
+                            &#x1f464; I'm just exploring / Regular User
+                        </a>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Subtext -->
+        <div style="text-align: center; margin: 20px 0 0 0;">
+            <p style="color: #9ca3af; font-size: 13px; line-height: 1.5; margin: 0;">
+                This helps us send you relevant tips and skip the stuff you don't need.
+            </p>
+        </div>
+
+        <!-- Signature -->
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <p style="color: #4b5563; font-size: 15px; line-height: 1.6; margin: 0;">
+                Welcome aboard,
+            </p>
+            <p style="color: #1f2937; font-size: 15px; font-weight: 600; margin: 10px 0 5px 0;">
+                Noushad
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0 0 5px 0;">
+                Desi Firms
+            </p>
+            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                &#x1f4f1; 0424 538 777 &nbsp;|&nbsp; &#x1f310; <a href="https://desifirms.com.au" style="color: #0093E9; text-decoration: none;">desifirms.com.au</a>
+            </p>
+        </div>
+    </td>
+</tr>
+{% endblock %}

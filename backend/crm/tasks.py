@@ -324,6 +324,89 @@ def process_pending_deals(self):
     return {'processed': processed, 'errors': errors}
 
 
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def send_registration_welcome_email(self, deal_id: str):
+    """
+    Send the welcome classification email to a newly registered user.
+    Contains 3 buttons: Business Owner, Real Estate Agent, Regular User.
+    Sent immediately (no office hours restriction) since it's a transactional welcome.
+    """
+    from crm.models import Deal, EmailLog, DealActivity
+    from crm.services.email_service import get_email_service
+    from crm.views import get_unsubscribe_url, get_intent_url
+    from django.template.loader import render_to_string
+
+    try:
+        deal = Deal.objects.select_related(
+            'contact', 'pipeline', 'pipeline__brand',
+        ).get(id=deal_id)
+    except Deal.DoesNotExist:
+        logger.error(f"send_registration_welcome_email: Deal {deal_id} not found")
+        return {'success': False, 'error': 'Deal not found'}
+
+    contact = deal.contact
+    brand = deal.pipeline.brand if deal.pipeline else None
+    brand_slug = brand.slug if brand else 'desifirms'
+
+    if not contact.email:
+        logger.info(f"send_registration_welcome_email: No email for contact {contact.id}")
+        return {'success': False, 'error': 'No email'}
+
+    if contact.email_bounced or contact.is_unsubscribed_from_brand(brand_slug):
+        return {'success': False, 'error': 'Contact bounced or unsubscribed'}
+
+    recipient_name = contact.name.split()[0] if contact.name else 'there'
+    email = contact.email
+
+    # Build intent URLs for the 3 buttons
+    context = {
+        'recipient_name': recipient_name,
+        'recipient_email': email,
+        'intent_url_business': get_intent_url(email, 'business'),
+        'intent_url_realestate': get_intent_url(email, 'realestate'),
+        'intent_url_regular': get_intent_url(email, 'regular'),
+        'unsubscribe_url': get_unsubscribe_url(email, brand_slug),
+        'current_year': timezone.now().year,
+        'brand_slug': brand_slug,
+    }
+
+    html_body = render_to_string('crm/emails/registration_welcome.html', context)
+    subject = f"Welcome to Desi Firms, {recipient_name}! What brings you here?"
+
+    email_service = get_email_service(brand)
+    try:
+        result = email_service.send(
+            to=email,
+            subject=subject,
+            body=html_body,
+            from_name='Desi Firms',
+        )
+
+        EmailLog.objects.create(
+            deal=deal,
+            to_email=email,
+            subject=subject,
+            body=html_body,
+            email_type='registration_welcome',
+            status='sent',
+            sent_at=timezone.now(),
+            channel='email',
+        )
+
+        DealActivity.objects.create(
+            deal=deal,
+            activity_type='email_sent',
+            description=f"Welcome classification email sent to {email}",
+        )
+
+        logger.info(f"Registration welcome email sent to {email} for deal {deal_id}")
+        return {'success': True}
+
+    except Exception as e:
+        logger.error(f"Failed to send registration welcome email for deal {deal_id}: {e}")
+        raise self.retry(exc=e)
+
+
 @shared_task(bind=True, max_retries=3, default_retry_delay=30)
 def queue_deal_email(self, deal_id: str, email_type: str = 'followup', ab_variant: str = ''):
     """

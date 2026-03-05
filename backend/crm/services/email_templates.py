@@ -60,6 +60,10 @@ EMAIL_TEMPLATES = {
             'events_nudge': 'crm/emails/events_nudge.html',
             'events_nudge_2': 'crm/emails/events_nudge2.html',
         },
+        # User Registration pipeline (welcome + classification)
+        'user_registration': {
+            'registration_welcome': 'crm/emails/registration_welcome.html',
+        },
         # For registered but inactive users (general - detects user type)
         'registered_users': {
             'business_nudge': 'crm/emails/business_nudge.html',
