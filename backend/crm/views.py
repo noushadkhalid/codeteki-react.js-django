@@ -1725,32 +1725,28 @@ class RegistrationIntentView(View):
 
     def get(self, request):
         from crm.models import Brand, DealActivity
+        from django.shortcuts import redirect
+
+        fallback_url = 'https://www.desifirms.com.au/dashboard'
 
         email = request.GET.get('email', '').lower().strip()
         token = request.GET.get('token', '')
         intent = request.GET.get('intent', '')
 
+        # For any validation failure, just redirect to dashboard (no error pages)
         if not email or not token or not verify_intent_token(email, token):
-            return render(request, 'crm/intent_thanks.html', {
-                'error': 'Invalid or expired link.',
-            })
+            return redirect(fallback_url)
 
         if intent not in VALID_INTENTS:
-            return render(request, 'crm/intent_thanks.html', {
-                'error': 'Invalid intent.',
-            })
+            return redirect(fallback_url)
 
         brand = Brand.objects.filter(slug='desifirms').first()
         if not brand:
-            return render(request, 'crm/intent_thanks.html', {
-                'error': 'Configuration error.',
-            })
+            return redirect(fallback_url)
 
         contact = Contact.objects.filter(email__iexact=email, brand=brand).first()
         if not contact:
-            return render(request, 'crm/intent_thanks.html', {
-                'error': 'Contact not found.',
-            })
+            return redirect(INTENT_REDIRECTS.get(intent, fallback_url))
 
         # Find active deal in user_registration pipeline
         deal = Deal.objects.filter(
@@ -1761,9 +1757,7 @@ class RegistrationIntentView(View):
         ).select_related('pipeline', 'current_stage').first()
 
         if not deal:
-            # No active deal — just redirect
-            from django.shortcuts import redirect
-            return redirect(INTENT_REDIRECTS.get(intent, 'https://www.desifirms.com.au/dashboard'))
+            return redirect(INTENT_REDIRECTS.get(intent, fallback_url))
 
         # Record intent on deal
         deal.ai_notes = (deal.ai_notes or '') + f"\n[Intent] User selected: {intent}"
@@ -1789,8 +1783,7 @@ class RegistrationIntentView(View):
                 description=f"[Intent] User identified as: {intent} — autopilot activated for targeted follow-up",
             )
 
-        from django.shortcuts import redirect
-        return redirect(INTENT_REDIRECTS.get(intent, 'https://www.desifirms.com.au/dashboard'))
+        return redirect(INTENT_REDIRECTS.get(intent, fallback_url))
 
 
 @method_decorator(csrf_exempt, name='dispatch')
