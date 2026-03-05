@@ -1688,7 +1688,7 @@ def get_unsubscribe_url(email: str, brand_slug: str = 'desifirms', brand=None) -
 VALID_INTENTS = {'business', 'realestate', 'regular'}
 
 INTENT_REDIRECTS = {
-    'business': 'https://www.desifirms.com.au/dashboard/add-business/',
+    'business': 'https://www.desifirms.com.au/api/add-listing/',
     'realestate': 'https://www.desifirms.com.au/dashboard/',
     'regular': 'https://www.desifirms.com.au/dashboard/',
 }
