@@ -1153,6 +1153,17 @@ class DesiFirmsWebhookView(View):
                 'contact_id': str(contact.id),
             })
 
+        # Guard against duplicate webhooks: check if deal already exists in this pipeline
+        existing_reg_deal = Deal.objects.filter(
+            contact=contact, pipeline=pipeline,
+        ).first()
+        if existing_reg_deal:
+            logger.info(f"Desi Firms webhook: duplicate registration for {email}, deal {existing_reg_deal.id} already exists")
+            return JsonResponse({
+                'status': 'duplicate',
+                'deal_id': str(existing_reg_deal.id),
+            })
+
         first_stage = PipelineStage.objects.filter(
             pipeline=pipeline, name='Registered',
         ).first()

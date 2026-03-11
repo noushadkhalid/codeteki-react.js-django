@@ -355,6 +355,14 @@ def send_registration_welcome_email(self, deal_id: str):
     if contact.email_bounced or contact.is_unsubscribed_from_brand(brand_slug):
         return {'success': False, 'error': 'Contact bounced or unsubscribed'}
 
+    # Guard against duplicate welcome emails
+    already_sent = EmailLog.objects.filter(
+        deal=deal, email_type='registration_welcome',
+    ).exists()
+    if already_sent:
+        logger.info(f"send_registration_welcome_email: already sent for deal {deal_id}, skipping")
+        return {'success': False, 'error': 'Already sent'}
+
     recipient_name = contact.name.split()[0] if contact.name else 'there'
     email = contact.email
 
